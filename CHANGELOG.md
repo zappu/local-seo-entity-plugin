@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## Unveröffentlicht
+
+- Quellen: Tracking-Parameter (`utm_*`, `gclid`, `fbclid` …) werden vor dem Speichern entfernt; OpenAI hängt `utm_source=openai` an
+
 ## 0.2.1 – 18.10.2026
 
 Erkenntnisse aus dem Test auf Staging.

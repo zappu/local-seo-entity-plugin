@@ -15,7 +15,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Testauswertung | Keywords und Entitäten für flaechenreiniger-wassertechnik.de mit echten Exporten | erledigt (17.10.2026) |
 | Machbarkeitstest, Etappe 1 | Grundgerüst, Datenbank, Warteschlange, Cronjob, Wiederaufnahme, Doppelschutz (M1–M5) | erledigt (18.10.2026), auf Staging bestätigt |
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
-| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | auf Staging bestanden am 18.10.2026 (0.2.0/0.2.1, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor), auch die Prüfpunkte mit Kosten; offen nur M9 (Search Console, wartet auf Dienstkonto) und M7b mit echtem Anthropic-/OpenAI-Schlüssel |
+| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | auf Staging bestanden am 18.10.2026 (0.2.0/0.2.1, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor), auch die Prüfpunkte mit Kosten; offen nur M9 (Search Console, wartet auf Dienstkonto) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | offen |
 | MVP 1 | Umsetzung nach Spezifikation v1.0 | offen |
 
@@ -28,10 +28,10 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M3 | Server-Cronjob über WP-CLI | 1 und Staging | bestanden auf Staging: Plesk-Aufgabe alle 5 Minuten mit `wp lsec cron`, daneben WP-Toolkit-Aufgabe für wp-cron.php |
 | M4 | Wiederaufnahme nach Abbruch | 1 | bestanden lokal, in CI und auf Staging (Abbruch in Schritt 2 und nach Beitragsanlage, verzögerte Wiederholung) |
 | M5 | Doppelschutz | 1 | bestanden lokal, in CI und auf Staging (5 gleichzeitige Starts, 24 gleichzeitige Bearbeitungsversuche) |
-| M6 | Wiederholungen (429 verzögert, 401 sofort `failed`) | 3 | bestanden als Schnittstellentest (KI-Adapter, Textfocus, Wikidata); echter 429 von Wikidata wurde korrekt als wiederholbar behandelt |
+| M6 | Wiederholungen (429 verzögert, 401 sofort `failed`) | 3 | bestanden als Schnittstellentest (KI-Adapter, Textfocus, Wikidata); echter 429 von Wikidata wurde korrekt als wiederholbar behandelt; echter Fall: Anthropic-Ausgabenlimit (HTTP 400) sofort endgültig mit verständlicher Meldung |
 | M7 | KI-Anbindung mit JSON-Schema, Korrekturversuch, Kosten | 3 | bestanden auf Staging am 18.10.2026 (OpenRouter, anthropic/claude-sonnet-5.5: gültiges JSON, 401/283 Token, $0,0036, 4,9 s); Korrekturversuch als Schnittstellentest |
 | M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | bestanden auf Staging am 18.10.2026: 5 Quellen mit URL gespeichert, Strukturierung gültig; Kosten $0,148, davon $0,142 für die Recherche (44.229 Eingabe-Token durch die eingefügten Suchergebnisse) |
-| M7b | Adapterwechsel | 3 | bestanden als Schnittstellentest mit allen drei Adaptern; echte Aufrufe offen |
+| M7b | Adapterwechsel | 3 | bestanden auf Staging am 18.10.2026: derselbe Aufruf über den OpenAI-Adapter (gpt-6.1-sol) mit gültigem JSON, auch zweistufig mit Websuche (4 Quellen); Anthropic direkt: Konto bis 01.11.2026 am Ausgabenlimit, vom Plugin richtig als endgültiger Fehler (HTTP 400) mit Klartext gemeldet |
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
 | M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026; Excel-Export von Textfocus nur mit Testdatei, echte Datei offen; auf Staging bestätigt |
@@ -86,10 +86,13 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Textfocus `tf_related` liefert für ein allgemeines Keyword vor allem Firmennamen (Hamburger Flächenreinigung, Helmut Günther, Aweka …) und andere Regionen (Hamburg, Seevetal), kaum Begriffe für die Region Hannover. Für die Themenrecherche braucht es einen Filter für Marken/Wettbewerber und fremde Orte (Abgleich mit Servicegebiet und Entitäten); regionale Abfragen besser mit Ortsnamen im Keyword.
 - Textfocus `difficulty` war bei allen 17 Keywords 0, `cost` (CPC) außer beim Hauptkeyword ebenfalls 0. Vorschlag für v1.0: Bei Textfocus 0 als „unbekannt“ (NULL) speichern, wie bei Keyword Chef (Regel 6.6.1).
 
+- Zwei Modelle, zwei Antworten: Claude (über OpenRouter) nennt 1226 als Ersterwähnung von **Eltze**, GPT (OpenAI) dieselbe Jahreszahl für **Dollbergen**, beide mit Quellenangabe. Mindestens eine Angabe ist falsch zugeordnet. Tatsachen aus der Recherche müssen daher gegen den Text der Quelle geprüft werden, bevor sie in einen Entwurf gehen (Qualitätsprüfung `UNSUPPORTED_FACT`, Abschnitt 8.7) – nicht nur gegen das Vorhandensein einer URL.
+- OpenAI-Websuche: 28.839 Eingabe-Token (OpenRouter: 44.229), Quellen mit `?utm_source=openai`. Ab 0.2.2 werden Tracking-Parameter vor dem Speichern entfernt, sonst steht dieselbe Seite doppelt in `lsec_sources`. Für OpenAI direkt fehlt ein Preis in `ai_prices`, daher „Kosten unbekannt“.
+
 ## Nächste Schritte
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
-2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M11, M16~~ erledigt am 18.10.2026; M7b nur mit echtem Anthropic- oder OpenAI-Schlüssel.
+2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16~~ erledigt am 18.10.2026.
 3. Textfocus: ~~Tarif und Sprachcode prüfen~~ erledigt (AppSumo, API-Zugang, Code `de`); einen Excel-Export einer Textfocus-Tabelle für M10 bereitstellen.
 4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
 5. Google-Dienstkonto für M9 (Search Console).

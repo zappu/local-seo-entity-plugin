@@ -27,7 +27,7 @@ final class SourceRepository {
 		$now   = gmdate( 'Y-m-d H:i:s' );
 		$ids   = array();
 		foreach ( $sources as $source ) {
-			$url = esc_url_raw( trim( $source['url'] ) );
+			$url = esc_url_raw( self::canonical( trim( $source['url'] ) ) );
 			if ( '' === $url || ! preg_match( '#^https?://#i', $url ) ) {
 				continue;
 			}
@@ -65,5 +65,32 @@ final class SourceRepository {
 			}
 		}
 		return $ids;
+	}
+
+	/**
+	 * Entfernt Tracking-Parameter, damit dieselbe Seite nur einmal gespeichert wird.
+	 * OpenAI hängt an Quellen der Websuche ?utm_source=openai an (beobachtet am 18.10.2026).
+	 *
+	 * @param string $url Adresse.
+	 */
+	public static function canonical( string $url ): string {
+		$parts = explode( '#', $url, 2 );
+		$base  = $parts[0];
+		$query = '';
+		if ( str_contains( $base, '?' ) ) {
+			list( $base, $query ) = explode( '?', $base, 2 );
+		}
+		if ( '' === $query ) {
+			return $base;
+		}
+		$kept = array();
+		foreach ( explode( '&', $query ) as $pair ) {
+			$name = strtolower( (string) strtok( $pair, '=' ) );
+			if ( '' === $name || str_starts_with( $name, 'utm_' ) || in_array( $name, array( 'gclid', 'fbclid', 'msclkid', 'mc_cid', 'mc_eid', 'srsltid' ), true ) ) {
+				continue;
+			}
+			$kept[] = $pair;
+		}
+		return array() === $kept ? $base : $base . '?' . implode( '&', $kept );
 	}
 }
