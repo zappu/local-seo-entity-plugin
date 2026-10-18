@@ -1,5 +1,18 @@
 # Änderungsprotokoll
 
+## 0.3.0 – 18.10.2026
+
+MVP 1, Stufe A (Spezifikation v1.0, Abschnitt 14).
+
+- Backend-Oberfläche: Menü „Local SEO“ mit Dashboard (Einrichtungshinweise, KI-Kosten und Budget, Textfocus-Credits, Cronjob, Website, letzte Abläufe mit Fortsetzen und Abbrechen) und Einstellungen; die bisherige Statusseite heißt jetzt „Technik“
+- KI-Budget: Monatsbudget (20 USD) und Budget je Ablauf (1 USD). Ist es erreicht, wartet der Ablauf und läuft nach Erhöhung oder im nächsten Monat weiter (`wp lsec ai budget`)
+- Eigenes Modell für die Recherche mit Websuche (`ai_research_model`); Treffer der Websuche einstellbar (`ai_web_max_results`, Standard 3 statt 5)
+- `wp lsec runs list|resume|cancel`
+- `wp lsec check secrets`: sucht Schlüssel im Klartext in Datenbank und Protokoll (Restprüfung M8)
+- Datenbank: Schemaversion 3 mit `competition` (Wettbewerb) bei Keyword-Kennzahlen, `exclusion` bei Keywords und `merged_into` bei Entitäten. Textfocus-Importe und `tf_keyword` speichern den Wettbewerb
+- Änderungen an Einstellungen stehen im Prüfprotokoll
+- Prüfskript `bin/mvp-pruefung.sh` für Stufe A, auch in der CI
+
 ## 0.2.4 – 18.10.2026
 
 - `wp lsec keywords list` zeigt Klicks, Impressionen, CTR, Position und Seite aus der Search Console; mit `--source=gsc` eigene Ansicht, sortiert nach Impressionen
