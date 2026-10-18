@@ -160,7 +160,7 @@ final class RestController {
 		if ( ! $ok ) {
 			return new \WP_Error( 'lsec_not_found', 'Entität nicht gefunden.', array( 'status' => 404 ) );
 		}
-		$this->plugin->logger->info(
+		$this->plugin->logger->audit(
 			'Entität entschieden',
 			array(
 				'entity_id' => $id,

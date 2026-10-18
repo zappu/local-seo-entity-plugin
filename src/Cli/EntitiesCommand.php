@@ -8,7 +8,9 @@
 namespace Lsec\Cli;
 
 use Lsec\Core\Plugin;
+use Lsec\Content\ContentReader;
 use Lsec\Core\Settings;
+use Lsec\Entities\EntityExtractor;
 use Lsec\Entities\EntityRepository;
 use Lsec\Entities\PlaceResolver;
 use Lsec\Entities\ServiceArea;
@@ -167,6 +169,117 @@ final class EntitiesCommand {
 	}
 
 	/**
+	 * Erkennt Entitäten in einem Beitrag und speichert sie als Kandidaten mit Fundstellen (M11).
+	 *
+	 * Ruft die KI auf (Kosten laut Modell, meist wenige Cent).
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Beitrag oder Seite (auch Elementor).
+	 *
+	 * [--dry-run]
+	 * : Nur anzeigen, nichts speichern.
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function extract( array $args, array $assoc_args ): void {
+		$post = get_post( (int) ( $args[0] ?? 0 ) );
+		if ( ! $post instanceof \WP_Post ) {
+			WP_CLI::error( 'Beitrag nicht gefunden.' );
+		}
+		$content = ContentReader::read( $post );
+		WP_CLI::log( sprintf( '„%s“: %d Wörter (%s)', $post->post_title, $content['words'], $content['source'] ) );
+		try {
+			$service = $this->plugin->ai->service();
+			$result  = ( new EntityExtractor( $service ) )->extract( $post->post_title, $content['text'], $this->entities->known_names() );
+		} catch ( RetryableException $e ) {
+			WP_CLI::error( 'Vorübergehend (' . $e->error_code . '): ' . $this->plugin->logger->redact( $e->getMessage() ) );
+		} catch ( \RuntimeException $e ) {
+			WP_CLI::error( $this->plugin->logger->redact( $e->getMessage() ) );
+		}
+		$rows = array();
+		foreach ( $result['entities'] as $entity ) {
+			$rows[] = array(
+				'typ'         => $entity['type'],
+				'name'        => $entity['name'],
+				'sicherheit'  => number_format( $entity['confidence'], 2, ',', '' ),
+				'fundstellen' => count( $entity['evidence'] ),
+				'beispiel'    => mb_substr( $entity['evidence'][0]['excerpt'], 0, 70 ),
+			);
+		}
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'typ', 'name', 'sicherheit', 'fundstellen', 'beispiel' ) );
+		foreach ( $result['rejected'] as $item ) {
+			WP_CLI::log( 'Verworfen: ' . $item['name'] . ' (' . $item['reason'] . ')' );
+		}
+		foreach ( $result['ambiguities'] as $item ) {
+			WP_CLI::log( 'Mehrdeutig: ' . $item['name'] . ' – ' . $item['reason'] . ' (Abgleich: wp lsec entities resolve-place "' . $item['name'] . '")' );
+		}
+		WP_CLI::log( 'Kosten: ' . ( null === $result['cost'] ? 'unbekannt' : '$' . number_format( $result['cost'], 4 ) ) );
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::success( 'Probelauf, nichts gespeichert.' );
+			return;
+		}
+		$saved = $this->entities->save_extraction( $post->ID, $result['entities'] );
+		WP_CLI::success( sprintf( '%d neue Kandidaten, %d vorhandene Entitäten, %d Fundstellen gespeichert.', $saved['created'], $saved['reused'], $saved['mentions'] ) );
+	}
+
+	/**
+	 * Bestätigt oder verwirft eine Entität; wird mit Benutzer und Zeit protokolliert.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Entität.
+	 *
+	 * <decision>
+	 * : confirmed oder rejected.
+	 *
+	 * [--user=<user>]
+	 * : Benutzer, in dessen Namen entschieden wird (WP-CLI-Standardoption).
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function decide( array $args, array $assoc_args ): void {
+		try {
+			$ok = $this->entities->decide( (int) $args[0], (string) $args[1], get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		if ( ! $ok ) {
+			WP_CLI::error( 'Entität nicht gefunden.' );
+		}
+		$this->plugin->logger->audit(
+			'Entität entschieden',
+			array(
+				'entity_id' => (int) $args[0],
+				'decision'  => (string) $args[1],
+				'user_id'   => get_current_user_id(),
+				'via'       => 'cli',
+			)
+		);
+		WP_CLI::success( 'Entität ' . (int) $args[0] . ': ' . $args[1] );
+	}
+
+	/**
+	 * Zeigt eine Entität mit Fundstellen.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Entität.
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function show( array $args, array $assoc_args ): void {
+		$rows = $this->entities->mentions( (int) $args[0] );
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'object_type', 'object_id', 'location', 'excerpt' ) );
+	}
+
+	/**
 	 * Zeigt Entitäten.
 	 *
 	 * ## OPTIONS
@@ -182,7 +295,7 @@ final class EntitiesCommand {
 	 */
 	public function list( array $args, array $assoc_args ): void {
 		$rows = $this->entities->list( (string) ( $assoc_args['type'] ?? '' ), (string) ( $assoc_args['status'] ?? '' ) );
-		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'type', 'canonical_name', 'status', 'confidence', 'external_ids', 'origin', 'updated_at' ) );
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'type', 'canonical_name', 'status', 'confidence', 'mentions', 'external_ids', 'origin', 'decided_by', 'decided_at' ) );
 	}
 
 	/**

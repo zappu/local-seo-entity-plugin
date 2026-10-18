@@ -7,6 +7,7 @@
 
 namespace Lsec\Core;
 
+use Lsec\Admin\EntitiesPage;
 use Lsec\Admin\StatusPage;
 use Lsec\Entities\EntityRepository;
 use Lsec\Cli\AiCommand;
@@ -184,6 +185,7 @@ final class Plugin {
 
 		if ( is_admin() ) {
 			( new StatusPage( $this ) )->register();
+			( new EntitiesPage( $this ) )->register();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

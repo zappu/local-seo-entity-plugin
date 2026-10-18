@@ -40,6 +40,16 @@ final class Logger {
 	}
 
 	/**
+	 * Nachvollziehbare Entscheidung eines Benutzers; wird immer geschrieben, unabhängig von WP_DEBUG.
+	 *
+	 * @param string               $message Meldung.
+	 * @param array<string, mixed> $context Kontext.
+	 */
+	public function audit( string $message, array $context = array() ): void {
+		$this->write( 'audit', $message, $context );
+	}
+
+	/**
 	 * Warnung.
 	 *
 	 * @param string               $message Meldung.
