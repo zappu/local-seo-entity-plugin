@@ -38,6 +38,7 @@ Werte mit **Vorschlag** sind Ausgangswerte und werden während MVP 1 oder in der
 | Abhängigkeiten | Composer mit PSR-4-Autoloading (`Lsec\` → `src/`); im ZIP nur `woocommerce/action-scheduler` und der Composer-Autoloader |
 | Konfliktschutz | Weitere gebündelte Fremdbibliotheken erhalten ein eigenes Namespace-Präfix (z. B. mit Strauss). Ausnahme: Action Scheduler, der für das parallele Mitliefern ausgelegt ist (geprüft neben der Kopie von Rank Math) |
 | Code-Standard | WordPress Coding Standards (PHPCS), PHPStan |
+| Backend-Oberfläche | React über `@wordpress/scripts` (36.0.0), Quellen in `src-js/`, gebaut nach `assets/dist/` (nicht im Repo, kommt in die ZIP). Nachtrag 18.10.: JSX je Datei klassisch übersetzt (`/** @jsxRuntime classic */`, `createElement` aus `@wordpress/element`), weil die automatische Übersetzung das Skript `react-jsx-runtime` verlangt, das erst WordPress 6.6 mitbringt. Geprüft mit WordPress 6.4.5 und 7.1.3 |
 | Tests | PHPUnit ohne WordPress für die fachliche Kernschicht, PHPUnit mit WordPress-Testumgebung, Prüfskripte `bin/machbarkeitstest.sh` und `bin/machbarkeitstest-etappe3.sh` gegen eine echte Installation |
 | CI | GitHub Actions: PHPCS, PHPStan, Unit-Tests, Prüfskripte mit PHP 8.1 + WordPress 6.4 sowie PHP 8.3/8.4 + aktuelles WordPress mit Rank Math und Elementor |
 | Testumgebung | Staging-Installation auf dem Plesk-VPS (PHP 8.4, WordPress 7.1, Rank Math, Elementor, Cronjob). WP-CLI läuft als Benutzer des Abonnements, nie als root |
@@ -125,7 +126,8 @@ local-seo-entity-plugin/
 │       ├── Logging/                   Protokoll mit Schwärzung, Stufe audit
 │       ├── Queue/                     Action-Scheduler-Adapter
 │       └── Security/                  Capability, Geheimnisse
-├── assets/                            neu: Backend-Oberfläche (React über @wordpress/scripts)
+├── src-js/                            Backend-Oberfläche (React), Quellen
+├── assets/dist/                       gebaute Oberfläche (nur in der ZIP)
 ├── languages/
 └── tests/
     ├── Unit/
@@ -395,6 +397,7 @@ Ein Thema wird nicht vorgeschlagen, wenn die Überschneidung über dem Schwellen
 4. **Keine PDF-Berichte.** Der Textfocus-Gesamtbericht ist ein Bild-PDF; importiert werden Excel-Tabellen oder API-Daten.
 5. **Textfocus-Entitäten** gehen in den Entitäten-Import, nicht in den Keyword-Import (8.3).
 6. **Search Console** liefert keine Volumina. Ihre Werte stehen in eigenen Spalten und werden nicht als Suchvolumen angezeigt.
+7. **Wettbewerb (Nachtrag 18.10., Stufe A).** Spalten „Competition“, „Konkurrenz“, „Wettbewerb“ gehen in `competition`, nicht mehr in `difficulty`.
 
 ### 6.7 Prüfung auf Tippfehler
 
@@ -431,6 +434,8 @@ queued ──► running ──► succeeded
 ```
 
 `failed` und `blocked` lassen sich ab dem betroffenen Schritt fortsetzen; erledigte Schritte laufen nicht erneut. **Neu:** `waiting` gilt auch, wenn das Textfocus-Tagesbudget oder das KI-Budget (8.1b) erreicht ist; der Ablauf läuft nach dem Tages- bzw. Monatswechsel oder nach Freigabe weiter.
+
+**Umsetzung (Nachtrag 18.10., Stufe A):** Ein Schritt wirft `WaitException` mit einem Grund (`ai_budget`). Der Ablauf geht auf `waiting`, `error_code` ist der Grund, der Schritt bleibt `pending`, und der Versuch zählt nicht. `wp lsec cron` prüft je Grund, ob es weitergehen kann (KI-Budget: `AiBudget::allows()`), und plant den Ablauf dann neu ein. Von Hand: `wp lsec runs resume <id>` oder „Fortsetzen“ im Dashboard; `wp lsec runs cancel <id>` bzw. „Abbrechen“. Das Textfocus-Budget wird in Stufe C auf denselben Weg umgestellt.
 
 ### 7.3 Abläufe in MVP 1
 
@@ -512,6 +517,7 @@ Der Test hat die Websuche als Kostentreiber gezeigt: Die Suchergebnisse werden a
 | Websuche nur wo nötig | nur im Schritt `research` der Themenrecherche; Briefing, Entwurf, Prüfung und Entity-Erkennung ohne Websuche |
 | Zwischenspeicher | keine neue Recherche, wenn für dieselbe Entität und Region in den letzten 14 Tagen (**Vorschlag**) schon geprüfte Aussagen vorliegen; die Ergebnisse stehen in `lsec_sources`, `lsec_claims` und `lsec_evidence` |
 | Anzeige | Kosten je Ablauf, je Beitrag und je Monat im Dashboard; Schätzung vor dem Start eines Sammelauftrags |
+| Umsetzung (Nachtrag 18.10., Stufe A) | Einstellungen `ai_monthly_budget` (20), `ai_run_budget` (1), `ai_web_max_results` (3, erlaubt 1–10), `ai_research_model` (leer). Geprüft wird vor jedem KI-Aufruf eines Ablaufs, auch vor dem Korrekturversuch. Der Monat beginnt am Ersten um 0 Uhr in der Zeitzone der Website. Aufrufe ohne Preis zählen nicht und werden als Hinweis gemeldet. Weitergabe der Trefferzahl: OpenRouter `max_results`, Anthropic `max_uses`, OpenAI `search_context_size` (bis 3 `low`, bis 6 `medium`, sonst `high`). Ein mit `--model` angegebenes Modell gilt auch für die Recherche. `wp lsec ai budget [--run=<id>]` |
 | Eigenes Modell für die Recherche | **festgelegt:** Einstellung `ai_research_model` (8.1a), umgesetzt in Stufe A; Auswahl des Modells in Stufe D. Die Anforderungsspezifikation ist um einen Nachtrag zu Abschnitt 14 ergänzt |
 
 **Grobe Schätzung je Beitrag (zu messen):** Recherche $0,05–0,15, Faktenprüfung bis $0,02, Briefing, Entwurf und Bewertung zusammen $0,05–0,15, also unter $0,50.
@@ -727,6 +733,8 @@ Eingaben: ausgewählte eigene Beiträge (Text aus dem Inhaltsindex), Beispieltex
 
 React über `@wordpress/scripts` und `@wordpress/components`, Daten über `lsec/v1`. Die vorhandene PHP-Seite „Entitäten“ wird in Stufe B ersetzt.
 
+**Umsetzung Stufe A (Nachtrag 18.10.):** Menü „Local SEO“ mit Dashboard, Entitäten, Einstellungen und Technik (bisherige Statusseite). Dashboard: Einrichtungshinweise mit Befehl, KI-Kosten mit Monatsbudget, Textfocus-Credits (letzter Stand aus `tf_account`, Knopf „Guthaben abfragen“, kostet keinen Credit), Cronjob, Website (Search Console, Rank Math, Elementor, Versionen) und die letzten zehn Abläufe mit Kosten, Fortsetzen und Abbrechen; lädt jede Minute neu. Einstellungen in Gruppen (KI, Textfocus, Search Console, Entitäten, Allgemein); gespeichert werden nur geänderte Werte, der Server prüft jeden einzeln und meldet Ablehnungen je Feld (HTTP 422). Schlüssel gehören nicht in die Oberfläche. Routen: `GET lsec/v1/dashboard`, `GET|POST lsec/v1/settings`, `POST lsec/v1/runs/<id>/resume|cancel`, `POST lsec/v1/textfocus/account`. Pflichtfelder werden im Callback geprüft, nicht als `required`, weil WordPress fehlende Pflichtfelder vor der Berechtigung prüft (Besucher bekämen 400 statt 403).
+
 ---
 
 ## 10. Qualitätsprüfung
@@ -768,7 +776,8 @@ Ergänzend bewertet die KI Suchintention, lokale Relevanz, Entity-Integration, M
 - **API-Schlüssel:** Konstanten in `wp-config.php` (`LSEC_OPENROUTER_API_KEY`, `LSEC_ANTHROPIC_API_KEY`, `LSEC_OPENAI_API_KEY`, `LSEC_TEXTFOCUS_API_KEY`) haben Vorrang. Im Backend eingegebene Schlüssel werden mit libsodium verschlüsselt (Schlüssel aus den WordPress-Salts) und nur maskiert angezeigt. `wp lsec status` nennt nur die Quelle eines Schlüssels.
 - **Dienstkonto der Search Console:** Schlüsseldatei außerhalb des Webroots. Reihenfolge: Konstante `LSEC_GSC_CREDENTIALS_FILE`, Einstellung `gsc_credentials_file`, sonst `private/gsc-service-account.json` neben dem Webroot (Plesk-Ordner `private`, Rechte 700 für den Ordner und 600 für die Datei, Besitzer = Benutzer des Abonnements). Anmeldung über ein mit RS256 signiertes JWT, Bereich `webmasters.readonly`; das Zugriffstoken bleibt im Speicher. Die Schlüsseldatei wird nie über das Backend hochgeladen oder angezeigt.
 - **Schwärzung:** Protokolle, Fehlermeldungen und Exporte schwärzen bekannte Geheimnisse und Muster: private Schlüssel, Google-Token (`ya29.…`), `key=`-Parameter, `X-API-Key`, Bearer-Token. Antworten von Textfocus werden ohne `params` gespeichert.
-- **Prüfprotokoll:** Entscheidungen über Entitäten, Aussagen, Themen und Ausschlüsse sowie Änderungen an Budget und Schlüsselquellen werden mit der Stufe `audit` protokolliert, unabhängig von `WP_DEBUG`.
+- **Prüfprotokoll:** Entscheidungen über Entitäten, Aussagen, Themen und Ausschlüsse sowie Änderungen an Budget und Schlüsselquellen werden mit der Stufe `audit` protokolliert, unabhängig von `WP_DEBUG`. Umsetzung (Nachtrag 18.10.): jede geänderte Einstellung über die Aktion `lsec_setting_changed` mit altem und neuem Wert und Benutzer; Fortsetzen und Abbrechen von Abläufen.
+- **Restprüfung M8:** `wp lsec check secrets` sucht jeden eingestellten Schlüssel (ganzer Wert und ein Ausschnitt aus der Mitte) und zwei Zeilen des privaten Schlüssels der Search Console in allen Plugin-Tabellen, `wp_options` (ohne die verschlüsselte Ablage), `wp_postmeta`, `wp_usermeta`, den Tabellen von Action Scheduler, `debug.log` und dem PHP-Fehlerprotokoll. Ausgegeben werden nur Fundorte und Anzahl.
 - **Externe Daten:** KI-Antworten, Importe, Suchergebnisse und abgerufene Seiten gelten als nicht vertrauenswürdig: validieren, bereinigen (`sanitize_*`, `wp_kses_post`), Datenbankzugriffe nur über `$wpdb->prepare()`.
 - **Abruf fremder Seiten (8.4a):** nur `wp_safe_remote_get` (keine internen Adressen), Größen- und Zeitlimit, keine Cookies, keine Ausführung von Skripten.
 - **Prompt-Injection:** Fremde Texte werden in KI-Anfragen als Daten gekennzeichnet. Aktionen mit Außenwirkung hängen nie allein von einer KI-Antwort ab.
@@ -789,7 +798,7 @@ Durchgeführt vom 18.10.2026 in CI und auf Staging (Plesk, PHP 8.4.26, WordPress
 | M7 | KI-Anbindung | bestanden (OpenRouter, $0,0036 je Aufruf) |
 | M7a | Recherche mit Websuche | bestanden (5 Quellen), Kosten $0,148 → 8.1b |
 | M7b | Adapterwechsel | bestanden mit OpenAI; Anthropic bis zur Kontogrenze |
-| M8 | Geheimnisse | bestanden im Code und in Tests; **Restprüfung:** Suche nach den Schlüsseln in der Staging-Datenbank (Stufe A) |
+| M8 | Geheimnisse | bestanden im Code und in Tests; Restprüfung auf Staging mit `wp lsec check secrets` (Stufe A) |
 | M9 | Search Console | bestanden (96 Zeilen, 79 Suchanfragen) |
 | M10 | CSV-/Excel-Import | bestanden mit echten Exporten |
 | M11 | Entity-Erkennung | bestanden (9 Kandidaten, 11 Fundstellen, $0,04) |

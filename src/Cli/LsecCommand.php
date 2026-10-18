@@ -12,6 +12,8 @@ use Lsec\Infrastructure\Database\Migrator;
 use Lsec\Infrastructure\Database\Schema;
 use Lsec\Infrastructure\Queue\ActionSchedulerQueue;
 use Lsec\Infrastructure\Security\Secrets;
+use Lsec\Integrations\AI\AiBudget;
+use Lsec\Integrations\AI\AiClientFactory;
 use WP_CLI;
 
 /**
@@ -117,6 +119,13 @@ final class LsecCommand {
 		$resumed = $this->plugin->watchdog->run( min( 60, $stale_after ) );
 		if ( array() !== $resumed ) {
 			WP_CLI::log( 'Wieder eingeplant: ' . implode( ', ', $resumed ) );
+		}
+
+		// Abläufe, die auf das KI-Budget warten, laufen weiter, sobald es wieder reicht (neuer Monat, höhere Grenze).
+		$budget   = AiClientFactory::budget();
+		$released = $this->plugin->engine->resume_waiting( AiBudget::WAIT_CODE, static fn( int $run_id ): bool => $budget->allows( $run_id ) );
+		if ( array() !== $released ) {
+			WP_CLI::log( 'Budget reicht wieder, fortgesetzt: ' . implode( ', ', $released ) );
 		}
 
 		$group = ' --group=' . ActionSchedulerQueue::GROUP;

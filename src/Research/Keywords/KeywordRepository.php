@@ -72,6 +72,7 @@ final class KeywordRepository {
 					'search_volume'   => $entry['volume'],
 					'difficulty'      => $entry['difficulty'],
 					'cpc'             => $entry['cpc'],
+					'competition'     => $entry['competition'] ?? null,
 					'trend'           => null === $entry['trend'] ? null : wp_json_encode( $entry['trend'] ),
 					'import_batch_id' => $import_id,
 					'created_at'      => $now,
@@ -96,10 +97,10 @@ final class KeywordRepository {
 	/**
 	 * Speichert Kennzahlen eines Datenanbieters, z. B. aus tf_keyword.
 	 *
-	 * @param string                                                                                           $source  Quelle, z. B. textfocus.
-	 * @param array<string, array{keyword: string, volume: int|null, cpc: float|null, difficulty: float|null}> $entries Kennzahlen je normalisiertem Keyword.
-	 * @param string                                                                                           $locale  Sprache.
-	 * @param string                                                                                           $region  Region.
+	 * @param string                                                                                                                     $source  Quelle, z. B. textfocus.
+	 * @param array<string, array{keyword: string, volume: int|null, cpc: float|null, difficulty: float|null, competition?: float|null}> $entries Kennzahlen je normalisiertem Keyword.
+	 * @param string                                                                                                                     $locale  Sprache.
+	 * @param string                                                                                                                     $region  Region.
 	 * @return int Anzahl gespeicherter Kennzahlen.
 	 */
 	public function save_metrics( string $source, array $entries, string $locale, string $region = '' ): int {
@@ -116,6 +117,7 @@ final class KeywordRepository {
 					'search_volume' => $entry['volume'],
 					'difficulty'    => $entry['difficulty'],
 					'cpc'           => $entry['cpc'],
+					'competition'   => $entry['competition'] ?? null,
 					'created_at'    => $now,
 				)
 			);
@@ -292,7 +294,7 @@ final class KeywordRepository {
 		$params[] = $limit;
 
 		// Neueste Kennzahl je Keyword und Quelle.
-		$sql = "SELECT k.id, k.keyword, k.locale, k.region, k.intent, m.source, m.search_volume, m.difficulty, m.cpc, m.trend, m.impressions, m.clicks, m.ctr, m.position, m.page_url, m.period_start, m.period_end, m.created_at
+		$sql = "SELECT k.id, k.keyword, k.locale, k.region, k.intent, m.source, m.search_volume, m.difficulty, m.cpc, m.competition, m.trend, m.impressions, m.clicks, m.ctr, m.position, m.page_url, m.period_start, m.period_end, m.created_at
 			FROM {$k} k
 			JOIN {$m} m ON m.keyword_id = k.id
 			JOIN ( SELECT keyword_id, source, MAX(id) AS id FROM {$m} GROUP BY keyword_id, source ) latest ON latest.id = m.id

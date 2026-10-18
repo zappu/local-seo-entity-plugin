@@ -12,8 +12,8 @@ use Lsec\Core\Plugin;
 use Lsec\Infrastructure\Security\Capabilities;
 
 /**
- * Menü "Local SEO" mit einer Statusseite für den Machbarkeitstest:
- * Versionen, Tabellen, Cronjob, Warteschlange und letzte Abläufe.
+ * Technische Statusseite unter „Local SEO“: Versionen, Tabellen, Cronjob, Warteschlange
+ * und letzte Abläufe. Das Dashboard (AppPage) zeigt dasselbe aufbereitet.
  */
 final class StatusPage {
 
@@ -30,7 +30,7 @@ final class StatusPage {
 	 * Registriert Menü und Hinweise.
 	 */
 	public function register(): void {
-		add_action( 'admin_menu', array( $this, 'add_menu' ) );
+		add_action( 'admin_menu', array( $this, 'add_menu' ), 40 );
 		add_action( 'admin_notices', array( $this, 'cron_notice' ) );
 	}
 
@@ -38,19 +38,10 @@ final class StatusPage {
 	 * Menüeintrag.
 	 */
 	public function add_menu(): void {
-		add_menu_page(
-			__( 'Local SEO', 'local-seo-entity-plugin' ),
-			__( 'Local SEO', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::SLUG,
-			array( $this, 'render' ),
-			'dashicons-location-alt',
-			58
-		);
 		add_submenu_page(
-			self::SLUG,
-			__( 'Status', 'local-seo-entity-plugin' ),
-			__( 'Status', 'local-seo-entity-plugin' ),
+			AppPage::SLUG,
+			__( 'Local SEO – Technik', 'local-seo-entity-plugin' ),
+			__( 'Technik', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,
 			self::SLUG,
 			array( $this, 'render' )
@@ -69,7 +60,7 @@ final class StatusPage {
 			return;
 		}
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( null === $screen || false === strpos( (string) $screen->id, self::SLUG ) ) {
+		if ( null === $screen || false === strpos( (string) $screen->id, AppPage::SLUG ) ) {
 			return;
 		}
 		printf(
@@ -108,7 +99,7 @@ final class StatusPage {
 			'elementor_active'         => __( 'Elementor aktiv', 'local-seo-entity-plugin' ),
 		);
 
-		echo '<div class="wrap"><h1>' . esc_html__( 'Local SEO – Status', 'local-seo-entity-plugin' ) . '</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__( 'Local SEO – Technik', 'local-seo-entity-plugin' ) . '</h1>';
 		echo '<table class="widefat striped" style="max-width:900px"><tbody>';
 		foreach ( $status as $key => $value ) {
 			if ( is_bool( $value ) ) {

@@ -24,7 +24,12 @@ final class Settings {
 		'max_parallel_runs'        => 3,
 		'ai_provider'              => 'openrouter',
 		'ai_model'                 => '',
+		'ai_research_model'        => '',
 		'ai_prices'                => array(),
+		'ai_monthly_budget'        => 20.0,
+		'ai_run_budget'            => 1.0,
+		'ai_web_max_results'       => 3,
+		'entity_min_confidence'    => 0.6,
 		'openai_endpoint'          => '',
 		'textfocus_lang'           => '',
 		'textfocus_locale'         => '',
@@ -44,6 +49,16 @@ final class Settings {
 	 */
 	public const CHOICES = array(
 		'ai_provider' => array( 'openrouter', 'anthropic', 'openai' ),
+	);
+
+	/**
+	 * Erlaubte Bereiche für Zahlen (einschließlich).
+	 *
+	 * @var array<string, array{0: int|float, 1: int|float}>
+	 */
+	public const RANGES = array(
+		'ai_web_max_results'    => array( 1, 10 ),
+		'entity_min_confidence' => array( 0.0, 1.0 ),
 	);
 
 	/**
@@ -81,6 +96,8 @@ final class Settings {
 			$value = filter_var( $value, FILTER_VALIDATE_BOOLEAN );
 		} elseif ( is_int( $default ) ) {
 			$value = max( 0, (int) $value );
+		} elseif ( is_float( $default ) ) {
+			$value = max( 0.0, (float) str_replace( ',', '.', (string) $value ) );
 		} elseif ( is_array( $default ) ) {
 			$value = is_string( $value ) ? json_decode( $value, true ) : $value;
 			if ( ! is_array( $value ) ) {
@@ -89,12 +106,26 @@ final class Settings {
 		} else {
 			$value = sanitize_text_field( (string) $value );
 		}
+		if ( isset( self::RANGES[ $key ] ) && ( is_int( $value ) || is_float( $value ) ) && ( $value < self::RANGES[ $key ][0] || $value > self::RANGES[ $key ][1] ) ) {
+			throw new \InvalidArgumentException( sprintf( '%s erlaubt %s bis %s.', $key, self::RANGES[ $key ][0], self::RANGES[ $key ][1] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
 		if ( isset( self::CHOICES[ $key ] ) && ! in_array( $value, self::CHOICES[ $key ], true ) ) {
 			throw new \InvalidArgumentException( $key . ' erlaubt: ' . implode( ', ', self::CHOICES[ $key ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
 		$all         = self::all();
+		$old         = $all[ $key ] ?? null;
 		$all[ $key ] = $value;
 		update_option( self::OPTION, $all, false );
+		if ( $old !== $value ) {
+			/**
+			 * Eine Einstellung wurde geändert (für das Prüfprotokoll). Einstellungen enthalten keine Geheimnisse.
+			 *
+			 * @param string $key   Schlüssel.
+			 * @param mixed  $old   Alter Wert.
+			 * @param mixed  $value Neuer Wert.
+			 */
+			do_action( 'lsec_setting_changed', $key, $old, $value );
+		}
 	}
 }

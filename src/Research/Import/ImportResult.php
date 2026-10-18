@@ -15,7 +15,7 @@ final class ImportResult {
 	/**
 	 * Keywords.
 	 *
-	 * @var array<int, array{keyword: string, normalized: string, intent: ?string, volume: ?int, difficulty: ?float, cpc: ?float, trend: ?array{labeled: bool, values: int[], min: int, max: int}}>
+	 * @var array<int, array{keyword: string, normalized: string, intent: ?string, volume: ?int, difficulty: ?float, cpc: ?float, competition: ?float, trend: ?array{labeled: bool, values: int[], min: int, max: int}}>
 	 */
 	public array $keywords = array();
 

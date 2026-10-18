@@ -12,6 +12,8 @@ vendor/
 # Werkzeuge und Testumgebung
 node_modules/
 build/
+# Gebaute Oberfläche (npm run build); kommt in die ZIP, nicht ins Repo
+/assets/dist/
 .phpunit.result.cache
 .phpcs-cache
 /tmp/

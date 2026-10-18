@@ -104,13 +104,14 @@ final class KeywordImporter {
 			$trend = self::trend( $cell( 'trend' ) );
 
 			$entry = array(
-				'keyword'    => $keyword,
-				'normalized' => $normalized,
-				'intent'     => self::intent( $cell( 'intent' ) ),
-				'volume'     => NumberParser::int( $cell( 'volume' ) ),
-				'difficulty' => NumberParser::float( $cell( 'difficulty' ) ),
-				'cpc'        => NumberParser::float( $cell( 'cpc' ) ),
-				'trend'      => $trend,
+				'keyword'     => $keyword,
+				'normalized'  => $normalized,
+				'intent'      => self::intent( $cell( 'intent' ) ),
+				'volume'      => NumberParser::int( $cell( 'volume' ) ),
+				'difficulty'  => NumberParser::float( $cell( 'difficulty' ) ),
+				'cpc'         => NumberParser::float( $cell( 'cpc' ) ),
+				'competition' => NumberParser::float( $cell( 'competition' ) ),
+				'trend'       => $trend,
 			);
 			foreach ( $profile->zero_is_unknown as $field ) {
 				if ( isset( $entry[ $field ] ) && 0.0 === (float) $entry[ $field ] ) {

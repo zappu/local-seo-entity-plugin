@@ -187,6 +187,8 @@ final class WorkflowEngine {
 
 		try {
 			$result = $definition->handler( $step_name )->handle( $context );
+		} catch ( WaitException $e ) {
+			$result = StepResult::wait( $e->wait_code, $e->getMessage() );
 		} catch ( RetryableException $e ) {
 			$result = StepResult::retry( $e->error_code, $e->getMessage() );
 		} catch ( \Throwable $e ) {
@@ -243,6 +245,26 @@ final class WorkflowEngine {
 				$this->fail_run( $run_id, (string) $result->code, (string) $result->message );
 				return;
 
+			case StepResult::WAIT:
+				$this->runs->pause_step( $step_id, (string) $result->code, (string) $result->message );
+				$this->runs->update_run(
+					$run_id,
+					array(
+						'status'        => RunStatus::Waiting->value,
+						'error_code'    => $result->code,
+						'error_message' => $result->message,
+					)
+				);
+				$this->logger->info(
+					'Ablauf wartet',
+					array(
+						'run_id' => $run_id,
+						'step'   => $step_name,
+						'code'   => $result->code,
+					)
+				);
+				return;
+
 			case StepResult::BLOCK:
 				$this->runs->finish_step( $step_id, StepStatus::Done, $result->output, $result->code, $result->message );
 				$this->runs->update_run(
@@ -267,6 +289,38 @@ final class WorkflowEngine {
 				$this->runs->finish_step( $step_id, StepStatus::Failed, null, $result->code, $result->message );
 				$this->fail_run( $run_id, (string) $result->code, (string) $result->message );
 		}
+	}
+
+	/**
+	 * Setzt einen wartenden Ablauf fort (von Hand oder durch den Cronjob).
+	 *
+	 * @param int $run_id Ablauf-ID.
+	 * @return bool True, wenn der Ablauf gewartet hat und jetzt eingeplant ist.
+	 */
+	public function resume( int $run_id ): bool {
+		if ( ! $this->runs->release_waiting( $run_id ) ) {
+			return false;
+		}
+		$this->queue->enqueue( $run_id );
+		$this->logger->info( 'Ablauf fortgesetzt', array( 'run_id' => $run_id ) );
+		return true;
+	}
+
+	/**
+	 * Setzt alle Abläufe fort, die mit einem Grund warten, sobald die Bedingung erfüllt ist.
+	 *
+	 * @param string              $code  Grund, z. B. ai_budget.
+	 * @param callable(int): bool $ready Prüft je Ablauf, ob es weitergehen kann.
+	 * @return list<int> Fortgesetzte Abläufe.
+	 */
+	public function resume_waiting( string $code, callable $ready ): array {
+		$resumed = array();
+		foreach ( $this->runs->waiting_run_ids( $code ) as $run_id ) {
+			if ( $ready( $run_id ) && $this->resume( $run_id ) ) {
+				$resumed[] = $run_id;
+			}
+		}
+		return $resumed;
 	}
 
 	/**

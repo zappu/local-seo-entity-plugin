@@ -18,7 +18,7 @@ final class MemoryAiCallLog implements AiCallLog {
 	/**
 	 * Einträge.
 	 *
-	 * @var list<array{task: string, status: string, cost: float|null}>
+	 * @var list<array{task: string, status: string, cost: float|null, run_id: int|null, model: string}>
 	 */
 	public array $entries = array();
 
@@ -39,6 +39,8 @@ final class MemoryAiCallLog implements AiCallLog {
 			'task'   => $task,
 			'status' => $status,
 			'cost'   => $response?->cost,
+			'run_id' => $run_id,
+			'model'  => $model,
 		);
 	}
 }

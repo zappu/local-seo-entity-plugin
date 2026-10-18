@@ -7,6 +7,11 @@
 
 namespace Lsec\Workflow\Selftest;
 
+use Lsec\Integrations\AI\AiCallRepository;
+use Lsec\Integrations\AI\AiClientFactory;
+use Lsec\Integrations\AI\AiRequest;
+use Lsec\Integrations\AI\AiService;
+use Lsec\Integrations\AI\PriceTable;
 use Lsec\Workflow\RunContext;
 use Lsec\Workflow\StepHandler;
 use Lsec\Workflow\StepResult;
@@ -22,6 +27,9 @@ use Lsec\Workflow\WorkflowDefinition;
  * - "create_post": Abbruch direkt nach dem Anlegen des Beitrags, bevor der Schritt
  *   als erledigt gespeichert ist. Die Wiederholung darf keinen zweiten Beitrag anlegen.
  * Der Abbruch funktioniert nur in WP-CLI, damit er nie eine Webanfrage beendet.
+ *
+ * Mit "ai_calls" und "ai_cost" macht compute KI-Aufrufe über eine Attrappe mit festen Kosten.
+ * Daran wird das KI-Budget geprüft: Ist es erreicht, wartet der Ablauf (Spezifikation 8.1b).
  */
 final class SelftestWorkflow {
 
@@ -58,6 +66,13 @@ final class SelftestWorkflow {
 					public function handle( RunContext $context ): StepResult {
 						SelftestWorkflow::count( $context );
 						SelftestWorkflow::maybe_crash( $context, 'compute' );
+						$calls = (int) ( $context->input['ai_calls'] ?? 0 );
+						if ( $calls > 0 ) {
+							$ai = new AiService( new SelftestAiClient( (float) ( $context->input['ai_cost'] ?? 0.1 ) ), new AiCallRepository(), new PriceTable(), AiClientFactory::budget() );
+							for ( $i = 0; $i < $calls; $i++ ) {
+								$ai->text( new AiRequest( 'selftest_budget', 'Selbsttest', 'Aufruf ' . ( $i + 1 ) ), $context->run_id );
+							}
+						}
 						if ( ! empty( $context->input['retry_once'] ) && 1 === $context->attempt ) {
 							return StepResult::retry( 'selftest_retry', 'Absichtlicher vorübergehender Fehler.' );
 						}

@@ -15,18 +15,19 @@ final class ImportProfile {
 	/**
 	 * Felder, die ein Import befüllen kann.
 	 */
-	public const FIELDS = array( 'keyword', 'volume', 'difficulty', 'cpc', 'intent', 'trend' );
+	public const FIELDS = array( 'keyword', 'volume', 'difficulty', 'cpc', 'competition', 'intent', 'trend' );
 
 	/**
 	 * Spaltennamen, die für die allgemeine Vorlage erkannt werden (klein geschrieben, ohne Klammerzusatz).
 	 */
 	private const ALIASES = array(
-		'keyword'    => array( 'keyword', 'keywords', 'expression', 'suchbegriff', 'suchanfrage', 'begriff', 'query', 'mot-clé', 'mot clé', 'mots-clés', 'term' ),
-		'volume'     => array( 'searches', 'monthly volume', 'suchvolumen', 'volume', 'search volume', 'avg', 'avg. monthly searches', 'monatliches suchvolumen', 'durchschnittliches suchvolumen', 'sv', 'volumen' ),
-		'difficulty' => array( 'difficulty', 'schwierigkeit', 'kd', 'keyword difficulty', 'seo difficulty', 'konkurrenz', 'competition' ),
-		'cpc'        => array( 'cpc', 'cost per click', 'kosten pro klick' ),
-		'intent'     => array( 'search_intent', 'intent', 'suchintention', 'search intent' ),
-		'trend'      => array( 'historical_volume', 'trend', 'verlauf' ),
+		'keyword'     => array( 'keyword', 'keywords', 'expression', 'suchbegriff', 'suchanfrage', 'begriff', 'query', 'mot-clé', 'mot clé', 'mots-clés', 'term' ),
+		'volume'      => array( 'searches', 'monthly volume', 'suchvolumen', 'volume', 'search volume', 'avg', 'avg. monthly searches', 'monatliches suchvolumen', 'durchschnittliches suchvolumen', 'sv', 'volumen' ),
+		'difficulty'  => array( 'difficulty', 'schwierigkeit', 'kd', 'keyword difficulty', 'seo difficulty' ),
+		'cpc'         => array( 'cpc', 'cost per click', 'kosten pro klick' ),
+		'competition' => array( 'competition', 'konkurrenz', 'wettbewerb', 'concurrency' ),
+		'intent'      => array( 'search_intent', 'intent', 'suchintention', 'search intent' ),
+		'trend'       => array( 'historical_volume', 'trend', 'verlauf' ),
 	);
 
 	/**
@@ -111,14 +112,15 @@ final class ImportProfile {
 					self::resolve(
 						$header,
 						array(
-							'keyword'    => 'expression',
-							'volume'     => 'monthly volume',
-							'cpc'        => 'cpc',
-							'difficulty' => 'difficulty',
+							'keyword'     => 'expression',
+							'volume'      => 'monthly volume',
+							'cpc'         => 'cpc',
+							'competition' => 'competition',
+							'difficulty'  => 'difficulty',
 						)
 					) + self::guess( $header ),
 					false,
-					array( 'volume', 'cpc', 'difficulty' )
+					array( 'volume', 'cpc', 'difficulty', 'competition' )
 				);
 			case 'generic':
 				return new self( 'generic', 'Allgemein', $format . ':generic', self::guess( $header ) );

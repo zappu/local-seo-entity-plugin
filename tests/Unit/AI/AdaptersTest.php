@@ -225,6 +225,49 @@ final class AdaptersTest extends TestCase {
 	}
 
 	/**
+	 * Spezifikation 8.1b: Die Trefferzahl der Websuche wird an jeden Anbieter weitergegeben.
+	 *
+	 * @dataProvider providers
+	 */
+	public function test_web_search_limit_reaches_the_provider( string $provider ): void {
+		$http = new FakeTransport( array( self::reply( $provider, 'x' ), self::reply( $provider, 'x' ) ) );
+		self::client( $provider, $http )->send( new AiRequest( 'test', 'System', 'Frage', null, 'r', true ) );
+		self::client( $provider, $http )->send( new AiRequest( 'test', 'System', 'Frage', null, 'r', true, 3000, 120, 8 ) );
+
+		$first  = $http->requests[0]['body'];
+		$second = $http->requests[1]['body'];
+		match ( $provider ) {
+			'openrouter' => $this->assertSame( array( 3, 8 ), array( $first['plugins'][0]['max_results'], $second['plugins'][0]['max_results'] ) ),
+			'anthropic'  => $this->assertSame( array( 3, 8 ), array( $first['tools'][0]['max_uses'], $second['tools'][0]['max_uses'] ) ),
+			default      => $this->assertSame( array( 'low', 'high' ), array( $first['tools'][0]['search_context_size'], $second['tools'][0]['search_context_size'] ) ),
+		};
+	}
+
+	/**
+	 * Nachtrag zu Anforderung 14: Die Recherche läuft mit dem Recherchemodell, die Strukturierung mit dem Hauptmodell.
+	 */
+	public function test_research_model_is_used_only_for_the_search_step(): void {
+		$main     = new FakeTransport( array( self::reply( 'openrouter', '{"districts":["Linden"]}' ) ) );
+		$research = new FakeTransport( array( self::reply( 'openrouter', 'Stadtteil Linden.' ) ) );
+		$service  = new AiService(
+			new OpenRouterClient( $main, 'sk-or-v1-test', 'main/model', '' ),
+			new MemoryAiCallLog(),
+			new PriceTable(),
+			null,
+			new OpenRouterClient( $research, 'sk-or-v1-test', 'cheap/model', '' ),
+			2
+		);
+		$service->research( 'districts', 'System', 'Welche Stadtteile?', self::schema(), 'districts' );
+
+		$this->assertCount( 1, $research->requests );
+		$this->assertSame( 'cheap/model', $research->requests[0]['body']['model'] );
+		$this->assertSame( 2, $research->requests[0]['body']['plugins'][0]['max_results'] );
+		$this->assertCount( 1, $main->requests );
+		$this->assertSame( 'main/model', $main->requests[0]['body']['model'] );
+		$this->assertArrayNotHasKey( 'plugins', $main->requests[0]['body'] );
+	}
+
+	/**
 	 * M7a: Recherche mit Websuche, danach Strukturierung ohne Werkzeuge; Quellen werden weitergereicht.
 	 *
 	 * @dataProvider providers

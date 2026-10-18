@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 18.10.2026 · Phase: Spezifikation v1.0 festgelegt; nächster Schritt MVP 1, Stufe A
+**Stand:** 18.10.2026 · Phase: MVP 1, Stufe A umgesetzt (0.3.0), Prüfung auf Staging offen; danach Stufe B
 
 ## Ziel
 
@@ -17,7 +17,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | erledigt (18.10.2026): KI-Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell, Testphase 20 Beiträge in 60 Tagen |
-| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | offen, als Nächstes Stufe A |
+| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A umgesetzt (0.3.0), lokal und in der CI geprüft; Staging offen |
 
 ## Machbarkeitstest: Prüfpunkte
 
@@ -93,6 +93,22 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 - Search Console der Testwebsite (28 Tage): keine Klicks, Impressionen vor allem auf Positionen 20–90. Viele Anfragen mit „in der Nähe“ und Umlaut-Varianten („naehe“) laufen auf die Seite `/flaechenreinigung-hannover`; lokale Landingpages wie Wolfsburg (Position 7,3) und Laatzen ranken für eng passende Anfragen. Für die Themenrecherche: Search Console zeigt, wo Seiten schon sichtbar sind, aber nicht klicken (Titel/Beschreibung, Inhalt), und welche Orte gesucht werden.
 
+## MVP 1: Stufen
+
+| Stufe | Inhalt | Version | Stand |
+|---|---|---|---|
+| A | Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, Dashboard und Einstellungen | 0.3.0 | umgesetzt; lokal mit WordPress 6.4.5 und 7.1.3 geprüft (`mvp-pruefung.sh` 25/25, Oberfläche im Browser); Staging offen |
+| B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | offen |
+| C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | offen |
+| D | Themen mit Faktenprüfung | 0.6.0 | offen |
+| E | Produktion | 0.7.0 | offen |
+| F | Abschluss, Abnahme | 1.0.0 | offen |
+
+## Erkenntnisse aus Stufe A
+
+- `@wordpress/scripts` übersetzt JSX standardmäßig für `react-jsx-runtime`; dieses Skript gibt es erst ab WordPress 6.6. Die Quellen nutzen deshalb die klassische Übersetzung je Datei und keinen JSX-Spread.
+- WordPress prüft Pflichtfelder einer REST-Route vor der Berechtigung. Ein als `required` markiertes Feld ließe Besucher 400 statt 403 sehen (M15); Pflichtfelder werden deshalb im Callback geprüft.
+
 ## Nächste Schritte
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
@@ -102,4 +118,5 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 5. Tags v0.2.0 bis v0.2.4 liegen auf GitHub (18.10.2026).
 6. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
 7. ~~Spezifikation v1.0~~ festgelegt am 18.10.2026. Noch offen: Recherchemodell (Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
-8. MVP 1, Stufe A: Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, React-Grundgerüst (Spezifikation v1.0, Abschnitt 14).
+8. MVP 1, Stufe A umgesetzt in 0.3.0. Auf Staging: ZIP installieren, `bin/mvp-pruefung.sh` ausführen, `wp lsec check secrets` (M8), Dashboard und Einstellungen ansehen.
+9. Danach Stufe B: Unternehmensprofil mit Servicegebiet, Inhaltsindex, Entity-Erkennung als Ablauf, Zusammenführen.

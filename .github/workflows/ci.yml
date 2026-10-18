@@ -86,6 +86,14 @@ jobs:
       - name: Abhängigkeiten ohne Entwicklungspakete
         working-directory: plugin
         run: composer install --no-dev --no-interaction --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - name: Oberfläche bauen
+        working-directory: plugin
+        run: npm ci --no-audit --no-fund && npm run build
       - name: WordPress installieren
         run: |
           mkdir -p /tmp/wp && cd /tmp/wp
@@ -109,6 +117,9 @@ jobs:
       - name: M10, M12 bis M15, M17
         working-directory: /tmp/wp
         run: bash wp-content/plugins/local-seo-entity-plugin/bin/machbarkeitstest-etappe3.sh --path=/tmp/wp
+      - name: MVP 1, Stufe A
+        working-directory: /tmp/wp
+        run: bash wp-content/plugins/local-seo-entity-plugin/bin/mvp-pruefung.sh --path=/tmp/wp
       - name: Keine PHP-Fehler aus dem Plugin
         if: always()
         working-directory: /tmp/wp

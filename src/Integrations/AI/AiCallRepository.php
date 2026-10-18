@@ -13,7 +13,7 @@ use Lsec\Infrastructure\Database\Schema;
  * Schreibt in lsec_ai_calls. Inhalte von Anfrage und Antwort werden nicht gespeichert
  * (Datenminimierung), nur Verbrauch, Dauer, Status und ein Fingerabdruck.
  */
-final class AiCallRepository implements AiCallLog {
+final class AiCallRepository implements AiCallLog, AiSpend {
 
 	/**
 	 * {@inheritDoc}
@@ -46,6 +46,39 @@ final class AiCallRepository implements AiCallLog {
 				'created_at'    => gmdate( 'Y-m-d H:i:s' ),
 			)
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $since_utc Zeitpunkt.
+	 */
+	public function cost_since( string $since_utc ): float {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'ai_calls' );
+		return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(cost_estimate),0) FROM {$table} WHERE created_at >= %s", $since_utc ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $run_id Ablauf.
+	 */
+	public function cost_of_run( int $run_id ): float {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'ai_calls' );
+		return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(cost_estimate),0) FROM {$table} WHERE run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param string $since_utc Zeitpunkt.
+	 */
+	public function unpriced_since( string $since_utc ): int {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'ai_calls' );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE created_at >= %s AND status = 'ok' AND cost_estimate IS NULL", $since_utc ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**

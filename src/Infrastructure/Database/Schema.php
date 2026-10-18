@@ -18,7 +18,7 @@ final class Schema {
 	/**
 	 * Aktuelle Schemaversion. Bei jeder Änderung erhöhen.
 	 */
-	public const VERSION = 2;
+	public const VERSION = 3;
 
 	/**
 	 * Option, in der die installierte Schemaversion steht.
@@ -86,6 +86,7 @@ external_ids longtext NULL,
 status varchar(20) NOT NULL DEFAULT 'candidate',
 confidence decimal(4,3) NULL,
 origin varchar(30) NOT NULL,
+merged_into bigint(20) unsigned NULL,
 decided_by bigint(20) unsigned NULL,
 decided_at datetime NULL,
 last_verified_at datetime NULL,
@@ -95,7 +96,8 @@ PRIMARY KEY  (id),
 UNIQUE KEY uuid (uuid),
 KEY normalized_name (normalized_name(191)),
 KEY status (status),
-KEY type (type)
+KEY type (type),
+KEY merged_into (merged_into)
 ) $collate;";
 
 		$sql['entity_aliases'] = "CREATE TABLE {$t('entity_aliases')} (
@@ -189,10 +191,12 @@ normalized varchar(191) NOT NULL,
 locale varchar(10) NOT NULL,
 region varchar(100) NOT NULL DEFAULT '',
 intent varchar(20) NULL,
+exclusion varchar(20) NULL,
 first_seen_at datetime NOT NULL,
 updated_at datetime NOT NULL,
 PRIMARY KEY  (id),
-UNIQUE KEY keyword_scope (normalized,locale,region)
+UNIQUE KEY keyword_scope (normalized,locale,region),
+KEY exclusion (exclusion)
 ) $collate;";
 
 		$sql['keyword_metrics'] = "CREATE TABLE {$t('keyword_metrics')} (
@@ -204,6 +208,7 @@ period_end date NULL,
 search_volume int(10) unsigned NULL,
 difficulty decimal(5,2) NULL,
 cpc decimal(8,2) NULL,
+competition decimal(5,2) NULL,
 impressions int(10) unsigned NULL,
 clicks int(10) unsigned NULL,
 ctr decimal(6,4) NULL,

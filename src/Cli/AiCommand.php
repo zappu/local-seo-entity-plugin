@@ -8,6 +8,8 @@
 namespace Lsec\Cli;
 
 use Lsec\Core\Plugin;
+use Lsec\Integrations\AI\AiBudget;
+use Lsec\Integrations\AI\AiClientFactory;
 use Lsec\Integrations\AI\AiException;
 use Lsec\Integrations\AI\AiRequest;
 use Lsec\Integrations\AI\Json;
@@ -79,6 +81,10 @@ final class AiCommand {
 		try {
 			$service = $this->plugin->ai->service( $provider, $model );
 			WP_CLI::log( sprintf( 'Anbieter: %s, Modell: %s', $service->client()->provider(), $service->client()->model() ) );
+			if ( ! empty( $assoc_args['web'] ) && $service->research_client() !== $service->client() ) {
+				WP_CLI::log( 'Recherchemodell: ' . $service->research_client()->model() );
+			}
+			self::warn_budget( $service->budget()?->status() );
 
 			if ( ! empty( $assoc_args['web'] ) ) {
 				$out = $service->research(
@@ -118,6 +124,85 @@ final class AiCommand {
 			WP_CLI::error( 'Vorübergehender Fehler (' . $e->error_code . '): ' . $this->plugin->logger->redact( $e->getMessage() ) );
 		} catch ( AiException $e ) {
 			WP_CLI::error( 'Fehler (' . $e->error_code . '): ' . $this->plugin->logger->redact( $e->getMessage() ) );
+		}
+	}
+
+	/**
+	 * Zeigt das KI-Budget: Kosten im laufenden Monat und Grenzen (Spezifikation 8.1b).
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--run=<id>]
+	 * : Zusätzlich die Kosten eines Ablaufs.
+	 *
+	 * [--format=<format>]
+	 * : table oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec ai budget
+	 *     wp lsec settings set ai_monthly_budget 30
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function budget( array $args, array $assoc_args ): void {
+		$budget = AiClientFactory::budget();
+		$status = $budget->status( isset( $assoc_args['run'] ) ? (int) $assoc_args['run'] : null );
+		if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
+			WP_CLI::line( (string) wp_json_encode( $status + array( 'month_start_utc' => $budget->month_start ) ) );
+			return;
+		}
+		$limit = static fn( float $v ): string => $v > 0 ? AiBudget::usd( $v ) . ' USD' : 'ohne Grenze';
+		$rows  = array(
+			array(
+				'punkt' => 'Monat seit',
+				'wert'  => $budget->month_start . ' UTC',
+			),
+			array(
+				'punkt' => 'Kosten im Monat',
+				'wert'  => AiBudget::usd( $status['month_spent'] ) . ' USD',
+			),
+			array(
+				'punkt' => 'Monatsbudget',
+				'wert'  => $limit( $status['month_limit'] ),
+			),
+			array(
+				'punkt' => 'Budget je Ablauf',
+				'wert'  => $limit( $status['run_limit'] ),
+			),
+		);
+		if ( null !== $status['run_spent'] ) {
+			$rows[] = array(
+				'punkt' => 'Kosten des Ablaufs',
+				'wert'  => AiBudget::usd( $status['run_spent'] ) . ' USD',
+			);
+		}
+		$rows[] = array(
+			'punkt' => 'Aufrufe ohne Preis',
+			'wert'  => (string) $status['unpriced_calls'],
+		);
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'punkt', 'wert' ) );
+		self::warn_budget( $status );
+	}
+
+	/**
+	 * Warnt, wenn ein Budget erreicht ist oder Kosten unbekannt sind.
+	 *
+	 * @param array{month_spent: float, month_limit: float, run_spent: float|null, run_limit: float, unpriced_calls: int, exceeded: string|null}|null $status Stand.
+	 */
+	private static function warn_budget( ?array $status ): void {
+		if ( null === $status ) {
+			return;
+		}
+		if ( 'month' === $status['exceeded'] ) {
+			WP_CLI::warning( sprintf( 'KI-Monatsbudget erreicht (%s von %s USD). Abläufe warten; Prüfbefehle laufen weiter.', AiBudget::usd( $status['month_spent'] ), AiBudget::usd( $status['month_limit'] ) ) );
+		}
+		if ( $status['unpriced_calls'] > 0 ) {
+			WP_CLI::warning( sprintf( '%d Aufruf(e) in diesem Monat ohne Preis; sie zählen nicht zum Budget. Preis setzen mit: wp lsec settings set ai_prices \'{"<anbieter>":{"<modell>":{"in":<USD je Mio.>,"out":<USD je Mio.>}}}\'', $status['unpriced_calls'] ) );
 		}
 	}
 

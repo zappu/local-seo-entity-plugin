@@ -16,6 +16,7 @@ final class StepResult {
 	public const RETRY = 'retry';
 	public const FAIL  = 'fail';
 	public const BLOCK = 'block';
+	public const WAIT  = 'wait';
 
 	/**
 	 * Konstruktor.
@@ -59,6 +60,16 @@ final class StepResult {
 	 */
 	public static function fail( string $code, string $message ): self {
 		return new self( self::FAIL, array(), $code, $message );
+	}
+
+	/**
+	 * Warten, bis eine Bedingung entfällt (z. B. Budget). Der Versuch zählt nicht.
+	 *
+	 * @param string $code    Grund.
+	 * @param string $message Meldung.
+	 */
+	public static function wait( string $code, string $message ): self {
+		return new self( self::WAIT, array(), $code, $message );
 	}
 
 	/**

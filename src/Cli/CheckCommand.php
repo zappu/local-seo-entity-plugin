@@ -8,6 +8,9 @@
 namespace Lsec\Cli;
 
 use Lsec\Content\ContentReader;
+use Lsec\Core\Plugin;
+use Lsec\Infrastructure\Security\SecretScan;
+use Lsec\Infrastructure\Security\Secrets;
 use Lsec\Rest\RestController;
 use WP_CLI;
 
@@ -15,6 +18,119 @@ use WP_CLI;
  * Prüfpunkte, die sich ohne Kosten auf jeder Installation wiederholen lassen.
  */
 final class CheckCommand {
+
+	/**
+	 * Konstruktor.
+	 *
+	 * @param Plugin|null $plugin Plugin (für die Geheimnis-Prüfung).
+	 */
+	public function __construct( private readonly ?Plugin $plugin = null ) {}
+
+	/**
+	 * Restprüfung M8: sucht die eingestellten Schlüssel im Klartext in der Datenbank und im Protokoll.
+	 *
+	 * Durchsucht alle Plugin-Tabellen, wp_options (ohne die verschlüsselte Ablage), wp_postmeta,
+	 * wp_usermeta und die Tabellen von Action Scheduler sowie debug.log und das PHP-Fehlerprotokoll.
+	 * Gezeigt werden nur Fundorte und Anzahl, nie ein Schlüssel.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format=<format>]
+	 * : table oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec check secrets
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function secrets( array $args, array $assoc_args ): void {
+		if ( null === $this->plugin ) {
+			WP_CLI::error( 'Plugin nicht geladen.' );
+		}
+		$targets = array();
+		foreach ( Secrets::NAMES as $name ) {
+			$value = $this->plugin->secrets->get( $name );
+			if ( null !== $value && '' !== $value ) {
+				$targets[ $name ] = array(
+					'source'  => $this->plugin->secrets->source( $name ),
+					'needles' => SecretScan::needles( $value ),
+				);
+			}
+		}
+		$gsc = GscCommand::credentials_file();
+		if ( is_readable( $gsc ) ) {
+			$data = json_decode( (string) file_get_contents( $gsc ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			if ( is_array( $data ) && ! empty( $data['private_key'] ) ) {
+				$targets['gsc_private_key'] = array(
+					'source'  => 'datei',
+					'needles' => SecretScan::pem_needles( (string) $data['private_key'] ),
+				);
+			}
+		}
+
+		// WP_DEBUG_LOG ist true (dann wp-content/debug.log) oder ein eigener Pfad.
+		$debug_log = defined( 'WP_DEBUG_LOG' ) ? (string) constant( 'WP_DEBUG_LOG' ) : '';
+		$logs      = array_unique(
+			array_filter(
+				array(
+					defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/debug.log' : '',
+					str_contains( $debug_log, '/' ) ? $debug_log : '',
+					(string) ini_get( 'error_log' ),
+				)
+			)
+		);
+
+		$rows  = array();
+		$found = 0;
+		foreach ( $targets as $name => $target ) {
+			$places = array();
+			foreach ( SecretScan::scan_database( $target['needles'] ) as $hit ) {
+				$places[] = $hit['table'] . '.' . $hit['column'] . ' (' . $hit['rows'] . ')';
+				$found   += $hit['rows'];
+			}
+			foreach ( $logs as $log ) {
+				$lines = SecretScan::scan_file( $log, $target['needles'] );
+				if ( null !== $lines && $lines > 0 ) {
+					$places[] = basename( $log ) . ' (' . $lines . ' Zeilen)';
+					$found   += $lines;
+				}
+			}
+			$rows[] = array(
+				'geheimnis' => $name,
+				'quelle'    => $target['source'],
+				'fundorte'  => array() === $places ? 'keine' : implode( ', ', $places ),
+			);
+		}
+
+		$checked = array_values( array_filter( $logs, static fn( string $l ): bool => is_readable( $l ) ) );
+		if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
+			WP_CLI::line(
+				(string) wp_json_encode(
+					array(
+						'secrets' => $rows,
+						'logs'    => array_map( 'basename', $checked ),
+						'found'   => $found,
+					)
+				)
+			);
+			return;
+		}
+		if ( array() === $rows ) {
+			WP_CLI::warning( 'Kein Geheimnis eingestellt; nichts zu prüfen.' );
+			return;
+		}
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'geheimnis', 'quelle', 'fundorte' ) );
+		WP_CLI::log( 'Geprüfte Protokolle: ' . ( array() === $checked ? 'keine lesbaren' : implode( ', ', $checked ) ) );
+		if ( $found > 0 ) {
+			WP_CLI::error( sprintf( '%d Fundstelle(n). Die betroffenen Schlüssel beim Anbieter erneuern und die Fundstellen löschen.', $found ) );
+		}
+		WP_CLI::success( 'Kein Schlüssel im Klartext gefunden (M8).' );
+	}
 
 	/**
 	 * Ruft alle Routen unter lsec/v1 als Besucher, Abonnent und Administrator auf (M15).

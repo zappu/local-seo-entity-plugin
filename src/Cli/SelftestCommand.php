@@ -38,6 +38,12 @@ final class SelftestCommand {
 	 * [--retry-once]
 	 * : compute meldet beim ersten Versuch einen vorübergehenden Fehler.
 	 *
+	 * [--ai-calls=<n>]
+	 * : compute macht n KI-Aufrufe über eine Attrappe (ohne Netz) und prüft dabei das KI-Budget.
+	 *
+	 * [--ai-cost=<usd>]
+	 * : Kosten je Attrappen-Aufruf in USD.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp lsec selftest start --key=test1 --crash-at=compute
@@ -50,6 +56,8 @@ final class SelftestCommand {
 		$input = array(
 			'crash_at'   => (string) ( $assoc_args['crash-at'] ?? '' ),
 			'retry_once' => ! empty( $assoc_args['retry-once'] ),
+			'ai_calls'   => max( 0, (int) ( $assoc_args['ai-calls'] ?? 0 ) ),
+			'ai_cost'    => max( 0.0, (float) ( $assoc_args['ai-cost'] ?? 0.1 ) ),
 		);
 
 		$result = $this->plugin->engine->start( SelftestWorkflow::TYPE, 'selftest', null, $input, array( 'key' => $key ) );
@@ -134,6 +142,7 @@ final class SelftestCommand {
 				wp_delete_post( $post_id, true );
 			}
 			$wpdb->delete( $steps, array( 'run_id' => (int) $row['id'] ) );
+			$wpdb->delete( Schema::table( $wpdb->prefix, 'ai_calls' ), array( 'run_id' => (int) $row['id'] ) );
 			$wpdb->delete( $runs, array( 'id' => (int) $row['id'] ) );
 			as_unschedule_all_actions( \Lsec\Infrastructure\Queue\ActionSchedulerQueue::HOOK, array( (int) $row['id'] ), \Lsec\Infrastructure\Queue\ActionSchedulerQueue::GROUP );
 		}

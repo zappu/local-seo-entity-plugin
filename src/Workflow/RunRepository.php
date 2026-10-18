@@ -262,6 +262,64 @@ final class RunRepository {
 	}
 
 	/**
+	 * Setzt einen Schritt nach einer Wartebedingung zurück auf „pending“; der Versuch zählt nicht.
+	 *
+	 * @param int    $step_id Schritt-ID.
+	 * @param string $code    Grund.
+	 * @param string $message Meldung.
+	 */
+	public function pause_step( int $step_id, string $code, string $message ): void {
+		$this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'run_steps' )} SET status = %s, attempt = GREATEST(attempt - 1, 0), error_code = %s, error_message = %s, finished_at = %s WHERE id = %d",
+				StepStatus::Pending->value,
+				$code,
+				$message,
+				self::now(),
+				$step_id
+			)
+		);
+	}
+
+	/**
+	 * Wartende Abläufe mit einem bestimmten Grund.
+	 *
+	 * @param string $code  Grund, z. B. ai_budget.
+	 * @param int    $limit Höchstzahl.
+	 * @return list<int> Ablauf-IDs.
+	 */
+	public function waiting_run_ids( string $code, int $limit = 50 ): array {
+		$ids = $this->db->get_col(
+			$this->db->prepare(
+				"SELECT id FROM {$this->t( 'runs' )} WHERE status = %s AND error_code = %s ORDER BY updated_at ASC LIMIT %d",
+				RunStatus::Waiting->value,
+				$code,
+				$limit
+			)
+		);
+		return array_values( array_map( 'intval', $ids ) );
+	}
+
+	/**
+	 * Setzt einen wartenden Ablauf zurück in die Warteschlange.
+	 *
+	 * @param int $run_id Ablauf-ID.
+	 * @return bool True, wenn der Ablauf gewartet hat.
+	 */
+	public function release_waiting( int $run_id ): bool {
+		$changed = $this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'runs' )} SET status = %s, error_code = NULL, error_message = NULL, updated_at = %s WHERE id = %d AND status = %s",
+				RunStatus::Queued->value,
+				self::now(),
+				$run_id,
+				RunStatus::Waiting->value
+			)
+		);
+		return 1 === (int) $changed;
+	}
+
+	/**
 	 * Anzahl Abläufe je Status.
 	 *
 	 * @return array<string, int>
@@ -278,15 +336,18 @@ final class RunRepository {
 	/**
 	 * Letzte Abläufe für die Statusseite.
 	 *
-	 * @param int $limit Anzahl.
+	 * @param int    $limit  Anzahl.
+	 * @param string $status Nur Abläufe mit diesem Status; leer = alle.
 	 * @return list<array<string, mixed>>
 	 */
-	public function recent( int $limit = 20 ): array {
-		$rows = $this->db->get_results(
+	public function recent( int $limit = 20, string $status = '' ): array {
+		$where  = '' === $status ? '' : 'WHERE status = %s';
+		$params = '' === $status ? array( $limit ) : array( $status, $limit );
+		$rows   = $this->db->get_results(
 			$this->db->prepare(
-				"SELECT id, uuid, type, status, current_step, error_code, created_at, updated_at, finished_at
-				FROM {$this->t( 'runs' )} ORDER BY id DESC LIMIT %d",
-				$limit
+				"SELECT id, uuid, type, status, current_step, error_code, error_message, created_at, updated_at, finished_at
+				FROM {$this->t( 'runs' )} {$where} ORDER BY id DESC LIMIT %d",
+				$params
 			),
 			ARRAY_A
 		);

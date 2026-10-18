@@ -201,6 +201,9 @@ final class KeywordImportTest extends TestCase {
 		$this->assertSame( 90, $result->keywords[0]['volume'] );
 		$this->assertSame( 5.13, $result->keywords[0]['cpc'] );
 		$this->assertNull( $result->keywords[0]['difficulty'] );
+		$this->assertSame( 54.0, $result->keywords[0]['competition'] );
+		$this->assertSame( 23.0, $result->keywords[1]['competition'] );
+		$this->assertNull( $result->keywords[2]['competition'] );
 		$this->assertSame( 10, $result->keywords[1]['volume'] );
 		$this->assertNull( $result->keywords[1]['cpc'] );
 		$this->assertNull( $result->keywords[2]['volume'] );

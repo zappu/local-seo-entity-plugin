@@ -7,6 +7,7 @@
 
 namespace Lsec\Core;
 
+use Lsec\Admin\AppPage;
 use Lsec\Admin\EntitiesPage;
 use Lsec\Admin\StatusPage;
 use Lsec\Entities\EntityRepository;
@@ -14,6 +15,7 @@ use Lsec\Cli\AiCommand;
 use Lsec\Cli\CheckCommand;
 use Lsec\Cli\DraftCommand;
 use Lsec\Cli\GscCommand;
+use Lsec\Cli\RunsCommand;
 use Lsec\Cli\EntitiesCommand;
 use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
@@ -179,12 +181,29 @@ final class Plugin {
 		do_action( 'lsec_register_workflows', $this->workflows );
 
 		add_action( ActionSchedulerQueue::HOOK, array( $this->engine, 'process' ), 10, 1 );
+		add_action(
+			'lsec_setting_changed',
+			function ( string $key, mixed $old, mixed $value ): void {
+				$this->logger->audit(
+					'Einstellung geändert',
+					array(
+						'key'  => $key,
+						'old'  => $old,
+						'new'  => $value,
+						'user' => get_current_user_id(),
+					)
+				);
+			},
+			10,
+			3
+		);
 		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
 		add_action( 'rest_api_init', array( new RestController( $this ), 'register' ) );
 		add_action( 'action_scheduler_init', array( $this, 'schedule_heartbeat' ) );
 		add_action( 'action_scheduler_before_process_queue', array( $this, 'mark_cli_queue_run' ) );
 
 		if ( is_admin() ) {
+			( new AppPage() )->register();
 			( new StatusPage( $this ) )->register();
 			( new EntitiesPage( $this ) )->register();
 		}
@@ -197,9 +216,10 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec textfocus', new TextfocusCommand( $this, new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec entities', new EntitiesCommand( $this, new EntityRepository() ) );
-			\WP_CLI::add_command( 'lsec check', new CheckCommand() );
+			\WP_CLI::add_command( 'lsec check', new CheckCommand( $this ) );
 			\WP_CLI::add_command( 'lsec draft', new DraftCommand() );
 			\WP_CLI::add_command( 'lsec gsc', new GscCommand( $this, new KeywordRepository() ) );
+			\WP_CLI::add_command( 'lsec runs', new RunsCommand( $this ) );
 		}
 	}
 

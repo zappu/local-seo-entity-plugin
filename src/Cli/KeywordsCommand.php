@@ -96,12 +96,13 @@ final class KeywordsCommand {
 				'volumen'    => null === $entry['volume'] ? 'unbekannt' : (string) $entry['volume'],
 				'schwierig'  => null === $entry['difficulty'] ? '' : (string) $entry['difficulty'],
 				'cpc'        => null === $entry['cpc'] ? '' : number_format( $entry['cpc'], 2, ',', '' ),
+				'wettbewerb' => null === $entry['competition'] ? '' : (string) $entry['competition'],
 				'intention'  => (string) $entry['intent'],
 				'spannweite' => null === $entry['trend'] ? '' : $entry['trend']['min'] . '–' . $entry['trend']['max'],
 			);
 		}
 		if ( array() !== $preview ) {
-			WP_CLI\Utils\format_items( 'table', $preview, array( 'keyword', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+			WP_CLI\Utils\format_items( 'table', $preview, array( 'keyword', 'volumen', 'schwierig', 'cpc', 'wettbewerb', 'intention', 'spannweite' ) );
 		}
 
 		if ( ! empty( $assoc_args['dry-run'] ) ) {
@@ -163,6 +164,7 @@ final class KeywordsCommand {
 				'seite'        => null === $row['page_url'] ? '' : (string) wp_parse_url( (string) $row['page_url'], PHP_URL_PATH ),
 				'schwierig'    => (string) $row['difficulty'],
 				'cpc'          => (string) $row['cpc'],
+				'wettbewerb'   => null === ( $row['competition'] ?? null ) ? '' : (string) $row['competition'],
 				'intention'    => (string) $row['intent'],
 				'spannweite'   => is_array( $trend ) ? $trend['min'] . '–' . $trend['max'] : '',
 			);
@@ -170,7 +172,7 @@ final class KeywordsCommand {
 		// Search Console liefert Klicks und Impressionen, die übrigen Quellen Suchvolumen und Kennzahlen der Tools.
 		$fields = 'gsc' === ( $assoc_args['source'] ?? '' )
 			? array( 'keyword', 'klicks', 'impressionen', 'ctr', 'position', 'seite' )
-			: array( 'keyword', 'quelle', 'volumen', 'impressionen', 'position', 'cpc', 'schwierig', 'intention', 'spannweite' );
+			: array( 'keyword', 'quelle', 'volumen', 'impressionen', 'position', 'cpc', 'wettbewerb', 'schwierig', 'intention', 'spannweite' );
 		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, $fields );
 	}
 

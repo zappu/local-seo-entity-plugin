@@ -1,0 +1,13 @@
+{
+	"name": "local-seo-entity-plugin",
+	"private": true,
+	"description": "Backend-Oberfläche des Plugins Local SEO & Entity Content",
+	"license": "UNLICENSED",
+	"scripts": {
+		"build": "wp-scripts build src-js/admin.js --output-path=assets/dist",
+		"start": "wp-scripts start src-js/admin.js --output-path=assets/dist"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "36.0.0"
+	}
+}

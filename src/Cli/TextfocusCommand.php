@@ -16,6 +16,7 @@ use Lsec\Research\Keywords\KeywordNormalizer;
 use Lsec\Research\Keywords\KeywordRepository;
 use Lsec\Research\Keywords\TypoChecker;
 use Lsec\Workflow\RetryableException;
+use Lsec\Integrations\Textfocus\AccountSnapshot;
 use WP_CLI;
 
 /**
@@ -41,6 +42,7 @@ final class TextfocusCommand {
 		$this->run(
 			function ( TextfocusService $tf ): void {
 				$info = $tf->account();
+				AccountSnapshot::save( $info );
 				$rows = array();
 				foreach ( $info as $key => $value ) {
 					$rows[] = array(

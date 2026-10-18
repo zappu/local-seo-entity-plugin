@@ -31,3 +31,6 @@ tests/fixtures/** -text
 /CLAUDE.md export-ignore
 /PROJEKTPLAN.md export-ignore
 /GLOSSAR.md export-ignore
+/src-js export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore

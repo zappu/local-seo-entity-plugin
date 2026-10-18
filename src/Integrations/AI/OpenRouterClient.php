@@ -90,7 +90,7 @@ final class OpenRouterClient implements AiClient {
 			$body['plugins'] = array(
 				array(
 					'id'          => 'web',
-					'max_results' => 5,
+					'max_results' => max( 1, $request->web_max_results ),
 				),
 			);
 		}

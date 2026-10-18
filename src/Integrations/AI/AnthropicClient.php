@@ -81,7 +81,7 @@ final class AnthropicClient implements AiClient {
 				array(
 					'type'     => 'web_search_20250305',
 					'name'     => 'web_search',
-					'max_uses' => 5,
+					'max_uses' => max( 1, $request->web_max_results ),
 				),
 			);
 		}

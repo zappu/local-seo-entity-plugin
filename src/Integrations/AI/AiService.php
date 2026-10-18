@@ -14,21 +14,43 @@ use Lsec\Workflow\RetryableException;
  * - Prüfung gegen das JSON-Schema und genau einen Korrekturversuch (Spezifikation 8.2, M7)
  * - zweistufige Recherche: erst Websuche mit Quellen, dann Strukturierung ohne Werkzeuge (M7a)
  * - Protokoll von Verbrauch und Kosten in lsec_ai_calls
+ * - KI-Budget vor jedem Aufruf eines Ablaufs (Spezifikation 8.1b)
+ * - eigenes Modell für den Rechercheschritt mit Websuche, falls eingestellt (8.1a)
  */
 final class AiService {
 
 	/**
 	 * Konstruktor.
 	 *
-	 * @param AiClient   $client Anbieter.
-	 * @param AiCallLog  $log    Protokoll.
-	 * @param PriceTable $prices Preistabelle.
+	 * @param AiClient      $client          Anbieter mit Hauptmodell.
+	 * @param AiCallLog     $log             Protokoll.
+	 * @param PriceTable    $prices          Preistabelle.
+	 * @param AiBudget|null $budget          Budget; null = ohne Prüfung.
+	 * @param AiClient|null $research_client Adapter für die Recherche mit Websuche; null = Hauptmodell.
+	 * @param int           $web_max_results Treffer der Websuche.
 	 */
 	public function __construct(
 		private readonly AiClient $client,
 		private readonly AiCallLog $log,
-		private readonly PriceTable $prices = new PriceTable()
+		private readonly PriceTable $prices = new PriceTable(),
+		private readonly ?AiBudget $budget = null,
+		private readonly ?AiClient $research_client = null,
+		private readonly int $web_max_results = 3
 	) {}
+
+	/**
+	 * Adapter für den Rechercheschritt.
+	 */
+	public function research_client(): AiClient {
+		return $this->research_client ?? $this->client;
+	}
+
+	/**
+	 * Das Budget, falls eingestellt.
+	 */
+	public function budget(): ?AiBudget {
+		return $this->budget;
+	}
 
 	/**
 	 * Der verwendete Adapter.
@@ -98,8 +120,10 @@ final class AiService {
 	 */
 	public function research( string $task, string $system, string $question, array $schema, string $schema_name = 'result', ?int $run_id = null ): array {
 		$research = $this->call(
-			new AiRequest( $task . '_research', $system, $question, null, $schema_name, true, 3000 ),
-			$run_id
+			new AiRequest( $task . '_research', $system, $question, null, $schema_name, true, 3000, 120, $this->web_max_results ),
+			$run_id,
+			null,
+			$this->research_client()
 		);
 
 		$sources = '';
@@ -127,21 +151,26 @@ final class AiService {
 	/**
 	 * Ein Aufruf mit Protokoll.
 	 *
-	 * @param AiRequest $request Anfrage.
-	 * @param int|null  $run_id  Ablauf.
-	 * @param int|null  $step_id Schritt.
+	 * @param AiRequest     $request Anfrage.
+	 * @param int|null      $run_id  Ablauf.
+	 * @param int|null      $step_id Schritt.
+	 * @param AiClient|null $client  Adapter; null = Hauptmodell.
 	 * @throws RetryableException Bei vorübergehenden Fehlern.
 	 * @throws AiException        Bei endgültigen Fehlern.
+	 *
+	 * Ist das Budget eines Ablaufs erreicht, wirft AiBudget eine WaitException.
 	 */
-	private function call( AiRequest $request, ?int $run_id = null, ?int $step_id = null ): AiResponse {
+	private function call( AiRequest $request, ?int $run_id = null, ?int $step_id = null, ?AiClient $client = null ): AiResponse {
+		$client = $client ?? $this->client;
+		$this->budget?->assert_available( $run_id );
 		$hash = self::hash( $request );
 		try {
-			$response = $this->client->send( $request );
+			$response = $client->send( $request );
 		} catch ( RetryableException $e ) {
-			$this->log->record( $request->task, $this->client->provider(), $this->client->model(), 'retryable_error', null, $hash, $run_id, $step_id );
+			$this->log->record( $request->task, $client->provider(), $client->model(), 'retryable_error', null, $hash, $run_id, $step_id );
 			throw $e;
 		} catch ( AiException $e ) {
-			$this->log->record( $request->task, $this->client->provider(), $this->client->model(), 'fatal_error', null, $hash, $run_id, $step_id );
+			$this->log->record( $request->task, $client->provider(), $client->model(), 'fatal_error', null, $hash, $run_id, $step_id );
 			throw $e;
 		}
 
@@ -149,7 +178,7 @@ final class AiService {
 		if ( $cost !== $response->cost ) {
 			$response = new AiResponse( $response->provider, $response->model, $response->text, null, $response->sources, $response->input_tokens, $response->output_tokens, $cost, $response->duration_ms, $response->finish );
 		}
-		$this->log->record( $request->task, $this->client->provider(), $this->client->model(), 'ok', $response, $hash, $run_id, $step_id );
+		$this->log->record( $request->task, $client->provider(), $client->model(), 'ok', $response, $hash, $run_id, $step_id );
 		return $response;
 	}
 

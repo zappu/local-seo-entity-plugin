@@ -17,9 +17,15 @@ mkdir -p "$BUILD"
 # Dateien aus dem letzten Commit; .gitattributes (export-ignore) hält Tests und Doku heraus.
 git archive HEAD | tar -x -C "$BUILD"
 
-# Während des Machbarkeitstests wird das Prüfskript mitgeliefert.
+# Prüfskripte werden mitgeliefert, damit sie auf der Website laufen können.
 mkdir -p "$BUILD/bin"
-cp bin/machbarkeitstest.sh bin/machbarkeitstest-etappe3.sh "$BUILD/bin/"
+cp bin/machbarkeitstest.sh bin/machbarkeitstest-etappe3.sh bin/mvp-pruefung.sh "$BUILD/bin/"
+
+# Backend-Oberfläche bauen (React über @wordpress/scripts) und mitliefern.
+npm ci --no-audit --no-fund --silent
+npm run build --silent
+mkdir -p "$BUILD/assets"
+cp -r assets/dist "$BUILD/assets/dist"
 
 ( cd "$BUILD" && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --quiet )
 

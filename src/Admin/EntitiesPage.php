@@ -40,7 +40,7 @@ final class EntitiesPage {
 	 */
 	public function add_menu(): void {
 		add_submenu_page(
-			StatusPage::SLUG,
+			AppPage::SLUG,
 			__( 'Entitäten', 'local-seo-entity-plugin' ),
 			__( 'Entitäten', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,

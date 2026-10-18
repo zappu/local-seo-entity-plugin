@@ -75,7 +75,14 @@ final class OpenAiClient implements AiClient {
 			);
 		}
 		if ( $request->web_search ) {
-			$body['tools'] = array( array( 'type' => 'web_search' ) );
+			// OpenAI kennt keine Trefferzahl, nur den Umfang des Suchkontexts (Spezifikation 8.1b).
+			$size          = $request->web_max_results <= 3 ? 'low' : ( $request->web_max_results <= 6 ? 'medium' : 'high' );
+			$body['tools'] = array(
+				array(
+					'type'                => 'web_search',
+					'search_context_size' => $size,
+				),
+			);
 		}
 		return $body;
 	}

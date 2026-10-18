@@ -7,12 +7,21 @@
 
 namespace Lsec\Rest;
 
+use Lsec\Admin\DashboardData;
+use Lsec\Admin\SettingsSchema;
 use Lsec\Cli\LsecCommand;
 use Lsec\Content\ContentReader;
 use Lsec\Core\Plugin;
+use Lsec\Core\Settings;
 use Lsec\Entities\EntityRepository;
 use Lsec\Infrastructure\Security\Capabilities;
+use Lsec\Integrations\Textfocus\AccountSnapshot;
+use Lsec\Integrations\Textfocus\ProviderCallRepository;
+use Lsec\Integrations\Textfocus\TextfocusException;
+use Lsec\Integrations\Textfocus\TextfocusService;
 use Lsec\Research\Keywords\KeywordRepository;
+use Lsec\Workflow\RetryableException;
+use Lsec\Workflow\RunStatus;
 
 /**
  * Namensraum lsec/v1. Jede Route verlangt die Capability lsec_manage; alle anderen erhalten 403 (Prüfpunkt M15),
@@ -133,6 +142,176 @@ final class RestController {
 				'permission_callback' => $permission,
 			)
 		);
+
+		$this->register_admin_routes( $permission );
+	}
+
+	/**
+	 * Routen für Dashboard, Einstellungen und Abläufe (Stufe A).
+	 *
+	 * @param callable $permission Zugriffsprüfung.
+	 */
+	private function register_admin_routes( callable $permission ): void {
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard',
+			array(
+				'methods'             => 'GET',
+				'callback'            => fn(): \WP_REST_Response => new \WP_REST_Response( DashboardData::collect( $this->plugin ) ),
+				'permission_callback' => $permission,
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/settings',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => static fn(): \WP_REST_Response => new \WP_REST_Response( SettingsSchema::describe() ),
+					'permission_callback' => $permission,
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'save_settings' ),
+					'permission_callback' => $permission,
+					// Nicht als Pflicht markiert: Fehlende Pflichtfelder prüft WordPress vor der Berechtigung,
+					// dann bekämen Besucher 400 statt 403 (M15).
+					'args'                => array(
+						'values' => array(
+							'type'    => 'object',
+							'default' => array(),
+						),
+					),
+				),
+			)
+		);
+
+		foreach ( array( 'resume', 'cancel' ) as $action ) {
+			register_rest_route(
+				self::NAMESPACE,
+				'/runs/(?P<id>\d+)/' . $action,
+				array(
+					'methods'             => 'POST',
+					'callback'            => fn( \WP_REST_Request $r ) => $this->run_action( $r, $action ),
+					'permission_callback' => $permission,
+				)
+			);
+		}
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/textfocus/account',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'textfocus_account' ),
+				'permission_callback' => $permission,
+			)
+		);
+	}
+
+	/**
+	 * Speichert Einstellungen. Jeder Wert wird einzeln geprüft; ungültige werden mit Grund gemeldet.
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit values = {Schlüssel: Wert}.
+	 */
+	public function save_settings( \WP_REST_Request $request ): \WP_REST_Response {
+		$values = $request->get_param( 'values' );
+		$saved  = array();
+		$errors = array();
+		foreach ( is_array( $values ) ? $values : array() as $key => $value ) {
+			$key = (string) $key;
+			if ( ! SettingsSchema::editable( $key ) ) {
+				$errors[ $key ] = 'Diese Einstellung lässt sich hier nicht ändern.';
+				continue;
+			}
+			try {
+				if ( is_array( Settings::DEFAULTS[ $key ] ) && is_array( $value ) ) {
+					$value = (string) wp_json_encode( $value );
+				}
+				Settings::set( $key, $value );
+				$saved[] = $key;
+			} catch ( \InvalidArgumentException $e ) {
+				$errors[ $key ] = $e->getMessage();
+			}
+		}
+		return new \WP_REST_Response(
+			array(
+				'saved'    => $saved,
+				'errors'   => (object) $errors,
+				'settings' => SettingsSchema::describe(),
+			),
+			array() === $errors ? 200 : 422
+		);
+	}
+
+	/**
+	 * Ablauf fortsetzen oder abbrechen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @param string           $action  resume oder cancel.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function run_action( \WP_REST_Request $request, string $action ): \WP_REST_Response|\WP_Error {
+		$id  = (int) $request['id'];
+		$run = $this->plugin->runs->find( $id );
+		if ( null === $run ) {
+			return new \WP_Error( 'lsec_not_found', 'Ablauf nicht gefunden.', array( 'status' => 404 ) );
+		}
+		if ( 'resume' === $action ) {
+			if ( ! $this->plugin->engine->resume( $id ) ) {
+				return new \WP_Error( 'lsec_not_waiting', 'Der Ablauf wartet nicht.', array( 'status' => 409 ) );
+			}
+			$this->plugin->logger->audit(
+				'Ablauf von Hand fortgesetzt',
+				array(
+					'run_id'  => $id,
+					'user_id' => get_current_user_id(),
+				)
+			);
+		} else {
+			$status = RunStatus::tryFrom( (string) $run['status'] );
+			if ( null !== $status && $status->is_terminal() ) {
+				return new \WP_Error( 'lsec_finished', 'Der Ablauf ist schon beendet.', array( 'status' => 409 ) );
+			}
+			$this->plugin->runs->update_run(
+				$id,
+				array(
+					'status'      => RunStatus::Cancelled->value,
+					'finished_at' => gmdate( 'Y-m-d H:i:s' ),
+				)
+			);
+			$this->plugin->logger->audit(
+				'Ablauf abgebrochen',
+				array(
+					'run_id'  => $id,
+					'user_id' => get_current_user_id(),
+				)
+			);
+		}
+		$run = $this->plugin->runs->find( $id );
+		return new \WP_REST_Response(
+			array(
+				'id'     => $id,
+				'status' => null === $run ? null : $run['status'],
+			)
+		);
+	}
+
+	/**
+	 * Fragt Tarif und Restguthaben bei Textfocus ab (kostet keinen Credit).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function textfocus_account(): \WP_REST_Response|\WP_Error {
+		try {
+			$tf   = TextfocusService::from_settings( $this->plugin->http, $this->plugin->secrets, new ProviderCallRepository() );
+			$info = $tf->account( false );
+			AccountSnapshot::save( $info );
+			return new \WP_REST_Response( AccountSnapshot::get() );
+		} catch ( TextfocusException | RetryableException $e ) {
+			return new \WP_Error( 'lsec_textfocus', $this->plugin->logger->redact( $e->getMessage() ), array( 'status' => 502 ) );
+		}
 	}
 
 	/**

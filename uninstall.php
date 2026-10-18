@@ -21,7 +21,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 \Lsec\Infrastructure\Database\Migrator::drop_all();
 \Lsec\Infrastructure\Security\Capabilities::remove();
 
-foreach ( array( 'lsec_settings', 'lsec_last_heartbeat', 'lsec_last_cli_queue_run', 'lsec_selftest_counters' ) as $lsec_option ) {
+foreach ( array( 'lsec_settings', 'lsec_last_heartbeat', 'lsec_last_cli_queue_run', 'lsec_selftest_counters', 'lsec_textfocus_account' ) as $lsec_option ) {
 	delete_option( $lsec_option );
 }
 foreach ( \Lsec\Infrastructure\Security\Secrets::NAMES as $lsec_secret ) {

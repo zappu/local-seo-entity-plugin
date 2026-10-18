@@ -12,7 +12,9 @@ use Lsec\Infrastructure\Http\HttpTransport;
 use Lsec\Infrastructure\Security\Secrets;
 
 /**
- * Ein Anbieter und ein Modell gelten für alle Aufgaben (Anforderung „ein festes KI-Modell“).
+ * Ein Anbieter und ein Hauptmodell gelten für alle Aufgaben. Ausnahme: Für den Rechercheschritt
+ * mit Websuche kann ai_research_model ein eigenes Modell desselben Anbieters festlegen
+ * (Nachtrag zu Anforderung 14 vom 18.10.2026).
  */
 final class AiClientFactory {
 
@@ -57,13 +59,41 @@ final class AiClientFactory {
 	}
 
 	/**
-	 * Dienst mit Protokoll und Preistabelle.
+	 * Dienst mit Protokoll, Preistabelle, Budget und gegebenenfalls Recherchemodell.
+	 *
+	 * Wird ein Modell ausdrücklich angegeben (Prüfbefehl mit --model), gilt es auch für die Recherche.
 	 *
 	 * @param string|null $provider Anbieter.
 	 * @param string|null $model    Modell.
 	 */
 	public function service( ?string $provider = null, ?string $model = null ): AiService {
-		$prices = Settings::get( 'ai_prices' );
-		return new AiService( $this->create( $provider, $model ), new AiCallRepository(), new PriceTable( is_array( $prices ) ? $prices : array() ) );
+		$prices   = Settings::get( 'ai_prices' );
+		$client   = $this->create( $provider, $model );
+		$research = null;
+		$name     = (string) Settings::get( 'ai_research_model' );
+		if ( null === $model && '' !== $name && $name !== $client->model() ) {
+			$research = $this->create( $client->provider(), $name );
+		}
+		return new AiService(
+			$client,
+			new AiCallRepository(),
+			new PriceTable( is_array( $prices ) ? $prices : array() ),
+			self::budget(),
+			$research,
+			max( 1, min( 10, (int) Settings::get( 'ai_web_max_results' ) ) )
+		);
+	}
+
+	/**
+	 * Budget nach Einstellungen, Monat nach Zeitzone der Website.
+	 */
+	public static function budget(): AiBudget {
+		$zone = function_exists( 'wp_timezone' ) ? wp_timezone() : new \DateTimeZone( 'UTC' );
+		return new AiBudget(
+			new AiCallRepository(),
+			(float) Settings::get( 'ai_monthly_budget' ),
+			(float) Settings::get( 'ai_run_budget' ),
+			AiBudget::month_start( $zone, time() )
+		);
 	}
 }

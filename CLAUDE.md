@@ -31,7 +31,8 @@ Der Machbarkeitstest ist bestanden (M1–M18). MVP 1 wird in den Stufen A–F na
 - PHP ≥ 8.1, WordPress ≥ 6.4, Namespace `Lsec\` in `src/`, Präfix `lsec` für Tabellen, Optionen, Hooks und Capabilities.
 - Warteschlange: Action Scheduler (Composer-Paket `woocommerce/action-scheduler`), Gruppe `lsec`. Der fachliche Ablauf liegt in `lsec_runs` und `lsec_run_steps`; der Action Scheduler stößt nur Schritte an.
 - Cronjob auf dem Server: `wp lsec cron` alle 5 Minuten. Der Befehl schließt bei Bedarf die Datenmigration von Action Scheduler ab, gibt verwaiste Aufträge frei, startet den Watchdog und ruft dann `action-scheduler run --group=lsec` auf (Begründung: Spezifikation v1.0, Abschnitt 7.1).
-- Prüfskript: `bin/machbarkeitstest.sh --path=<WordPress>` prüft M2–M5 auf einer echten Installation; läuft auch in der CI.
+- Prüfskripte: `bin/machbarkeitstest.sh` (M2–M5), `bin/machbarkeitstest-etappe3.sh` (M10–M18) und `bin/mvp-pruefung.sh` (je Stufe von MVP 1) mit `--path=<WordPress>`; laufen auch in der CI.
+- Oberfläche: React in `src-js/`, Build mit `npm ci && npm run build` nach `assets/dist/` (nicht im Repo, `bin/build-zip.sh` baut mit). JSX je Datei mit `/** @jsxRuntime classic */` und ohne JSX-Spread, damit WordPress 6.4 reicht.
 - Datenbank: Schema in `src/Infrastructure/Database/Schema.php`, Migration über `dbDelta()` und Option `lsec_db_version`. Jede Schemaänderung erhöht `Schema::VERSION`.
 - Geheimnisse: Konstanten in `wp-config.php` haben Vorrang vor Optionen. Geheimnisse nie in Logs, Fehlermeldungen oder Exporte.
 
