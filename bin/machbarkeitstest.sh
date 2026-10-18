@@ -19,7 +19,13 @@ FAIL=0
 # Nach einem simulierten Absturz gelten Aufträge nach 10 Sekunden als verwaist (Produktion: 600).
 STALE=10
 
-wpc() { $WP "${WP_ARGS[@]}" "$@"; }
+# WP-CLI zeigt bei WP_DEBUG PHP-Hinweise anderer Plugins (z. B. "Deprecated" unter PHP 8.4)
+# in der normalen Ausgabe an. Diese Zeilen und Leerzeilen werden herausgefiltert, damit die
+# Prüfungen nur die Ausgabe der Befehle auswerten.
+wpc() {
+	$WP "${WP_ARGS[@]}" "$@" 2>/dev/null | grep -v -E '^(PHP )?(Deprecated|Notice|Warning|Strict Standards|Fatal error): ' | sed '/^[[:space:]]*$/d'
+	return "${PIPESTATUS[0]}"
+}
 json() { php -r '$d=json_decode(stream_get_contents(STDIN),true); $p=explode(".",$argv[1]); foreach($p as $k){ $d=$d[$k]??null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
 check() {
 	local name="$1" expected="$2" actual="$3"
