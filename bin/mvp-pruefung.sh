@@ -60,7 +60,7 @@ wpc() {
 		{ print }'
 	return "${PIPESTATUS[0]}"
 }
-json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i&&$d===null;$j--){ $s=implode("\n",array_slice($l,$i,$j-$i+1)); $t=json_decode($s,true); if(is_array($t)){ $d=$t; break; } /* Text hinter dem JSON in derselben Zeile (z. B. Elementor-Protokoll) abschneiden. */ for($k=strlen($s)-1;$k>0;$k--){ if($s[$k]!=="]"&&$s[$k]!=="}") continue; $t=json_decode(substr($s,0,$k+1),true); if(is_array($t)){ $d=$t; break; } } } } $p=explode(".",$argv[1]); foreach($p as $k){ if($k==="count"){ $d=is_array($d)?count($d):0; continue; } $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d,JSON_UNESCAPED_UNICODE):$d);' "$1"; }
+json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i&&$d===null;$j--){ $s=implode("\n",array_slice($l,$i,$j-$i+1)); $t=json_decode($s,true); if(is_array($t)){ $d=$t; break; } /* Text hinter dem JSON in derselben Zeile (z. B. Elementor-Protokoll) abschneiden. */ for($k=strlen($s)-1;$k>0;$k--){ if($s[$k]!=="]"&&$s[$k]!=="}") continue; $t=json_decode(substr($s,0,$k+1),true); if(is_array($t)){ $d=$t; break; } } } } if($argv[1]==="."){ echo json_encode($d,JSON_UNESCAPED_UNICODE); exit; } $p=explode(".",$argv[1]); foreach($p as $k){ if($k==="count"){ $d=is_array($d)?count($d):0; continue; } $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d,JSON_UNESCAPED_UNICODE):$d);' "$1"; }
 # Ungefilterte Ausgabe für JSON: json() überspringt fremde Zeilen selbst. Der Filter in wpc() würde nach einem
 # mehrzeiligen Elementor-Protokollblock alles Weitere verwerfen, auch das JSON.
 wpj() { $WP "${WP_ARGS[@]}" "$@" 2>&1; }
@@ -224,7 +224,8 @@ echo "B3 Zusammenführen"
 wpc lsec entities add organization "LSECTEST Musterbetrieb Flächenreinigungs-Service & Wassertechnik" --confirmed >/dev/null
 wpc lsec entities add organization "LSECTEST Musterbetrieb" >/dev/null
 wpc lsec entities add brand "LSECTEST Musterbetrieb Flächenreinigung & Wassertechnik" >/dev/null
-SUG=$(wpj lsec entities suggest-merges --format=json)
+# json . liest das JSON auch, wenn Elementor unter PHP 8.4 Text dahinter schreibt.
+SUG=$(wpj lsec entities suggest-merges --format=json | json .)
 TARGET=$(echo "$SUG" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $g){ if(str_starts_with($g["target"]["name"],"LSECTEST")){ echo $g["target"]["id"]; break; } }')
 SOURCES=$(echo "$SUG" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $g){ if(str_starts_with($g["target"]["name"],"LSECTEST")){ echo implode(" ", array_column($g["candidates"],"id")); break; } }')
 check "drei Schreibweisen vorgeschlagen" "3" "$(echo "$SOURCES" | wc -w | tr -d ' ')"
