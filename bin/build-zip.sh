@@ -19,7 +19,7 @@ git archive HEAD | tar -x -C "$BUILD"
 
 # Während des Machbarkeitstests wird das Prüfskript mitgeliefert.
 mkdir -p "$BUILD/bin"
-cp bin/machbarkeitstest.sh "$BUILD/bin/"
+cp bin/machbarkeitstest.sh bin/machbarkeitstest-etappe3.sh "$BUILD/bin/"
 
 ( cd "$BUILD" && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --quiet )
 

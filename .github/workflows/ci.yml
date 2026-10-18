@@ -106,6 +106,9 @@ jobs:
       - name: M2 bis M5
         working-directory: /tmp/wp
         run: bash wp-content/plugins/local-seo-entity-plugin/bin/machbarkeitstest.sh --path=/tmp/wp
+      - name: M10, M12 bis M15, M17
+        working-directory: /tmp/wp
+        run: bash wp-content/plugins/local-seo-entity-plugin/bin/machbarkeitstest-etappe3.sh --path=/tmp/wp
       - name: Keine PHP-Fehler aus dem Plugin
         if: always()
         working-directory: /tmp/wp
