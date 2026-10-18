@@ -1,0 +1,144 @@
+<?php
+/**
+ * Zentrale Plugin-Klasse.
+ *
+ * @package Lsec
+ */
+
+namespace Lsec\Core;
+
+use Lsec\Admin\StatusPage;
+use Lsec\Cli\LsecCommand;
+use Lsec\Cli\SelftestCommand;
+use Lsec\Infrastructure\Database\Migrator;
+use Lsec\Infrastructure\Logging\Logger;
+use Lsec\Infrastructure\Logging\Redactor;
+use Lsec\Infrastructure\Queue\ActionSchedulerQueue;
+use Lsec\Infrastructure\Queue\Queue;
+use Lsec\Infrastructure\Security\Secrets;
+use Lsec\Workflow\RetryPolicy;
+use Lsec\Workflow\RunRepository;
+use Lsec\Workflow\Selftest\SelftestWorkflow;
+use Lsec\Workflow\Watchdog;
+use Lsec\Workflow\WorkflowEngine;
+use Lsec\Workflow\WorkflowRegistry;
+
+/**
+ * Baut die Dienste zusammen und registriert die Hooks.
+ */
+final class Plugin {
+
+	public const HEARTBEAT_HOOK     = 'lsec_heartbeat';
+	public const HEARTBEAT_INTERVAL = 300;
+	public const OPT_LAST_HEARTBEAT = 'lsec_last_heartbeat';
+	public const OPT_LAST_CLI_RUN   = 'lsec_last_cli_queue_run';
+
+	/**
+	 * Einzige Instanz.
+	 *
+	 * @var Plugin|null
+	 */
+	private static ?Plugin $instance = null;
+
+	/**
+	 * Schon gestartet?
+	 *
+	 * @var bool
+	 */
+	private bool $booted = false;
+
+	public readonly Redactor $redactor;
+	public readonly Logger $logger;
+	public readonly Secrets $secrets;
+	public readonly RunRepository $runs;
+	public readonly Queue $queue;
+	public readonly WorkflowRegistry $workflows;
+	public readonly WorkflowEngine $engine;
+	public readonly Watchdog $watchdog;
+
+	/**
+	 * Konstruktor: einfache, handgeschriebene Verdrahtung ohne Container-Bibliothek.
+	 */
+	private function __construct() {
+		$this->redactor  = new Redactor();
+		$this->logger    = new Logger( $this->redactor );
+		$this->secrets   = new Secrets( $this->redactor );
+		$this->runs      = new RunRepository();
+		$this->queue     = new ActionSchedulerQueue();
+		$this->workflows = new WorkflowRegistry();
+		$this->engine    = new WorkflowEngine( $this->workflows, $this->runs, $this->queue, new RetryPolicy(), $this->logger );
+		$this->watchdog  = new Watchdog( $this->runs, $this->queue, $this->logger );
+	}
+
+	/**
+	 * Zugriff auf die Instanz.
+	 */
+	public static function instance(): Plugin {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Registriert Hooks. Wird auf plugins_loaded aufgerufen.
+	 */
+	public function boot(): void {
+		if ( $this->booted ) {
+			return;
+		}
+		$this->booted = true;
+
+		// Schema nach Updates nachziehen, ohne erneute Aktivierung.
+		Migrator::maybe_migrate();
+
+		$this->workflows->register( SelftestWorkflow::definition( (int) apply_filters( 'lsec_selftest_lock_ttl', 10 ) ) );
+
+		/**
+		 * Weitere Ablauftypen registrieren.
+		 *
+		 * @param WorkflowRegistry $registry Verzeichnis.
+		 */
+		do_action( 'lsec_register_workflows', $this->workflows );
+
+		add_action( ActionSchedulerQueue::HOOK, array( $this->engine, 'process' ), 10, 1 );
+		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
+		add_action( 'action_scheduler_init', array( $this, 'schedule_heartbeat' ) );
+		add_action( 'action_scheduler_before_process_queue', array( $this, 'mark_cli_queue_run' ) );
+
+		if ( is_admin() ) {
+			( new StatusPage( $this ) )->register();
+		}
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::add_command( 'lsec', new LsecCommand( $this ) );
+			\WP_CLI::add_command( 'lsec selftest', new SelftestCommand( $this ) );
+		}
+	}
+
+	/**
+	 * Plant den wiederkehrenden Heartbeat ein, falls er fehlt.
+	 */
+	public function schedule_heartbeat(): void {
+		if ( ! as_has_scheduled_action( self::HEARTBEAT_HOOK, array(), ActionSchedulerQueue::GROUP ) ) {
+			as_schedule_recurring_action( time() + 60, self::HEARTBEAT_INTERVAL, self::HEARTBEAT_HOOK, array(), ActionSchedulerQueue::GROUP );
+		}
+	}
+
+	/**
+	 * Heartbeat: Zeitstempel setzen und hängengebliebene Abläufe wieder aufnehmen.
+	 */
+	public function heartbeat(): void {
+		update_option( self::OPT_LAST_HEARTBEAT, time(), false );
+		$this->watchdog->run();
+	}
+
+	/**
+	 * Merkt sich, wann die Warteschlange zuletzt über WP-CLI (Server-Cronjob) lief.
+	 */
+	public function mark_cli_queue_run(): void {
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			update_option( self::OPT_LAST_CLI_RUN, time(), false );
+		}
+	}
+}

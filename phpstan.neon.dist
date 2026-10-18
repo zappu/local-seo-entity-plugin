@@ -1,0 +1,16 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 6
+	paths:
+		- src
+		- local-seo-entity-plugin.php
+		- uninstall.php
+	bootstrapFiles:
+		- tests/phpstan-bootstrap.php
+	scanFiles:
+		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+		- vendor/woocommerce/action-scheduler/functions.php
+	scanDirectories:
+		- vendor/woocommerce/action-scheduler/classes

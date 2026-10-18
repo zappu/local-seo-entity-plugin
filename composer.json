@@ -1,0 +1,50 @@
+{
+    "name": "thoka/local-seo-entity-plugin",
+    "description": "WordPress-Plugin für Local SEO mit Entity-basierter KI-Content-Produktion.",
+    "type": "wordpress-plugin",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1",
+        "woocommerce/action-scheduler": "^3.9"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpstan/phpstan": "^1.12",
+        "szepeviktor/phpstan-wordpress": "^1.3",
+        "php-stubs/wp-cli-stubs": "^2.11"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lsec\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lsec\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.1.0"
+        },
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "composer/installers": true
+        }
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "test:unit": "phpunit --testsuite unit",
+        "test": [
+            "@test:unit"
+        ]
+    }
+}

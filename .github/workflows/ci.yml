@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: PHPCS und PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - name: PHPCS
+        run: vendor/bin/phpcs
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+  unit:
+    name: Unit-Tests PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          extensions: sodium
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpunit
+
+  machbarkeitstest:
+    name: Machbarkeitstest PHP ${{ matrix.php }} / WP ${{ matrix.wp }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.1'
+            wp: '6.4'
+            extras: ''
+          - php: '8.3'
+            wp: 'latest'
+            extras: 'seo-by-rank-math elementor'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: plugin
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2, wp-cli
+          extensions: mysqli, sodium
+          coverage: none
+      - name: Abhängigkeiten ohne Entwicklungspakete
+        working-directory: plugin
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: WordPress installieren
+        run: |
+          mkdir -p /tmp/wp && cd /tmp/wp
+          wp core download --version=${{ matrix.wp }} --locale=de_DE
+          wp config create --dbname=wp --dbuser=root --dbpass=root --dbhost=127.0.0.1
+          wp config set DISABLE_WP_CRON true --raw
+          wp config set WP_DEBUG true --raw
+          wp config set WP_DEBUG_LOG true --raw
+          wp config set WP_DEBUG_DISPLAY false --raw
+          wp core install --url=http://localhost --title=LSEC --admin_user=admin --admin_password=admin --admin_email=ci@example.com --skip-email
+          ln -s "$GITHUB_WORKSPACE/plugin" wp-content/plugins/local-seo-entity-plugin
+          if [ -n "${{ matrix.extras }}" ]; then wp plugin install ${{ matrix.extras }} --activate; fi
+      - name: M1 Aktivierung
+        working-directory: /tmp/wp
+        run: |
+          wp plugin activate local-seo-entity-plugin
+          wp lsec status
+      - name: M2 bis M5
+        working-directory: /tmp/wp
+        run: bash wp-content/plugins/local-seo-entity-plugin/bin/machbarkeitstest.sh --path=/tmp/wp
+      - name: Keine PHP-Fehler aus dem Plugin
+        if: always()
+        working-directory: /tmp/wp
+        run: |
+          touch wp-content/debug.log
+          if grep -E "PHP (Fatal error|Warning|Notice|Deprecated)" wp-content/debug.log | grep -i "local-seo-entity-plugin"; then
+            echo "PHP-Meldungen aus dem Plugin gefunden."; exit 1
+          fi
+          echo "Keine PHP-Meldungen aus dem Plugin."
