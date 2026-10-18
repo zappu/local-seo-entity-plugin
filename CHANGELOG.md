@@ -3,6 +3,7 @@
 ## Unveröffentlicht
 
 - Entity-Erkennung: Beitragstitel wird als Klartext übergeben (vorher `&amp;` statt `&` in Fundstellen aus dem Titel)
+- Textfocus in WP-CLI: Hinweis, wenn wegen des Mindestabstands gewartet wird
 
 ## 0.2.0 – 18.10.2026
 

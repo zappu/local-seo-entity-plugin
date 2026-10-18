@@ -98,9 +98,10 @@ final class TextfocusService {
 	 * @param HttpTransport   $http    HTTP.
 	 * @param Secrets         $secrets Geheimnisse.
 	 * @param ProviderCallLog $log     Protokoll.
+	 * @param \Closure|null   $sleep   Wartefunktion (Sekunden), z. B. mit Hinweis in WP-CLI.
 	 * @throws TextfocusException Wenn kein Schlüssel hinterlegt ist.
 	 */
-	public static function from_settings( HttpTransport $http, Secrets $secrets, ProviderCallLog $log ): self {
+	public static function from_settings( HttpTransport $http, Secrets $secrets, ProviderCallLog $log, ?\Closure $sleep = null ): self {
 		$key = $secrets->get( 'textfocus_api_key' );
 		if ( null === $key || '' === $key ) {
 			throw new TextfocusException( 'not_configured', 'Kein Textfocus-Schlüssel. Konstante ' . Secrets::constant_name( 'textfocus_api_key' ) . ' in wp-config.php setzen.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
@@ -110,7 +111,8 @@ final class TextfocusService {
 			$log,
 			(int) Settings::get( 'textfocus_daily_budget' ),
 			(int) Settings::get( 'textfocus_min_interval' ),
-			(int) Settings::get( 'textfocus_batch_size' )
+			(int) Settings::get( 'textfocus_batch_size' ),
+			$sleep
 		);
 	}
 

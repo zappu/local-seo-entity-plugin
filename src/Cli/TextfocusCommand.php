@@ -364,7 +364,11 @@ final class TextfocusCommand {
 	 */
 	private function run( callable $callback ): void {
 		try {
-			$callback( TextfocusService::from_settings( $this->plugin->http, $this->plugin->secrets, new ProviderCallRepository() ) );
+			$sleep = static function ( int $seconds ): void {
+				WP_CLI::log( sprintf( 'Warte %d Sekunden (Mindestabstand zwischen Textfocus-Aufrufen) …', $seconds ) );
+				sleep( $seconds );
+			};
+			$callback( TextfocusService::from_settings( $this->plugin->http, $this->plugin->secrets, new ProviderCallRepository(), $sleep ) );
 		} catch ( TextfocusException $e ) {
 			WP_CLI::error( $e->error_code . ': ' . $this->plugin->logger->redact( $e->getMessage() ) );
 		} catch ( RetryableException $e ) {
