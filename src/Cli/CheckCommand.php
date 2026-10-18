@@ -83,7 +83,7 @@ final class CheckCommand {
 			require_once ABSPATH . 'wp-admin/includes/user.php';
 			wp_delete_user( $subscriber );
 		}
-		WP_CLI\Utils\format_items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'methode', 'route', 'besucher', 'abonnent', 'administrator' ) );
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'methode', 'route', 'besucher', 'abonnent', 'administrator' ) );
 		if ( array() === $rows ) {
 			WP_CLI::error( 'Keine Routen unter ' . RestController::NAMESPACE . ' gefunden.' );
 		}

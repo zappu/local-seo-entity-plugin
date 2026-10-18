@@ -34,7 +34,7 @@ wpc() {
 }
 # Liest JSON aus der WP-CLI-Ausgabe. PHP-Hinweise anderer Plugins (z. B. "Deprecated" unter
 # PHP 8.4) können vor oder nach dem JSON stehen; sie werden übersprungen.
-json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i;$j--){ $t=json_decode(implode("\n",array_slice($l,$i,$j-$i+1)),true); if(is_array($t)){ $d=$t; break; } } } $p=explode(".",$argv[1]); foreach($p as $k){ $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
+json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i&&$d===null;$j--){ $s=implode("\n",array_slice($l,$i,$j-$i+1)); $t=json_decode($s,true); if(is_array($t)){ $d=$t; break; } /* Text hinter dem JSON in derselben Zeile (z. B. Elementor-Protokoll) abschneiden. */ for($k=strlen($s)-1;$k>0;$k--){ if($s[$k]!=="]"&&$s[$k]!=="}") continue; $t=json_decode(substr($s,0,$k+1),true); if(is_array($t)){ $d=$t; break; } } } } $p=explode(".",$argv[1]); foreach($p as $k){ $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
 # Letzte Zeile, die nur aus einer Zahl bzw. einem Bezeichner besteht.
 last_number() { grep -E '^[0-9]+$' | tail -1; }
 last_word() { grep -E '^[A-Za-z0-9_]+$' | tail -1; }

@@ -161,7 +161,7 @@ final class KeywordsCommand {
 				'spannweite' => is_array( $trend ) ? $trend['min'] . '–' . $trend['max'] : '',
 			);
 		}
-		WP_CLI\Utils\format_items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'keyword', 'quelle', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'keyword', 'quelle', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
 	}
 
 	/**
