@@ -55,6 +55,22 @@ drain() {
 run_id() { json run_id; }
 
 echo "Machbarkeitstest Etappe 1 – $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+# Vorbedingungen: WP-CLI und PHP müssen aufrufbar sein, das Plugin aktiv.
+if ! command -v php >/dev/null 2>&1; then
+	echo "Abbruch: 'php' ist nicht im PATH. Beispiel: PATH=/opt/plesk/php/8.4/bin:\$PATH"
+	exit 2
+fi
+if ! WP_VERSION=$(wpc core version 2>&1); then
+	echo "Abbruch: WP-CLI nicht aufrufbar ($WP). Ausgabe: $WP_VERSION"
+	echo "Beispiel: WP=\"php /pfad/zu/wp-cli.phar\" bash $0 --path=/pfad/zu/httpdocs"
+	exit 2
+fi
+if ! wpc lsec status --format=json >/dev/null 2>&1; then
+	echo "Abbruch: 'wp lsec' nicht verfügbar. Ist das Plugin aktiviert?"
+	exit 2
+fi
+echo "WordPress $WP_VERSION, PHP $(php -r 'echo PHP_VERSION;')"
 wpc lsec selftest cleanup >/dev/null 2>&1
 
 echo "M1/M2 Aktivierung und Datenbank"
