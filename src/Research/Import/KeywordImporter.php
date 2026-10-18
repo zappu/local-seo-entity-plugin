@@ -84,6 +84,7 @@ final class KeywordImporter {
 		$result->rows_total = count( $rows );
 		$seen               = array();
 		$duplicates         = 0;
+		$zeros              = 0;
 
 		foreach ( $rows as $row ) {
 			$keyword = trim( (string) preg_replace( '/\s+/u', ' ', (string) ( $row[ $index['keyword'] ] ?? '' ) ) );
@@ -102,7 +103,7 @@ final class KeywordImporter {
 			$cell  = static fn( string $field ): ?string => isset( $index[ $field ] ) ? ( $row[ $index[ $field ] ] ?? null ) : null;
 			$trend = self::trend( $cell( 'trend' ) );
 
-			$result->keywords[] = array(
+			$entry = array(
 				'keyword'    => $keyword,
 				'normalized' => $normalized,
 				'intent'     => self::intent( $cell( 'intent' ) ),
@@ -111,8 +112,18 @@ final class KeywordImporter {
 				'cpc'        => NumberParser::float( $cell( 'cpc' ) ),
 				'trend'      => $trend,
 			);
+			foreach ( $profile->zero_is_unknown as $field ) {
+				if ( isset( $entry[ $field ] ) && 0.0 === (float) $entry[ $field ] ) {
+					$entry[ $field ] = null;
+					++$zeros;
+				}
+			}
+			$result->keywords[] = $entry;
 		}
 
+		if ( $zeros > 0 ) {
+			$result->notes[] = sprintf( '%d Nullwerte als „unbekannt“ gespeichert (%s schreibt 0, wenn keine Daten vorliegen).', $zeros, $profile->label );
+		}
 		if ( $duplicates > 0 ) {
 			$result->notes[] = sprintf( '%d doppelte Keywords übersprungen (gleiche Schreibweise nach Normalisierung).', $duplicates );
 		}

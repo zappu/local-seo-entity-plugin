@@ -34,7 +34,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M7b | Adapterwechsel | 3 | bestanden auf Staging am 18.10.2026: derselbe Aufruf über den OpenAI-Adapter (gpt-6.1-sol) mit gültigem JSON, auch zweistufig mit Websuche (4 Quellen); Anthropic direkt: Konto bis 01.11.2026 am Ausgabenlimit, vom Plugin richtig als endgültiger Fehler (HTTP 400) mit Klartext gemeldet |
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
 | M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
-| M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026; Excel-Export von Textfocus nur mit Testdatei, echte Datei offen; auf Staging bestätigt |
+| M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026 (Keyword Revealer, Keyword Chef) und echten Textfocus-Exporten vom 18.10.2026 (Keyword-Volumen, Entitäten-Tabelle); auf Staging bestätigt (CSV) |
 | M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | bestanden auf Staging am 18.10.2026 (Seite 516, 1.333 Wörter): 9 Kandidaten mit 11 wörtlichen Fundstellen, $0,04 je Lauf; Bestätigen und Ablehnen im Backend mit Benutzer und Zeit gespeichert |
 | M12 | Entwurf mit gültigen Blöcken | 3 | bestanden im Block-Editor (WordPress 6.4.5 und 7.1.3: 16 Blöcke gültig, keine Warnung); auf Staging bestätigt |
 | M13 | Rank-Math-Seitenleiste | 3 | bestanden (Rank Math 1.0.280, WordPress 7.1.3: Titel, Beschreibung, drei Keywords in der Seitenleiste); auf Staging bestätigt |
@@ -89,11 +89,14 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Zwei Modelle, zwei Antworten: Claude (über OpenRouter) nennt 1226 als Ersterwähnung von **Eltze**, GPT (OpenAI) dieselbe Jahreszahl für **Dollbergen**, beide mit Quellenangabe. Mindestens eine Angabe ist falsch zugeordnet. Tatsachen aus der Recherche müssen daher gegen den Text der Quelle geprüft werden, bevor sie in einen Entwurf gehen (Qualitätsprüfung `UNSUPPORTED_FACT`, Abschnitt 8.7) – nicht nur gegen das Vorhandensein einer URL.
 - OpenAI-Websuche: 28.839 Eingabe-Token (OpenRouter: 44.229), Quellen mit `?utm_source=openai`. Ab 0.2.2 werden Tracking-Parameter vor dem Speichern entfernt, sonst steht dieselbe Seite doppelt in `lsec_sources`. Für OpenAI direkt fehlt ein Preis in `ai_prices`, daher „Kosten unbekannt“.
 
+- Textfocus-Entitäten der Startseite: 19 Einträge, darunter vier Schreibweisen des eigenen Firmennamens („Staats“, „Staats Flächenreinigung“, „Staats Flächenreinigung & Wassertechnik“, „Staats Flächenreinigungs-Service & Wassertechnik“), Orte außerhalb der Region (Braunschweig, Peine, Gifhorn, Celle) und sachfremde Begriffe (Kaugummi, Tartan). Für v1.0: Zusammenführen von Entitäten als Aliasse im Backend.
+- Die Semantik-Analyse von Textfocus lieferte für „flächenreinigung hannover“ keine Ergebnisse (zu wenig Wettbewerber für das regionale Keyword).
+
 ## Nächste Schritte
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
 2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16~~ erledigt am 18.10.2026.
-3. Textfocus: ~~Tarif und Sprachcode prüfen~~ erledigt (AppSumo, API-Zugang, Code `de`); einen Excel-Export einer Textfocus-Tabelle für M10 bereitstellen.
+3. ~~Textfocus: Tarif, Sprachcode, Excel-Exporte~~ erledigt (AppSumo, API-Zugang, Code `de`; Exporte Keyword-Volumen und Entitäten in 0.2.2 eingebaut).
 4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
 5. Google-Dienstkonto für M9 (Search Console).
 6. Danach Spezifikation v1.0 mit den offenen Entscheidungen.

@@ -148,13 +148,14 @@ final class KeywordImportTest extends TestCase {
 		$path = sys_get_temp_dir() . '/lsec-test-' . uniqid() . '.xlsx';
 		$this->write_xlsx( $path );
 		try {
-			$result = KeywordImporter::from_file( $path, 'textfocus-semantik.xlsx' );
+			$result = KeywordImporter::from_file( $path, 'eigene-liste.xlsx' );
 		} finally {
 			unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 		}
 
-		$this->assertSame( 'textfocus', $result->profile->id );
-		$this->assertSame( 'xlsx:textfocus', $result->profile->source );
+		// Excel ohne Textfocus-Spalten: allgemeine Vorlage.
+		$this->assertSame( 'generic', $result->profile->id );
+		$this->assertSame( 'xlsx:generic', $result->profile->source );
 		$this->assertCount( 2, $result->keywords );
 		$this->assertSame( 'Hochdruckreiniger für Pflaster', $result->keywords[0]['keyword'] );
 		$this->assertSame( 320, $result->keywords[0]['volume'] );
@@ -185,5 +186,30 @@ final class KeywordImportTest extends TestCase {
 			. '</sheetData></worksheet>'
 		);
 		$zip->close();
+	}
+
+	public function test_real_textfocus_keyword_volume_export(): void {
+		$result = KeywordImporter::from_file( self::FIXTURES . 'textfocus-keyword-volume.xlsx' );
+
+		$this->assertSame( 'textfocus', $result->profile->id );
+		$this->assertSame( 'xlsx:textfocus', $result->profile->source );
+		$this->assertSame( 'Expression', $result->profile->mapping['keyword'] );
+		$this->assertSame( 'Monthly volume', $result->profile->mapping['volume'] );
+		$this->assertCount( 6, $result->keywords );
+
+		$this->assertSame( 'dachreinigung hannover', $result->keywords[0]['keyword'] );
+		$this->assertSame( 90, $result->keywords[0]['volume'] );
+		$this->assertSame( 5.13, $result->keywords[0]['cpc'] );
+		$this->assertNull( $result->keywords[0]['difficulty'] );
+		$this->assertSame( 10, $result->keywords[1]['volume'] );
+		$this->assertNull( $result->keywords[1]['cpc'] );
+		$this->assertNull( $result->keywords[2]['volume'] );
+		$this->assertStringContainsString( 'Nullwerte', implode( ' ', $result->notes ) );
+	}
+
+	public function test_textfocus_entity_table_is_redirected(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'wp lsec entities import' );
+		KeywordImporter::from_file( self::FIXTURES . 'textfocus-entities.xlsx' );
 	}
 }

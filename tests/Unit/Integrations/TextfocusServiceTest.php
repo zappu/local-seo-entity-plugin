@@ -103,7 +103,8 @@ final class TextfocusServiceTest extends TestCase {
 		$this->assertSame( 4.36, $out['keywords']['flächenreinigung']['cpc'] );
 		$this->assertSame( 35.0, $out['keywords']['flächenreinigung']['difficulty'] );
 		$this->assertSame( 0.12, $out['keywords']['flächenreinigung']['competition'] );
-		$this->assertSame( 0, $out['keywords']['terrassenreinigung']['volume'] );
+		// Textfocus schreibt 0, wenn keine Daten vorliegen: gespeichert als unbekannt.
+		$this->assertNull( $out['keywords']['terrassenreinigung']['volume'] );
 		$this->assertNull( $out['keywords']['terrassenreinigung']['cpc'] );
 
 		$call = $log->calls[1];

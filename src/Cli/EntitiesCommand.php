@@ -13,6 +13,7 @@ use Lsec\Core\Settings;
 use Lsec\Entities\EntityExtractor;
 use Lsec\Entities\EntityRepository;
 use Lsec\Entities\PlaceResolver;
+use Lsec\Entities\TextfocusEntityImport;
 use Lsec\Entities\ServiceArea;
 use Lsec\Integrations\Textfocus\ProviderCallRepository;
 use Lsec\Integrations\Wikidata\WikidataClient;
@@ -224,6 +225,60 @@ final class EntitiesCommand {
 		}
 		$saved = $this->entities->save_extraction( $post->ID, $result['entities'] );
 		WP_CLI::success( sprintf( '%d neue Kandidaten, %d vorhandene Entitäten, %d Fundstellen gespeichert.', $saved['created'], $saved['reused'], $saved['mentions'] ) );
+	}
+
+	/**
+	 * Übernimmt die Entitäten-Tabelle einer Textfocus-Analyse (Excel-Export) als Kandidaten.
+	 *
+	 * Die Wikidata-Zuordnung von Textfocus wird nur als Hinweis gespeichert. Orte lassen sich danach mit
+	 * resolve-place gegen das Servicegebiet prüfen.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <file>
+	 * : Excel- oder CSV-Datei.
+	 *
+	 * [--dry-run]
+	 * : Nur anzeigen.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec entities import flaechenreinigung_Semantic_analysis.xlsx --dry-run
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function import( array $args, array $assoc_args ): void {
+		$path = (string) ( $args[0] ?? '' );
+		if ( ! is_readable( $path ) ) {
+			WP_CLI::error( 'Datei nicht gefunden oder nicht lesbar: ' . $path );
+		}
+		try {
+			$rows = TextfocusEntityImport::from_file( $path, basename( $path ) );
+		} catch ( \RuntimeException | \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		$area  = ServiceArea::from_settings();
+		$table = array();
+		foreach ( $rows as $row ) {
+			$table[] = array(
+				'typ'       => $row['type'],
+				'name'      => $row['name'],
+				'textfocus' => $row['entity'] . ( '' !== $row['wikidata'] ? ' (' . $row['wikidata'] . ')' : '' ),
+				'relevanz'  => null === $row['relevance'] ? '' : number_format( $row['relevance'], 2, ',', '' ),
+			);
+		}
+		WP_CLI\Utils\format_items( 'table', $table, array( 'typ', 'name', 'textfocus', 'relevanz' ) );
+		$places = array_values( array_filter( $rows, static fn( array $r ): bool => 'place' === $r['type'] ) );
+		if ( array() !== $places ) {
+			WP_CLI::log( sprintf( '%d Orte. Abgleich mit dem Servicegebiet%s: wp lsec entities resolve-place "<Name>" --save', count( $places ), null === $area ? ' (noch keins festgelegt)' : ' ' . $area->label ) );
+		}
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::success( count( $rows ) . ' Entitäten gelesen, Probelauf, nichts gespeichert.' );
+			return;
+		}
+		$saved = $this->entities->save_textfocus( $rows );
+		WP_CLI::success( sprintf( '%d neue Kandidaten, %d vorhandene Entitäten ergänzt.', $saved['created'], $saved['reused'] ) );
 	}
 
 	/**

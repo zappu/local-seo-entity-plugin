@@ -289,8 +289,9 @@ final class TextfocusService {
 			if ( '' === $keyword ) {
 				continue;
 			}
-			$num = static fn( string $field ): ?float => isset( $entry[ $field ] ) && is_numeric( $entry[ $field ] ) ? (float) $entry[ $field ] : null;
 
+			// Textfocus schreibt 0, wenn keine Daten vorliegen (Spezifikation 6.6, Regel 4).
+			$num    = static fn( string $field ): ?float => isset( $entry[ $field ] ) && is_numeric( $entry[ $field ] ) && 0.0 !== (float) $entry[ $field ] ? (float) $entry[ $field ] : null;
 			$volume = $num( 'volume' );
 			$out[ KeywordNormalizer::normalize( $keyword ) ] = array(
 				'keyword'     => $keyword,

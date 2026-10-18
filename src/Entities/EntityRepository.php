@@ -196,6 +196,82 @@ final class EntityRepository {
 	}
 
 	/**
+	 * Übernimmt Entitäten aus einem Textfocus-Export als Kandidaten (origin import).
+	 * Vorhandene Entitäten (gleicher Typ und Name oder Alias, „&“ wie „und“) werden nur ergänzt.
+	 * Der Wikidata-Vorschlag von Textfocus landet in properties.textfocus, nicht in external_ids.
+	 *
+	 * @param array<int, array{name: string, entity: string, type: string, source_type: string, relevance: float|null, wikidata: string, wikipedia: string}> $rows Zeilen.
+	 * @return array{created: int, reused: int}
+	 */
+	public function save_textfocus( array $rows ): array {
+		global $wpdb;
+		$table   = Schema::table( $wpdb->prefix, 'entities' );
+		$aliases = Schema::table( $wpdb->prefix, 'entity_aliases' );
+		$now     = gmdate( 'Y-m-d H:i:s' );
+		$out     = array(
+			'created' => 0,
+			'reused'  => 0,
+		);
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		foreach ( $rows as $row ) {
+			$normalized = mb_substr( KeywordNormalizer::normalize( $row['name'] ), 0, 255 );
+			$variants   = array_unique( array( $normalized, str_replace( ' & ', ' und ', $normalized ), str_replace( ' und ', ' & ', $normalized ) ) );
+			$id         = 0;
+			foreach ( $variants as $variant ) {
+				$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND normalized_name = %s LIMIT 1", $row['type'], $variant ) );
+				if ( 0 === $id ) {
+					$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT e.id FROM {$table} e JOIN {$aliases} a ON a.entity_id = e.id WHERE e.type = %s AND a.normalized_alias = %s LIMIT 1", $row['type'], $variant ) );
+				}
+				if ( $id > 0 ) {
+					break;
+				}
+			}
+			$hint = array(
+				'entity'    => $row['entity'],
+				'type'      => $row['source_type'],
+				'relevance' => $row['relevance'],
+				'wikidata'  => $row['wikidata'],
+				'wikipedia' => $row['wikipedia'],
+				'imported'  => $now,
+			);
+			if ( $id > 0 ) {
+				$properties              = json_decode( (string) $wpdb->get_var( $wpdb->prepare( "SELECT properties FROM {$table} WHERE id = %d", $id ) ), true );
+				$properties              = is_array( $properties ) ? $properties : array();
+				$properties['textfocus'] = $hint;
+				$wpdb->update(
+					$table,
+					array(
+						'properties' => wp_json_encode( $properties, JSON_UNESCAPED_UNICODE ),
+						'updated_at' => $now,
+					),
+					array( 'id' => $id )
+				);
+				++$out['reused'];
+				continue;
+			}
+			$wpdb->insert(
+				$table,
+				array(
+					'uuid'            => wp_generate_uuid4(),
+					'type'            => $row['type'],
+					'canonical_name'  => mb_substr( $row['name'], 0, 255 ),
+					'normalized_name' => $normalized,
+					'description'     => $row['entity'] !== $row['name'] ? 'Textfocus: ' . $row['entity'] : null,
+					'properties'      => wp_json_encode( array( 'textfocus' => $hint ), JSON_UNESCAPED_UNICODE ),
+					'status'          => 'candidate',
+					'confidence'      => null === $row['relevance'] ? null : round( max( 0.0, min( 1.0, $row['relevance'] ) ), 3 ),
+					'origin'          => 'import',
+					'created_at'      => $now,
+					'updated_at'      => $now,
+				)
+			);
+			++$out['created'];
+		}
+		// phpcs:enable
+		return $out;
+	}
+
+	/**
 	 * Fundstellen einer Entität.
 	 *
 	 * @param int $entity_id Entität.

@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht
 
+- Textfocus-Excel „Keyword volume search“ wird erkannt (Expression, Monthly volume, CPC, Difficulty); Nullwerte gelten als unbekannt, auch bei der API
+- Neuer Befehl `wp lsec entities import`: Entitäten-Tabelle einer Textfocus-Analyse als Kandidaten; Wikidata-Vorschlag nur als Hinweis
 - Quellen: Tracking-Parameter (`utm_*`, `gclid`, `fbclid` …) werden vor dem Speichern entfernt; OpenAI hängt `utm_source=openai` an
 
 ## 0.2.1 – 18.10.2026

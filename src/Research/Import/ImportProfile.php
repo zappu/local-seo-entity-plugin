@@ -21,8 +21,8 @@ final class ImportProfile {
 	 * Spaltennamen, die für die allgemeine Vorlage erkannt werden (klein geschrieben, ohne Klammerzusatz).
 	 */
 	private const ALIASES = array(
-		'keyword'    => array( 'keyword', 'keywords', 'suchbegriff', 'suchanfrage', 'begriff', 'query', 'mot-clé', 'mot clé', 'mots-clés', 'term' ),
-		'volume'     => array( 'searches', 'suchvolumen', 'volume', 'search volume', 'avg', 'avg. monthly searches', 'monatliches suchvolumen', 'durchschnittliches suchvolumen', 'sv', 'volumen' ),
+		'keyword'    => array( 'keyword', 'keywords', 'expression', 'suchbegriff', 'suchanfrage', 'begriff', 'query', 'mot-clé', 'mot clé', 'mots-clés', 'term' ),
+		'volume'     => array( 'searches', 'monthly volume', 'suchvolumen', 'volume', 'search volume', 'avg', 'avg. monthly searches', 'monatliches suchvolumen', 'durchschnittliches suchvolumen', 'sv', 'volumen' ),
 		'difficulty' => array( 'difficulty', 'schwierigkeit', 'kd', 'keyword difficulty', 'seo difficulty', 'konkurrenz', 'competition' ),
 		'cpc'        => array( 'cpc', 'cost per click', 'kosten pro klick' ),
 		'intent'     => array( 'search_intent', 'intent', 'suchintention', 'search intent' ),
@@ -37,13 +37,15 @@ final class ImportProfile {
 	 * @param string                $source              Quellkennung in lsec_keyword_metrics.
 	 * @param array<string, string> $mapping             Feld => Spaltenname.
 	 * @param bool                  $all_zero_is_unknown Alle Volumina 0 bedeutet „unbekannt“.
+	 * @param string[]              $zero_is_unknown     Felder, in denen jede 0 „unbekannt“ bedeutet (Textfocus).
 	 */
 	public function __construct(
 		public readonly string $id,
 		public readonly string $label,
 		public readonly string $source,
 		public readonly array $mapping,
-		public readonly bool $all_zero_is_unknown = true
+		public readonly bool $all_zero_is_unknown = true,
+		public readonly array $zero_is_unknown = array()
 	) {}
 
 	/**
@@ -59,9 +61,13 @@ final class ImportProfile {
 
 		$revealer = in_array( 'keywordsinclude', $keys, true ) && in_array( 'historical_volume', $keys, true );
 		$chef     = array() === array_diff( array( 'keyword', 'avg', 'high', 'low' ), $keys );
+		$tf_vol   = in_array( 'expression', $keys, true ) && in_array( 'monthly volume', $keys, true );
+		if ( in_array( 'entity detected on the page', $keys, true ) && in_array( 'wikidata id', $keys, true ) ) {
+			throw new \InvalidArgumentException( 'Das ist die Entitäten-Tabelle einer Textfocus-Analyse, keine Keyword-Liste. Import mit: wp lsec entities import <Datei>' );
+		}
 
 		if ( '' === $requested ) {
-			$requested = $revealer ? 'keyword_revealer' : ( $chef ? 'keyword_chef' : ( 'xlsx' === $format ? 'textfocus' : 'generic' ) );
+			$requested = $revealer ? 'keyword_revealer' : ( $chef ? 'keyword_chef' : ( $tf_vol ? 'textfocus' : 'generic' ) );
 		}
 
 		switch ( $requested ) {
@@ -96,7 +102,24 @@ final class ImportProfile {
 					)
 				);
 			case 'textfocus':
-				return new self( 'textfocus', 'Textfocus (Excel)', 'xlsx:textfocus', self::guess( $header ) );
+				// Export „Keyword volume search“ (geprüft am 18.10.2026): Expression, Monthly volume, CPC,
+				// Competition, Difficulty, Words, Interest, Type of volume. Textfocus schreibt 0, wenn keine Daten vorliegen.
+				return new self(
+					'textfocus',
+					'Textfocus',
+					$format . ':textfocus',
+					self::resolve(
+						$header,
+						array(
+							'keyword'    => 'expression',
+							'volume'     => 'monthly volume',
+							'cpc'        => 'cpc',
+							'difficulty' => 'difficulty',
+						)
+					) + self::guess( $header ),
+					false,
+					array( 'volume', 'cpc', 'difficulty' )
+				);
 			case 'generic':
 				return new self( 'generic', 'Allgemein', $format . ':generic', self::guess( $header ) );
 			default:
@@ -127,7 +150,7 @@ final class ImportProfile {
 			}
 			$mapping[ $parts[0] ] = $column;
 		}
-		return new self( $this->id, $this->label, $this->source, $mapping, $this->all_zero_is_unknown );
+		return new self( $this->id, $this->label, $this->source, $mapping, $this->all_zero_is_unknown, $this->zero_is_unknown );
 	}
 
 	/**
@@ -136,7 +159,7 @@ final class ImportProfile {
 	 * @param string $source Quelle, z. B. csv:sistrix.
 	 */
 	public function with_source( string $source ): self {
-		return new self( $this->id, $this->label, $source, $this->mapping, $this->all_zero_is_unknown );
+		return new self( $this->id, $this->label, $source, $this->mapping, $this->all_zero_is_unknown, $this->zero_is_unknown );
 	}
 
 	/**
