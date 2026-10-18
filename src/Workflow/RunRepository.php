@@ -258,7 +258,7 @@ final class RunRepository {
 				$limit
 			)
 		);
-		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
+		return array_values( array_map( 'intval', $ids ) );
 	}
 
 	/**
