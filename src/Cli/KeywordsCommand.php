@@ -1,0 +1,189 @@
+<?php
+/**
+ * WP-CLI: Keywords importieren und anzeigen.
+ *
+ * @package Lsec
+ */
+
+namespace Lsec\Cli;
+
+use Lsec\Research\Import\KeywordImporter;
+use Lsec\Research\Keywords\KeywordRepository;
+use WP_CLI;
+
+/**
+ * Keyword-Import aus CSV und Excel (Prüfpunkt M10).
+ */
+final class KeywordsCommand {
+
+	/**
+	 * Konstruktor.
+	 *
+	 * @param KeywordRepository $repository Speicher.
+	 */
+	public function __construct( private readonly KeywordRepository $repository ) {}
+
+	/**
+	 * Importiert eine CSV- oder Excel-Datei.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <file>
+	 * : Pfad zur Datei (.csv oder .xlsx).
+	 *
+	 * [--profile=<profile>]
+	 * : keyword_revealer, keyword_chef, textfocus oder generic. Standard: automatisch.
+	 *
+	 * [--source=<source>]
+	 * : Eigene Quellkennung, z. B. csv:sistrix. Standard: aus der Vorlage.
+	 *
+	 * [--map=<map>]
+	 * : Spaltenzuordnung, z. B. keyword=Begriff,volume=SV.
+	 *
+	 * [--locale=<locale>]
+	 * : Sprache und Land.
+	 * ---
+	 * default: de_DE
+	 * ---
+	 *
+	 * [--region=<region>]
+	 * : Ort, falls alle Keywords der Datei zu einem Ort gehören.
+	 *
+	 * [--dry-run]
+	 * : Nur prüfen und anzeigen, nichts speichern.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec keywords import keyword-revealer.csv
+	 *     wp lsec keywords import export.csv --map=keyword=Begriff,volume=SV --dry-run
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function import( array $args, array $assoc_args ): void {
+		$path = (string) ( $args[0] ?? '' );
+		if ( ! is_readable( $path ) ) {
+			WP_CLI::error( 'Datei nicht gefunden oder nicht lesbar: ' . $path );
+		}
+		try {
+			$result = KeywordImporter::from_file(
+				$path,
+				basename( $path ),
+				(string) ( $assoc_args['profile'] ?? '' ),
+				(string) ( $assoc_args['map'] ?? '' ),
+				(string) ( $assoc_args['source'] ?? '' )
+			);
+		} catch ( \RuntimeException | \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+
+		WP_CLI::log( sprintf( 'Vorlage: %s · Quelle: %s · Kodierung: %s · Trennzeichen: %s', $result->profile->label, $result->profile->source, $result->encoding, $result->delimiter ) );
+		$mapping = array();
+		foreach ( $result->profile->mapping as $field => $column ) {
+			$mapping[] = $field . ' ← ' . $column;
+		}
+		WP_CLI::log( 'Zuordnung: ' . implode( ', ', $mapping ) );
+		WP_CLI::log( sprintf( 'Zeilen: %d · Keywords: %d · übersprungen: %d', $result->rows_total, count( $result->keywords ), $result->rows_skipped ) );
+		foreach ( $result->notes as $note ) {
+			WP_CLI::log( 'Hinweis: ' . $note );
+		}
+
+		$preview = array();
+		foreach ( array_slice( $result->keywords, 0, 10 ) as $entry ) {
+			$preview[] = array(
+				'keyword'    => $entry['keyword'],
+				'volumen'    => null === $entry['volume'] ? 'unbekannt' : (string) $entry['volume'],
+				'schwierig'  => null === $entry['difficulty'] ? '' : (string) $entry['difficulty'],
+				'cpc'        => null === $entry['cpc'] ? '' : number_format( $entry['cpc'], 2, ',', '' ),
+				'intention'  => (string) $entry['intent'],
+				'spannweite' => null === $entry['trend'] ? '' : $entry['trend']['min'] . '–' . $entry['trend']['max'],
+			);
+		}
+		if ( array() !== $preview ) {
+			WP_CLI\Utils\format_items( 'table', $preview, array( 'keyword', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+		}
+
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::success( 'Probelauf, nichts gespeichert.' );
+			return;
+		}
+		try {
+			$saved = $this->repository->save_import(
+				$result,
+				(string) ( $assoc_args['locale'] ?? 'de_DE' ),
+				(string) ( $assoc_args['region'] ?? '' ),
+				get_current_user_id() ?: null
+			);
+		} catch ( \RuntimeException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		WP_CLI::success( sprintf( 'Import %d gespeichert: %d neue, %d vorhandene Keywords.', $saved['import_id'], $saved['created'], $saved['updated'] ) );
+	}
+
+	/**
+	 * Zeigt Keywords mit der neuesten Kennzahl je Quelle.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--search=<text>]
+	 * : Teilwort.
+	 *
+	 * [--source=<source>]
+	 * : Nur diese Quelle, z. B. csv:keyword_chef.
+	 *
+	 * [--limit=<n>]
+	 * : Höchstzahl.
+	 * ---
+	 * default: 50
+	 * ---
+	 *
+	 * [--format=<format>]
+	 * : table, csv oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function list( array $args, array $assoc_args ): void {
+		$rows = array();
+		foreach ( $this->repository->list_with_metrics( (string) ( $assoc_args['search'] ?? '' ), (string) ( $assoc_args['source'] ?? '' ), (int) ( $assoc_args['limit'] ?? 50 ) ) as $row ) {
+			$trend  = null === $row['trend'] ? null : json_decode( (string) $row['trend'], true );
+			$rows[] = array(
+				'keyword'    => $row['keyword'],
+				'quelle'     => $row['source'],
+				'volumen'    => null === $row['search_volume'] ? 'unbekannt' : $row['search_volume'],
+				'schwierig'  => (string) $row['difficulty'],
+				'cpc'        => (string) $row['cpc'],
+				'intention'  => (string) $row['intent'],
+				'spannweite' => is_array( $trend ) ? $trend['min'] . '–' . $trend['max'] : '',
+			);
+		}
+		WP_CLI\Utils\format_items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'keyword', 'quelle', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+	}
+
+	/**
+	 * Zeigt die letzten Importe.
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function imports( array $args, array $assoc_args ): void {
+		$rows = array();
+		foreach ( $this->repository->imports() as $row ) {
+			$notes  = json_decode( (string) $row['notes'], true );
+			$rows[] = array(
+				'id'           => $row['id'],
+				'quelle'       => $row['source'],
+				'datei'        => $row['filename'],
+				'zeilen'       => $row['rows_total'],
+				'importiert'   => $row['rows_imported'],
+				'übersprungen' => $row['rows_skipped'],
+				'hinweise'     => is_array( $notes ) ? implode( ' | ', $notes ) : '',
+				'am'           => $row['created_at'],
+			);
+		}
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'quelle', 'datei', 'zeilen', 'importiert', 'übersprungen', 'hinweise', 'am' ) );
+	}
+}

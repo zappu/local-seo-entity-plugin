@@ -9,6 +9,7 @@ namespace Lsec\Core;
 
 use Lsec\Admin\StatusPage;
 use Lsec\Cli\AiCommand;
+use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
 use Lsec\Cli\SelftestCommand;
 use Lsec\Cli\SettingsCommand;
@@ -21,6 +22,7 @@ use Lsec\Infrastructure\Logging\Redactor;
 use Lsec\Infrastructure\Queue\ActionSchedulerQueue;
 use Lsec\Infrastructure\Queue\Queue;
 use Lsec\Infrastructure\Security\Secrets;
+use Lsec\Research\Keywords\KeywordRepository;
 use Lsec\Workflow\RetryPolicy;
 use Lsec\Workflow\RunRepository;
 use Lsec\Workflow\Selftest\SelftestWorkflow;
@@ -182,6 +184,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec selftest', new SelftestCommand( $this ) );
 			\WP_CLI::add_command( 'lsec ai', new AiCommand( $this ) );
 			\WP_CLI::add_command( 'lsec settings', new SettingsCommand() );
+			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository() ) );
 		}
 	}
 
