@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## Unveröffentlicht
+
+- Entity-Erkennung: Beitragstitel wird als Klartext übergeben (vorher `&amp;` statt `&` in Fundstellen aus dem Titel)
+
 ## 0.2.0 – 18.10.2026
 
 Machbarkeitstest, Etappe 3: Bausteine für Recherche, Entitäten und Entwürfe.

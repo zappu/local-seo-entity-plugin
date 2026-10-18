@@ -35,7 +35,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
 | M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026; Excel-Export von Textfocus nur mit Testdatei, echte Datei offen; auf Staging bestätigt |
-| M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | Speicherung, Prüfung der Fundstellen und Backend-Entscheidung bestanden; KI-Aufruf mit echtem Beitrag offen (`wp lsec entities extract <ID>`) |
+| M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | Erkennung auf Staging bestanden (Seite 516, 1.333 Wörter, classic): 9 Kandidaten mit 11 wörtlichen Fundstellen, Hemmingen als mehrdeutig gemeldet, $0,04 je Lauf; Entscheidung im Backend auf Staging offen |
 | M12 | Entwurf mit gültigen Blöcken | 3 | bestanden im Block-Editor (WordPress 6.4.5 und 7.1.3: 16 Blöcke gültig, keine Warnung); auf Staging bestätigt |
 | M13 | Rank-Math-Seitenleiste | 3 | bestanden (Rank Math 1.0.280, WordPress 7.1.3: Titel, Beschreibung, drei Keywords in der Seitenleiste); auf Staging bestätigt |
 | M14 | Elementor-Text | 3 | bestanden; auf Staging bestätigt |
@@ -74,6 +74,9 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 - Die Websuche über OpenRouter ist der Kostentreiber: Die Suchergebnisse landen als rund 44.000 Eingabe-Token im Prompt (Recherche $0,142 gegenüber $0,005 für die Strukturierung). Zu prüfen für v1.0: weniger Treffer (`max_results`), ein günstigeres Modell nur für den Rechercheschritt oder ein Tagesbudget für KI-Kosten.
 - Das Modell hat die Frage richtiggestellt (Uetze hat Ortsteile, keine Stadtteile) und nur belegte Tatsachen übernommen.
+
+- Die Entity-Erkennung liefert bei zwei Läufen auf derselben Seite unterschiedliche Listen (7 bzw. 9 Vorschläge, leicht andere Namen). Neben echten Entitäten (Unternehmen, Ort, Hauptleistung) kommen allgemeine Formulierungen wie „Regelmäßige Wartung“. Die Prüfung im Backend bleibt deshalb Pflicht; für v1.0 prüfen: schärfere Anweisung, niedrige Temperatur (nicht jedes Modell erlaubt sie), Mindest-Sicherheit für die Anzeige.
+- WordPress speichert „&“ im Titel als `&amp;`; der Titel wird vor der Erkennung in Klartext umgewandelt (ab 0.2.1).
 
 ## Nächste Schritte
 

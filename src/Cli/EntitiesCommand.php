@@ -190,10 +190,11 @@ final class EntitiesCommand {
 			WP_CLI::error( 'Beitrag nicht gefunden.' );
 		}
 		$content = ContentReader::read( $post );
-		WP_CLI::log( sprintf( '„%s“: %d Wörter (%s)', $post->post_title, $content['words'], $content['source'] ) );
+		$title   = ContentReader::title( $post );
+		WP_CLI::log( sprintf( '„%s“: %d Wörter (%s)', $title, $content['words'], $content['source'] ) );
 		try {
 			$service = $this->plugin->ai->service();
-			$result  = ( new EntityExtractor( $service ) )->extract( $post->post_title, $content['text'], $this->entities->known_names() );
+			$result  = ( new EntityExtractor( $service ) )->extract( $title, $content['text'], $this->entities->known_names() );
 		} catch ( RetryableException $e ) {
 			WP_CLI::error( 'Vorübergehend (' . $e->error_code . '): ' . $this->plugin->logger->redact( $e->getMessage() ) );
 		} catch ( \RuntimeException $e ) {

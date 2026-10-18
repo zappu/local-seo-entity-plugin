@@ -49,6 +49,10 @@ final class ElementorReaderTest extends TestCase {
 		$this->assertLessThan( strpos( $text, 'Häufige Fragen' ), strpos( $text, 'Heißwasser' ) );
 	}
 
+	public function test_title_entities_are_decoded(): void {
+		$this->assertSame( 'Staats Flächenreinigung & Wassertechnik in Hemmingen', ElementorReader::plain( 'Staats Flächenreinigung &amp; Wassertechnik in Hemmingen' ) );
+	}
+
 	public function test_invalid_json(): void {
 		$this->assertNull( ElementorReader::read( 'kein json' ) );
 	}

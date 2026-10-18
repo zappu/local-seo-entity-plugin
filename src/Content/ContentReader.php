@@ -51,6 +51,15 @@ final class ContentReader {
 	}
 
 	/**
+	 * Titel als Klartext. WordPress speichert „&“ im Titel als „&amp;“.
+	 *
+	 * @param \WP_Post $post Beitrag.
+	 */
+	public static function title( \WP_Post $post ): string {
+		return ElementorReader::plain( $post->post_title );
+	}
+
+	/**
 	 * Wortzahl für deutschen Text (str_word_count zählt Umlaute nicht).
 	 *
 	 * @param string $text Text.
