@@ -11,6 +11,7 @@ use Lsec\Admin\StatusPage;
 use Lsec\Entities\EntityRepository;
 use Lsec\Cli\AiCommand;
 use Lsec\Cli\CheckCommand;
+use Lsec\Cli\DraftCommand;
 use Lsec\Cli\EntitiesCommand;
 use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
@@ -194,6 +195,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec textfocus', new TextfocusCommand( $this, new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec entities', new EntitiesCommand( $this, new EntityRepository() ) );
 			\WP_CLI::add_command( 'lsec check', new CheckCommand() );
+			\WP_CLI::add_command( 'lsec draft', new DraftCommand() );
 		}
 	}
 

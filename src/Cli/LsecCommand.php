@@ -213,7 +213,7 @@ final class LsecCommand {
 			),
 			'runs_by_status'           => $plugin->runs->count_by_status(),
 			'secrets'                  => $secrets,
-			'rank_math_active'         => class_exists( '\RankMath' ) || defined( 'RANK_MATH_VERSION' ),
+			'rank_math_active'         => \Lsec\Content\DraftWriter::rank_math_active(),
 			'elementor_active'         => defined( 'ELEMENTOR_VERSION' ),
 		);
 	}
