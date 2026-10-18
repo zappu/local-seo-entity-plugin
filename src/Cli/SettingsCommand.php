@@ -46,7 +46,7 @@ final class SettingsCommand {
 	 * ## EXAMPLES
 	 *
 	 *     wp lsec settings set ai_provider openrouter
-	 *     wp lsec settings set ai_model anthropic/claude-sonnet-4.5
+	 *     wp lsec settings set ai_model anthropic/claude-sonnet-5.5
 	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.

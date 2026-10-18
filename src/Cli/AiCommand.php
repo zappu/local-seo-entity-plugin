@@ -11,6 +11,7 @@ use Lsec\Core\Plugin;
 use Lsec\Integrations\AI\AiException;
 use Lsec\Integrations\AI\AiRequest;
 use Lsec\Integrations\AI\Json;
+use Lsec\Research\SourceRepository;
 use Lsec\Workflow\RetryableException;
 use WP_CLI;
 
@@ -44,7 +45,7 @@ final class AiCommand {
 	 *
 	 *     wp lsec ai test
 	 *     wp lsec ai test --web
-	 *     wp lsec ai test --provider=anthropic --model=claude-sonnet-4-5
+	 *     wp lsec ai test --provider=anthropic --model=claude-sonnet-5-5
 	 *
 	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
@@ -91,6 +92,8 @@ final class AiCommand {
 				foreach ( $out['research']->sources as $source ) {
 					WP_CLI::log( '  Quelle: ' . $source['title'] . ' – ' . $source['url'] );
 				}
+				$ids = ( new SourceRepository() )->save_all( $out['research']->sources, 'ai_search' );
+				WP_CLI::log( sprintf( '  %d Quelle(n) in lsec_sources gespeichert (IDs %s).', count( $ids ), implode( ', ', $ids ) ) );
 				$this->print_response( 'Schritt 2: Strukturierung', $out['result'], true );
 				if ( array() === $out['research']->sources ) {
 					WP_CLI::warning( 'Die Recherche lieferte keine Quellen. Unterstützt das Modell Websuche?' );
