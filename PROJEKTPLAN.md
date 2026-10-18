@@ -23,7 +23,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 | Nr. | Prüfpunkt | Etappe | Ergebnis |
 |---|---|---|---|
-| M1 | Kompatibilität (PHP 8.1/8.3, WP 6.4/aktuell, mit Rank Math und Elementor) | 1 und Staging | bestanden in CI: PHP 8.1 + WP 6.4, PHP 8.3 + WP aktuell mit Rank Math 1.0.280 und Elementor; Staging offen |
+| M1 | Kompatibilität (PHP 8.1/8.3/8.4, WP 6.4/aktuell, mit Rank Math und Elementor) | 1 und Staging | bestanden in CI: PHP 8.1 + WP 6.4, PHP 8.3 + WP aktuell mit Rank Math 1.0.280 und Elementor; Staging offen |
 | M2 | Datenbank und Migration | 1 | bestanden |
 | M3 | Server-Cronjob über WP-CLI | 1 und Staging | bestanden mit `wp lsec cron`; Plesk-Cronjob offen |
 | M4 | Wiederaufnahme nach Abbruch | 1 | bestanden (Abbruch in Schritt 2 und nach Beitragsanlage, verzögerte Wiederholung) |
