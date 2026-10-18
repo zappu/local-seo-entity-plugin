@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 18.10.2026 · Phase: MVP 1, Stufe A umgesetzt (0.3.0), Prüfung auf Staging offen; danach Stufe B
+**Stand:** 18.10.2026 · Phase: MVP 1, Stufe A auf Staging bestanden (0.3.0); nächster Schritt Stufe B
 
 ## Ziel
 
@@ -17,7 +17,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | erledigt (18.10.2026): KI-Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell, Testphase 20 Beiträge in 60 Tagen |
-| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A umgesetzt (0.3.0), lokal und in der CI geprüft; Staging offen |
+| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A bestanden (0.3.0, auch auf Staging); als Nächstes Stufe B |
 
 ## Machbarkeitstest: Prüfpunkte
 
@@ -32,7 +32,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M7 | KI-Anbindung mit JSON-Schema, Korrekturversuch, Kosten | 3 | bestanden auf Staging am 18.10.2026 (OpenRouter, anthropic/claude-sonnet-5.5: gültiges JSON, 401/283 Token, $0,0036, 4,9 s); Korrekturversuch als Schnittstellentest |
 | M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | bestanden auf Staging am 18.10.2026: 5 Quellen mit URL gespeichert, Strukturierung gültig; Kosten $0,148, davon $0,142 für die Recherche (44.229 Eingabe-Token durch die eingefügten Suchergebnisse) |
 | M7b | Adapterwechsel | 3 | bestanden auf Staging am 18.10.2026: derselbe Aufruf über den OpenAI-Adapter (gpt-6.1-sol) mit gültigem JSON, auch zweistufig mit Websuche (4 Quellen); Anthropic direkt: Konto bis 01.11.2026 am Ausgabenlimit, vom Plugin richtig als endgültiger Fehler (HTTP 400) mit Klartext gemeldet |
-| M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
+| M8 | Geheimnisse | 3 | bestanden: Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Datenbank auf Staging am 18.10.2026 mit `wp lsec check secrets` ohne Fund. Protokolldateien des Webservers waren für den Benutzer des Abonnements nicht lesbar und sind noch ungeprüft |
 | M9 | Search Console | 3 | bestanden auf Staging am 18.10.2026: Dienstkonto `lsec-staging` sieht die Property `https://flaechenreiniger-wassertechnik.de/` (siteRestrictedUser), 96 Zeilen (Suchanfrage × Seite) für 18.09.–15.10.2026, Deutschland, als 79 Suchanfragen gespeichert |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026 (Keyword Revealer, Keyword Chef) und echten Textfocus-Exporten vom 18.10.2026 (Keyword-Volumen, Entitäten-Tabelle); auf Staging bestätigt (CSV) |
 | M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | bestanden auf Staging am 18.10.2026 (Seite 516, 1.333 Wörter): 9 Kandidaten mit 11 wörtlichen Fundstellen, $0,04 je Lauf; Bestätigen und Ablehnen im Backend mit Benutzer und Zeit gespeichert |
@@ -97,7 +97,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 | Stufe | Inhalt | Version | Stand |
 |---|---|---|---|
-| A | Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, Dashboard und Einstellungen | 0.3.0 | umgesetzt; lokal mit WordPress 6.4.5 und 7.1.3 geprüft (`mvp-pruefung.sh` 25/25, Oberfläche im Browser); Staging offen |
+| A | Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, Dashboard und Einstellungen | 0.3.0 | bestanden: lokal mit WordPress 6.4.5 und 7.1.3, CI, Staging am 18.10.2026 (`mvp-pruefung.sh` 25/25, `check secrets` ohne Fund für alle vier Schlüssel und den Dienstkonto-Schlüssel) |
 | B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | offen |
 | C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | offen |
 | D | Themen mit Faktenprüfung | 0.6.0 | offen |
@@ -118,5 +118,5 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 5. Tags v0.2.0 bis v0.2.4 liegen auf GitHub (18.10.2026).
 6. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
 7. ~~Spezifikation v1.0~~ festgelegt am 18.10.2026. Noch offen: Recherchemodell (Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
-8. MVP 1, Stufe A umgesetzt in 0.3.0. Auf Staging: ZIP installieren, `bin/mvp-pruefung.sh` ausführen, `wp lsec check secrets` (M8), Dashboard und Einstellungen ansehen.
+8. ~~MVP 1, Stufe A~~ auf Staging bestanden (0.3.0). Offen: Preis für das OpenAI-Modell in `ai_prices` (3 Aufrufe ohne Preis), Sichtprüfung von Dashboard und Einstellungen.
 9. Danach Stufe B: Unternehmensprofil mit Servicegebiet, Inhaltsindex, Entity-Erkennung als Ablauf, Zusammenführen.
