@@ -98,7 +98,8 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
 2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16~~ erledigt am 18.10.2026.
 3. ~~Textfocus: Tarif, Sprachcode, Excel-Exporte~~ erledigt (AppSumo, API-Zugang, Code `de`; Exporte Keyword-Volumen und Entitäten in 0.2.2 eingebaut).
-4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
-5. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
-6. ~~Spezifikation v1.0~~ festgelegt am 18.10.2026. Noch offen: Recherchemodell (Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
-7. MVP 1, Stufe A: Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, React-Grundgerüst (Spezifikation v1.0, Abschnitt 14).
+4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net: gestellt, in Bearbeitung (Stand 18.10.2026). Bis zur Lösung bleibt der Eintrag in `/etc/hosts` auf Staging.
+5. Tags v0.2.0 bis v0.2.4 liegen auf GitHub (18.10.2026).
+6. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
+7. ~~Spezifikation v1.0~~ festgelegt am 18.10.2026. Noch offen: Recherchemodell (Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
+8. MVP 1, Stufe A: Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, React-Grundgerüst (Spezifikation v1.0, Abschnitt 14).
