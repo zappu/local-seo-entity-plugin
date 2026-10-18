@@ -35,14 +35,14 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
 | M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026; Excel-Export von Textfocus nur mit Testdatei, echte Datei offen; auf Staging bestätigt |
-| M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | Erkennung auf Staging bestanden (Seite 516, 1.333 Wörter, classic): 9 Kandidaten mit 11 wörtlichen Fundstellen, Hemmingen als mehrdeutig gemeldet, $0,04 je Lauf; Entscheidung im Backend auf Staging offen |
+| M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | bestanden auf Staging am 18.10.2026 (Seite 516, 1.333 Wörter): 9 Kandidaten mit 11 wörtlichen Fundstellen, $0,04 je Lauf; Bestätigen und Ablehnen im Backend mit Benutzer und Zeit gespeichert |
 | M12 | Entwurf mit gültigen Blöcken | 3 | bestanden im Block-Editor (WordPress 6.4.5 und 7.1.3: 16 Blöcke gültig, keine Warnung); auf Staging bestätigt |
 | M13 | Rank-Math-Seitenleiste | 3 | bestanden (Rank Math 1.0.280, WordPress 7.1.3: Titel, Beschreibung, drei Keywords in der Seitenleiste); auf Staging bestätigt |
 | M14 | Elementor-Text | 3 | bestanden; auf Staging bestätigt |
 | M15 | REST 403 | 3 | bestanden (5 Routen, Besucher und Abonnent 403); auf Staging bestätigt |
 | M16 | Textfocus-API | 3 | Schnittstellentest bestanden, echter Endpunkt erreicht (ungültiger Schlüssel richtig erkannt); Tarif, Sprachcode und Volumina auf Staging offen |
 | M17 | Tippfehlerprüfung | 3 | bestanden mit den echten Keywords; auf Staging bestätigt |
-| M18 | Ortsabgleich Burgdorf | 3 | bestanden mit echten Wikidata-Daten: ohne Kontext `unresolved`, mit Region Hannover `probable` (Q555618); auf Staging bestätigt |
+| M18 | Ortsabgleich Burgdorf | 3 | bestanden mit echten Wikidata-Daten: ohne Kontext `unresolved`, mit Region Hannover `probable` (Q555618); auf Staging bestätigt; Praxistest Hemmingen aus der Entity-Erkennung: mit Servicegebiet Region Hannover `probable` (Q534259, 10,7 km), zweiter Kandidat 398 km entfernt |
 
 ## Offene Entscheidungen
 
