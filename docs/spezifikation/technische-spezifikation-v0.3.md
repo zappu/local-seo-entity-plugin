@@ -276,7 +276,8 @@ Das Unternehmensprofil wird nicht doppelt gespeichert. Unternehmen, Standorte, L
 | credits_used | laut Antwort des Anbieters |
 | credits_remaining | laut Antwort, für die Anzeige im Backend |
 | status | `ok`, `cached`, `budget_exceeded`, `rate_limited`, `error` |
-| response_ref | Verweis auf die gespeicherten Ergebnisse (z. B. Import-ID) |
+| response_ref | Verweis auf die gespeicherten Ergebnisse (z. B. Import-ID) oder bei `cached` auf den Ursprungsaufruf (`call:<id>`) |
+| response_body | Nachtrag 18.10. (Schema-Version 2): Feld `result` der Antwort als JSON, Grundlage für den Zwischenspeicher. Ohne die Hülle `params`, weil Textfocus dort den API-Schlüssel wiederholt. Für `tf_account` leer (enthält Adressdaten, kostet nichts) |
 | cached_until | Ablauf des Zwischenspeichers |
 | run_id | auslösender Ablauf |
 | created_at | |
@@ -386,6 +387,9 @@ Ein Thema wird **nicht** vorgeschlagen, wenn die Überschneidung mit einem beste
 | Callbacks | `tf_competition` und `tf_semantic` bieten eine Callback-URL. Im MVP nicht genutzt: Abfrage direkt mit Zeitlimit 60 Sekunden. Ein Callback bräuchte einen öffentlichen REST-Endpunkt mit geheimem Token und folgt erst bei Bedarf |
 | Entitäten | Von Textfocus erkannte Entitäten (mit Wikidata-ID) werden immer als Kandidaten gespeichert, nie als bestätigt (siehe 8.3) |
 | Fehler | Ratenlimit → Wiederholung nach Wartezeit; fehlender API-Zugang oder ungültiger Schlüssel → sofort `failed` mit Hinweis im Backend |
+| Beobachtet am 18.10. | Ein ungültiger Schlüssel liefert HTTP 200 mit `"response":404,"message":"api key invalid"`. Fehler werden daher am Feld `response` und an der Meldung erkannt, nicht nur am HTTP-Status. `lang=de-DE` wird von Textfocus als `de` übernommen. Mehrere Keywords werden als `keyword[0]=…&keyword[1]=…` gesendet |
+| Abstand und Budget im Ablauf | Im WP-CLI-Aufruf wartet der Adapter den Mindestabstand ab. In einem Ablaufschritt wirft er stattdessen einen wiederholbaren Fehler (`rate_limited`), damit kein Arbeitsprozess blockiert. Der Tag für das Budget richtet sich nach der Zeitzone der Website |
+| Prüfbefehle | `wp lsec textfocus account`, `langs [--save=<id>]`, `keyword <kw>… [--dry-run] [--force]`, `query related\|competition\|semantic\|seo <kw> [--url]`, `calls` |
 
 ### 6.6 Importregeln je Quelle
 

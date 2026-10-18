@@ -13,6 +13,7 @@ use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
 use Lsec\Cli\SelftestCommand;
 use Lsec\Cli\SettingsCommand;
+use Lsec\Cli\TextfocusCommand;
 use Lsec\Infrastructure\Http\HttpTransport;
 use Lsec\Infrastructure\Http\WpHttpTransport;
 use Lsec\Integrations\AI\AiClientFactory;
@@ -185,6 +186,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec ai', new AiCommand( $this ) );
 			\WP_CLI::add_command( 'lsec settings', new SettingsCommand() );
 			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository() ) );
+			\WP_CLI::add_command( 'lsec textfocus', new TextfocusCommand( $this, new KeywordRepository() ) );
 		}
 	}
 

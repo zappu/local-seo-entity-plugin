@@ -18,7 +18,7 @@ final class Schema {
 	/**
 	 * Aktuelle Schemaversion. Bei jeder Änderung erhöhen.
 	 */
-	public const VERSION = 1;
+	public const VERSION = 2;
 
 	/**
 	 * Option, in der die installierte Schemaversion steht.
@@ -348,6 +348,7 @@ credits_used decimal(10,2) NULL,
 credits_remaining decimal(12,2) NULL,
 status varchar(20) NOT NULL,
 response_ref varchar(100) NULL,
+response_body longtext NULL,
 cached_until datetime NULL,
 run_id bigint(20) unsigned NULL,
 created_at datetime NOT NULL,

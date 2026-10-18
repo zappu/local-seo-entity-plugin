@@ -94,6 +94,59 @@ final class KeywordRepository {
 	}
 
 	/**
+	 * Speichert Kennzahlen eines Datenanbieters, z. B. aus tf_keyword.
+	 *
+	 * @param string                                                                                           $source  Quelle, z. B. textfocus.
+	 * @param array<string, array{keyword: string, volume: int|null, cpc: float|null, difficulty: float|null}> $entries Kennzahlen je normalisiertem Keyword.
+	 * @param string                                                                                           $locale  Sprache.
+	 * @param string                                                                                           $region  Region.
+	 * @return int Anzahl gespeicherter Kennzahlen.
+	 */
+	public function save_metrics( string $source, array $entries, string $locale, string $region = '' ): int {
+		global $wpdb;
+		$now   = gmdate( 'Y-m-d H:i:s' );
+		$saved = 0;
+		foreach ( $entries as $normalized => $entry ) {
+			$found = $this->upsert( $entry['keyword'], (string) $normalized, $locale, $region, null, $now );
+			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				Schema::table( $wpdb->prefix, 'keyword_metrics' ),
+				array(
+					'keyword_id'    => $found['id'],
+					'source'        => $source,
+					'search_volume' => $entry['volume'],
+					'difficulty'    => $entry['difficulty'],
+					'cpc'           => $entry['cpc'],
+					'created_at'    => $now,
+				)
+			);
+			++$saved;
+		}
+		return $saved;
+	}
+
+	/**
+	 * Normalisierte Keywords, für die eine Quelle in den letzten Tagen schon Kennzahlen geliefert hat.
+	 *
+	 * @param string   $source Quelle.
+	 * @param string[] $keywords Keywords.
+	 * @param string   $locale Sprache.
+	 * @param int      $days   Zeitraum.
+	 * @return string[]
+	 */
+	public function fresh( string $source, array $keywords, string $locale, int $days ): array {
+		global $wpdb;
+		if ( array() === $keywords ) {
+			return array();
+		}
+		$k            = Schema::table( $wpdb->prefix, 'keywords' );
+		$m            = Schema::table( $wpdb->prefix, 'keyword_metrics' );
+		$normalized   = array_map( array( KeywordNormalizer::class, 'normalize' ), $keywords );
+		$placeholders = implode( ',', array_fill( 0, count( $normalized ), '%s' ) );
+		$sql          = "SELECT DISTINCT k.normalized FROM {$k} k JOIN {$m} m ON m.keyword_id = k.id WHERE m.source = %s AND k.locale = %s AND m.created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY) AND k.normalized IN ({$placeholders})";
+		return array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( $sql, array_merge( array( $source, $locale, $days ), $normalized ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+	}
+
+	/**
 	 * Legt ein Keyword an oder aktualisiert Zeitstempel und Intention.
 	 *
 	 * @param string      $keyword    Schreibweise aus der Quelle.

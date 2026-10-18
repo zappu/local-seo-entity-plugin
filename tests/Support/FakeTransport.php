@@ -17,7 +17,7 @@ final class FakeTransport implements HttpTransport {
 	/**
 	 * Gesendete Anfragen.
 	 *
-	 * @var list<array{method: string, url: string, headers: array<string, string>, body: array<mixed>|null}>
+	 * @var list<array{method: string, url: string, headers: array<string, string>, body: array<mixed>|null, raw: string|null}>
 	 */
 	public array $requests = array();
 
@@ -60,6 +60,7 @@ final class FakeTransport implements HttpTransport {
 			'url'     => $url,
 			'headers' => $headers,
 			'body'    => is_array( $decoded ) ? $decoded : null,
+			'raw'     => $body,
 		);
 		$next             = array_shift( $this->responses );
 		if ( null === $next ) {
