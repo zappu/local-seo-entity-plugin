@@ -42,7 +42,7 @@ final class SelftestCommand {
 	 *
 	 *     wp lsec selftest start --key=test1 --crash-at=compute
 	 *
-	 * @param list<string>               $args       Argumente.
+	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
 	 */
 	public function start( array $args, array $assoc_args ): void {
@@ -64,7 +64,7 @@ final class SelftestCommand {
 	 * <run-id>
 	 * : Ablauf-ID.
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function report( array $args, array $assoc_args ): void {
@@ -105,7 +105,7 @@ final class SelftestCommand {
 	 * <key>
 	 * : Merkmal, das bei start angegeben wurde.
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function count( array $args, array $assoc_args ): void {
@@ -119,7 +119,7 @@ final class SelftestCommand {
 	/**
 	 * Entfernt alle Selbsttest-Abläufe, ihre Beiträge und Zähler.
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function cleanup( array $args, array $assoc_args ): void {

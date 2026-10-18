@@ -41,20 +41,25 @@ final class RedactorTest extends TestCase {
 	 */
 	public static function pattern_provider(): array {
 		return array(
-			'Anthropic'   => array( 'key=sk-ant-api03-abcdefghijklmnop', 'abcdefghijklmnop' ),
-			'OpenRouter'  => array( 'sk-or-v1-0123456789abcdef0123', '0123456789abcdef' ),
-			'OpenAI'      => array( 'sk-proj-ABCDEFGHIJKLMNOPQRSTUVWX', 'ABCDEFGHIJKLMNOPQRSTUVWX' ),
-			'Bearer'      => array( 'Authorization: Bearer abcdef1234567890xyz', 'abcdef1234567890xyz' ),
-			'URL-Param'   => array( 'https://www.textfocus.net/apis/tf_keyword/?key=Zz9988776655&lang=de', 'Zz9988776655' ),
-			'JSON-Feld'   => array( '{"api_key":"a1b2c3d4e5f6g7"}', 'a1b2c3d4e5f6g7' ),
-			'GitHub'      => array( 'gh' . 'p_abcdefghijklmnopqrstuvwxyz0123', 'abcdefghijklmnopqrstuvwxyz0123' ),
+			'Anthropic'  => array( 'key=sk-ant-api03-abcdefghijklmnop', 'abcdefghijklmnop' ),
+			'OpenRouter' => array( 'sk-or-v1-0123456789abcdef0123', '0123456789abcdef' ),
+			'OpenAI'     => array( 'sk-proj-ABCDEFGHIJKLMNOPQRSTUVWX', 'ABCDEFGHIJKLMNOPQRSTUVWX' ),
+			'Bearer'     => array( 'Authorization: Bearer abcdef1234567890xyz', 'abcdef1234567890xyz' ),
+			'URL-Param'  => array( 'https://www.textfocus.net/apis/tf_keyword/?key=Zz9988776655&lang=de', 'Zz9988776655' ),
+			'JSON-Feld'  => array( '{"api_key":"a1b2c3d4e5f6g7"}', 'a1b2c3d4e5f6g7' ),
+			'GitHub'     => array( implode( '', array( 'gh', 'p_abcdefghijklmnopqrstuvwxyz0123' ) ), 'abcdefghijklmnopqrstuvwxyz0123' ),
 		);
 	}
 
 	public function test_nested_arrays_are_redacted(): void {
 		$r = new Redactor();
 		$r->add_secret( 'geheim-geheim-geheim' );
-		$out = $r->redact_array( array( 'a' => array( 'b' => 'x geheim-geheim-geheim y' ), 'n' => 5 ) );
+		$out = $r->redact_array(
+			array(
+				'a' => array( 'b' => 'x geheim-geheim-geheim y' ),
+				'n' => 5,
+			)
+		);
 		$this->assertSame( 'x [GESCHWÄRZT] y', $out['a']['b'] );
 		$this->assertSame( 5, $out['n'] );
 	}

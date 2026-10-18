@@ -30,7 +30,8 @@ Implementiert wird erst nach bestandenem Machbarkeitstest (Spezifikation v0.3, A
 
 - PHP ≥ 8.1, WordPress ≥ 6.4, Namespace `Lsec\` in `src/`, Präfix `lsec` für Tabellen, Optionen, Hooks und Capabilities.
 - Warteschlange: Action Scheduler (Composer-Paket `woocommerce/action-scheduler`), Gruppe `lsec`. Der fachliche Ablauf liegt in `lsec_runs` und `lsec_run_steps`; der Action Scheduler stößt nur Schritte an.
-- Cronjob auf dem Server: `wp action-scheduler run --group=lsec --batch-size=3 --batches=1` alle 5 Minuten.
+- Cronjob auf dem Server: `wp lsec cron` alle 5 Minuten. Der Befehl schließt bei Bedarf die Datenmigration von Action Scheduler ab, gibt verwaiste Aufträge frei, startet den Watchdog und ruft dann `action-scheduler run --group=lsec` auf (Begründung: Spezifikation v0.3, Abschnitt 7.1).
+- Prüfskript: `bin/machbarkeitstest.sh --path=<WordPress>` prüft M2–M5 auf einer echten Installation; läuft auch in der CI.
 - Datenbank: Schema in `src/Infrastructure/Database/Schema.php`, Migration über `dbDelta()` und Option `lsec_db_version`. Jede Schemaänderung erhöht `Schema::VERSION`.
 - Geheimnisse: Konstanten in `wp-config.php` haben Vorrang vor Optionen. Geheimnisse nie in Logs, Fehlermeldungen oder Exporte.
 

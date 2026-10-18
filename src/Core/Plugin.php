@@ -47,15 +47,61 @@ final class Plugin {
 	 */
 	private bool $booted = false;
 
+	/**
+	 * Schwärzung von Geheimnissen.
+	 *
+	 * @var Redactor
+	 */
 	public readonly Redactor $redactor;
-	public readonly Logger $logger;
-	public readonly Secrets $secrets;
-	public readonly RunRepository $runs;
-	public readonly Queue $queue;
-	public readonly WorkflowRegistry $workflows;
-	public readonly WorkflowEngine $engine;
-	public readonly Watchdog $watchdog;
 
+	/**
+	 * Protokoll.
+	 *
+	 * @var Logger
+	 */
+	public readonly Logger $logger;
+
+	/**
+	 * API-Schlüssel.
+	 *
+	 * @var Secrets
+	 */
+	public readonly Secrets $secrets;
+
+	/**
+	 * Datenzugriff für Abläufe.
+	 *
+	 * @var RunRepository
+	 */
+	public readonly RunRepository $runs;
+
+	/**
+	 * Warteschlange.
+	 *
+	 * @var Queue
+	 */
+	public readonly Queue $queue;
+
+	/**
+	 * Ablaufdefinitionen.
+	 *
+	 * @var WorkflowRegistry
+	 */
+	public readonly WorkflowRegistry $workflows;
+
+	/**
+	 * Ablaufsteuerung.
+	 *
+	 * @var WorkflowEngine
+	 */
+	public readonly WorkflowEngine $engine;
+
+	/**
+	 * Wiederaufnahme hängengebliebener Abläufe.
+	 *
+	 * @var Watchdog
+	 */
+	public readonly Watchdog $watchdog;
 	/**
 	 * Konstruktor: einfache, handgeschriebene Verdrahtung ohne Container-Bibliothek.
 	 */

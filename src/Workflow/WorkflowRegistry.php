@@ -41,6 +41,7 @@ final class WorkflowRegistry {
 	 * Definition eines Typs.
 	 *
 	 * @param string $type Ablauftyp.
+	 * @throws \OutOfBoundsException Wenn der Typ nicht registriert ist.
 	 */
 	public function get( string $type ): WorkflowDefinition {
 		if ( ! $this->has( $type ) ) {

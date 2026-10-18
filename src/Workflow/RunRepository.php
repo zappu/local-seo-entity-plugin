@@ -62,10 +62,11 @@ final class RunRepository {
 	 * @param int|null             $subject_id      ID des Gegenstands.
 	 * @param string               $idempotency_key Schlüssel.
 	 * @param array<string, mixed> $input           Startkontext.
-	 * @param list<string>         $steps           Schritte in Reihenfolge.
+	 * @param string[]             $steps           Schritte in Reihenfolge.
 	 * @param int                  $max_attempts    Höchstzahl Versuche je Schritt.
 	 * @param int|null             $created_by      WordPress-Benutzer.
 	 * @return array{0: int, 1: bool} Ablauf-ID und ob er neu angelegt wurde.
+	 * @throws \RuntimeException Wenn der Ablauf nicht gespeichert werden konnte.
 	 */
 	public function create( string $type, ?string $subject_type, ?int $subject_id, string $idempotency_key, array $input, array $steps, int $max_attempts, ?int $created_by ): array {
 		$now      = self::now();

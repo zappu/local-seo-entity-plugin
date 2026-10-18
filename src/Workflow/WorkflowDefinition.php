@@ -18,6 +18,7 @@ final class WorkflowDefinition {
 	 * @param string                     $type     Ablauftyp.
 	 * @param array<string, StepHandler> $handlers Schrittname => Handler, in Ausführungsreihenfolge.
 	 * @param int                        $lock_ttl Sperrdauer in Sekunden; muss länger sein als der längste Schritt.
+	 * @throws \InvalidArgumentException Ohne Schritte.
 	 */
 	public function __construct(
 		public readonly string $type,
@@ -42,6 +43,7 @@ final class WorkflowDefinition {
 	 * Handler eines Schritts.
 	 *
 	 * @param string $step Schrittname.
+	 * @throws \OutOfBoundsException Bei unbekanntem Schritt.
 	 */
 	public function handler( string $step ): StepHandler {
 		if ( ! isset( $this->handlers[ $step ] ) ) {

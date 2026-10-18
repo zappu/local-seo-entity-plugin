@@ -70,7 +70,13 @@ final class WorkflowEngine {
 
 		if ( $created ) {
 			$this->queue->enqueue( $run_id );
-			$this->logger->info( 'Ablauf gestartet', array( 'run_id' => $run_id, 'type' => $type ) );
+			$this->logger->info(
+				'Ablauf gestartet',
+				array(
+					'run_id' => $run_id,
+					'type'   => $type,
+				)
+			);
 		}
 
 		return array(
@@ -248,7 +254,13 @@ final class WorkflowEngine {
 						'finished_at'   => gmdate( 'Y-m-d H:i:s' ),
 					)
 				);
-				$this->logger->info( 'Ablauf blockiert', array( 'run_id' => $run_id, 'code' => $result->code ) );
+				$this->logger->info(
+					'Ablauf blockiert',
+					array(
+						'run_id' => $run_id,
+						'code'   => $result->code,
+					)
+				);
 				return;
 
 			default:

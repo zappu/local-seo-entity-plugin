@@ -409,13 +409,18 @@ Ein falsch geschriebenes Ausgangs-Keyword („flächenreingung“) hat in der Te
 - **Ausführung:** Der Server-Cronjob ruft WP-CLI auf. Über die Kommandozeile gelten die Laufzeitgrenzen des Webservers nicht, was lange KI-Aufrufe absichert.
 - **Fachliche Steuerung:** Das Plugin hält Status, Zwischenergebnisse und Reihenfolge selbst in `lsec_runs` und `lsec_run_steps`. Der Action Scheduler ist nur der Auslöser. Damit lässt sich die Warteschlange später austauschen, ohne den Workflow zu ändern.
 
-**Vorschlag Cronjob (Plesk „Geplante Aufgaben“), alle 5 Minuten:**
+**Cronjob (Plesk „Geplante Aufgaben“), alle 5 Minuten** – festgelegt nach Etappe 1 des Machbarkeitstests:
 
 ```bash
-wp --path=/var/www/vhosts/<domain>/httpdocs action-scheduler run --group=lsec --batch-size=3 --batches=1
+wp --path=/var/www/vhosts/<domain>/httpdocs lsec cron
 ```
 
-Optional zusätzlich `wp cron event run --due-now`, wenn `DISABLE_WP_CRON` gesetzt ist. Das Plugin zeigt im Backend den Zeitpunkt der letzten Cron-Ausführung und warnt, wenn sie länger als 15 Minuten zurückliegt.
+`wp lsec cron` ruft intern `action-scheduler run --group=lsec --batch-size=3 --batches=1` auf und erledigt vorher zwei Dinge, die sich im Test als nötig erwiesen haben (18.10.2026):
+
+- **Datenmigration von Action Scheduler:** Auf einer Website, auf der Action Scheduler neu ist, laufen auf eine Gruppe gefilterte Durchgänge so lange mit Fehler („group does not exist“), bis Action Scheduler seine einmalige Migration abgeschlossen hat. Diese Migration läuft selbst als Aktion einer anderen Gruppe und würde mit dem Gruppenfilter nie ausgeführt. `wp lsec cron` führt sie deshalb beim ersten Lauf direkt aus und arbeitet die Warteschlange dieses eine Mal ungefiltert ab.
+- **Verwaiste Durchgänge:** Stürzt ein Durchgang ab, bleiben seine Aufträge beansprucht. Action Scheduler erlaubt standardmäßig nur einen Durchgang gleichzeitig und verweigert dann jeden weiteren, bis seine eigene Aufräumroutine greift. `wp lsec cron` gibt Aufträge, die länger als `--stale-after` (Standard 600 Sekunden, gleich der Sperrdauer) beansprucht sind, vorher frei.
+
+Zusätzlich `wp cron event run --due-now`, wenn `DISABLE_WP_CRON` gesetzt ist und andere Plugins WP-Cron nutzen. Das Plugin zeigt im Backend den Zeitpunkt der letzten Cron-Ausführung und warnt, wenn sie länger als 15 Minuten zurückliegt. Rank Math bringt selbst Action Scheduler mit; beide Kopien vertragen sich (geprüft mit Rank Math 1.0.280 und Action Scheduler 3.9.3).
 
 ### 7.2 Status eines Ablaufs
 
@@ -761,7 +766,7 @@ Nach dem Machbarkeitstest werden die offenen Entscheidungen (Abschnitt 13) getro
 | Screpy für Ranking-Verlauf, Backlinks, Site-Audit | vorgesehen für Ausbau 3 |
 | KI-Sichtbarkeit (Screpy, optional Indexly) als neue Anforderung | offen – Entscheidung des Administrators |
 | Suchvolumina im vorhandenen Textfocus-Tarif | offen – Prüfung in M16 |
-| Action Scheduler mit WP-CLI-Cronjob | Vorschlag, Bestätigung im Machbarkeitstest |
+| Action Scheduler mit WP-CLI-Cronjob (`wp lsec cron`) | bestätigt in Etappe 1 (M3–M5 bestanden, 18.10.2026) |
 | Search Console über Dienstkonto im MVP | Vorschlag |
 | Rank Math über Metafelder | Vorschlag, Prüfung in M13 |
 | KI-Anbieter | festgelegt: OpenRouter, Anthropic, OpenAI (Abschnitt 8.1a) |

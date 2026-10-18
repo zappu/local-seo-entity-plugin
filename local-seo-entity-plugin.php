@@ -40,7 +40,7 @@ if ( version_compare( PHP_VERSION, LSEC_MIN_PHP, '<' ) ) {
 	return;
 }
 
-$lsec_autoload = LSEC_DIR . 'vendor/autoload.php';
+$lsec_autoload         = LSEC_DIR . 'vendor/autoload.php';
 $lsec_action_scheduler = LSEC_DIR . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 
 if ( ! file_exists( $lsec_autoload ) || ! file_exists( $lsec_action_scheduler ) ) {

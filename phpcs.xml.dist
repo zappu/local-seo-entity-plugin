@@ -38,6 +38,16 @@
 
 	<rule ref="PHPCompatibilityWP"/>
 
+	<!-- Fehlalarm: $this in Methoden von PHP-8.1-Enums. -->
+	<rule ref="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext">
+		<exclude-pattern>/src/Workflow/*Status.php</exclude-pattern>
+	</rule>
+
+	<!-- WP-CLI gibt die Signatur ($args, $assoc_args) vor, auch wenn ein Befehl sie nicht braucht. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>/src/Cli/*</exclude-pattern>
+	</rule>
+
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

@@ -18,8 +18,8 @@ final class RetryPolicy {
 	/**
 	 * Konstruktor.
 	 *
-	 * @param list<int> $delays       Wartezeiten in Sekunden nach dem 1., 2., 3. Fehlversuch.
-	 * @param int       $max_attempts Höchstzahl der Versuche je Schritt.
+	 * @param int[] $delays       Wartezeiten in Sekunden nach dem 1., 2., 3. Fehlversuch.
+	 * @param int   $max_attempts Höchstzahl der Versuche je Schritt.
 	 */
 	public function __construct(
 		private readonly array $delays = array( 60, 300, 1800 ),

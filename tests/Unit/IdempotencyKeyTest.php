@@ -23,8 +23,24 @@ final class IdempotencyKeyTest extends TestCase {
 	}
 
 	public function test_order_of_extra_keys_does_not_matter(): void {
-		$a = IdempotencyKey::for_run( 'x', 'topic', 1, array( 'a' => 1, 'b' => 2 ) );
-		$b = IdempotencyKey::for_run( 'x', 'topic', 1, array( 'b' => 2, 'a' => 1 ) );
+		$a = IdempotencyKey::for_run(
+			'x',
+			'topic',
+			1,
+			array(
+				'a' => 1,
+				'b' => 2,
+			)
+		);
+		$b = IdempotencyKey::for_run(
+			'x',
+			'topic',
+			1,
+			array(
+				'b' => 2,
+				'a' => 1,
+			)
+		);
 		$this->assertSame( $a, $b );
 	}
 

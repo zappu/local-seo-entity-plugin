@@ -157,6 +157,7 @@ final class Secrets {
 	 * Erlaubt nur bekannte Namen.
 	 *
 	 * @param string $name Name.
+	 * @throws \InvalidArgumentException Bei unbekanntem Namen.
 	 */
 	private static function assert_name( string $name ): void {
 		if ( ! in_array( $name, self::NAMES, true ) ) {

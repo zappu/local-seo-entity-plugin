@@ -44,7 +44,7 @@ final class LsecCommand {
 	 *
 	 *     wp lsec status
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function status( array $args, array $assoc_args ): void {
@@ -98,7 +98,7 @@ final class LsecCommand {
 	 *     # In Plesk unter "Geplante Aufgaben" alle 5 Minuten:
 	 *     wp --path=/var/www/vhosts/example.de/httpdocs lsec cron
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function cron( array $args, array $assoc_args ): void {
@@ -143,7 +143,7 @@ final class LsecCommand {
 	 * [--force]
 	 * : Auch ausführen, wenn die Schemaversion aktuell ist.
 	 *
-	 * @param list<string>               $args       Argumente.
+	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
 	 */
 	public function migrate( array $args, array $assoc_args ): void {
@@ -166,7 +166,7 @@ final class LsecCommand {
 	 * default: 60
 	 * ---
 	 *
-	 * @param list<string>          $args       Argumente.
+	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function watchdog( array $args, array $assoc_args ): void {

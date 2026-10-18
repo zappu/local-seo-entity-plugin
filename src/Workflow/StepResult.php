@@ -12,10 +12,10 @@ namespace Lsec\Workflow;
  */
 final class StepResult {
 
-	public const DONE    = 'done';
-	public const RETRY   = 'retry';
-	public const FAIL    = 'fail';
-	public const BLOCK   = 'block';
+	public const DONE  = 'done';
+	public const RETRY = 'retry';
+	public const FAIL  = 'fail';
+	public const BLOCK = 'block';
 
 	/**
 	 * Konstruktor.
