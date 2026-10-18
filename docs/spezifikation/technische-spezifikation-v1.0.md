@@ -270,7 +270,7 @@ Deaktivieren entfernt nichts. `uninstall.php` löscht Tabellen und Optionen nur,
 | `lsec_keywords` | Spalte `exclusion` VARCHAR(20) NULL, INDEX | Filter für Wettbewerber, Marken und fremde Orte (6.4) |
 | `lsec_entities` | Spalte `merged_into` BIGINT UNSIGNED NULL, INDEX; Status `merged` | Zusammenführen (8.3) |
 
-Die Migration ergänzt nur Spalten; vorhandene Daten bleiben. Bereits importierte Textfocus-Daten werden nicht nachträglich ergänzt; ein erneuter Abruf aus dem Zwischenspeicher füllt `competition`, weil `response_body` die vollständige Antwort enthält.
+Die Migration ergänzt nur Spalten; vorhandene Daten bleiben. Bereits importierte Textfocus-Daten werden nicht automatisch ergänzt. Ein erneutes Einlesen aus dem Zwischenspeicher füllt `competition` ohne Credit, weil `response_body` das vollständige Feld `result` enthält.
 
 ---
 
@@ -508,7 +508,7 @@ Der Test hat die Websuche als Kostentreiber gezeigt: Die Suchergebnisse werden a
 | KI-Budget im Plugin | zusätzliche Bremse: Monatsbudget `ai_monthly_budget` und Höchstbetrag je Ablauf `ai_run_budget` in USD, berechnet aus `lsec_ai_calls.cost_estimate`. Bei Erreichen gehen Abläufe auf `waiting`; manuelle Prüfbefehle laufen mit Warnung weiter. **Vorschlag:** 20 USD im Monat, 1 USD je Ablauf – **Entscheidung offen** |
 | Treffer der Websuche | einstellbar `ai_web_max_results`; **Vorschlag:** 3 statt bisher 5. Bei OpenAI zusätzlich `search_context_size: low`. Wirkung auf Kosten und Quellenqualität wird in Stufe D gemessen |
 | Websuche nur wo nötig | nur im Schritt `research` der Themenrecherche; Briefing, Entwurf, Prüfung und Entity-Erkennung ohne Websuche |
-| Zwischenspeicher | Rechercheergebnisse je Thema und Region 14 Tage (**Vorschlag**), über `request_hash` in `lsec_ai_calls` |
+| Zwischenspeicher | keine neue Recherche, wenn für dieselbe Entität und Region in den letzten 14 Tagen (**Vorschlag**) schon geprüfte Aussagen vorliegen; die Ergebnisse stehen in `lsec_sources`, `lsec_claims` und `lsec_evidence` |
 | Anzeige | Kosten je Ablauf, je Beitrag und je Monat im Dashboard; Schätzung vor dem Start eines Sammelauftrags |
 | Eigenes Modell für die Recherche | würde die Anforderung „ein Modell für alle Aufgaben“ ändern. **Entscheidung offen**; Vorschlag: nicht in MVP 1, erst wenn die Messung in Stufe D zeigt, dass weniger Treffer nicht reichen |
 

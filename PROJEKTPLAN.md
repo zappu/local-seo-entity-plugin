@@ -16,7 +16,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 1 | Grundgerüst, Datenbank, Warteschlange, Cronjob, Wiederaufnahme, Doppelschutz (M1–M5) | erledigt (18.10.2026), auf Staging bestätigt |
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
-| Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | offen |
+| Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | Entwurf liegt vor (`docs/spezifikation/technische-spezifikation-v1.0.md`), Entscheidungen in Abschnitt 13 offen |
 | MVP 1 | Umsetzung nach Spezifikation v1.0 | offen |
 
 ## Machbarkeitstest: Prüfpunkte
@@ -101,4 +101,4 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 3. ~~Textfocus: Tarif, Sprachcode, Excel-Exporte~~ erledigt (AppSumo, API-Zugang, Code `de`; Exporte Keyword-Volumen und Entitäten in 0.2.2 eingebaut).
 4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
 5. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
-6. Danach Spezifikation v1.0 mit den offenen Entscheidungen.
+6. Spezifikation v1.0: Entwurf erstellt am 18.10.2026. Offen: KI-Budget, Treffer der Websuche, eigenes Recherchemodell, Modell, Testphase (KI-Sichtbarkeit erst vor Ausbau 3).
