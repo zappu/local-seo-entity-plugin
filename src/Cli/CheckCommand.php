@@ -30,10 +30,14 @@ final class CheckCommand {
 	 * Restprüfung M8: sucht die eingestellten Schlüssel im Klartext in der Datenbank und im Protokoll.
 	 *
 	 * Durchsucht alle Plugin-Tabellen, wp_options (ohne die verschlüsselte Ablage), wp_postmeta,
-	 * wp_usermeta und die Tabellen von Action Scheduler sowie debug.log und das PHP-Fehlerprotokoll.
+	 * wp_usermeta und die Tabellen von Action Scheduler sowie debug.log, das PHP-Fehlerprotokoll und
+	 * unter Plesk die Fehlerprotokolle im Ordner logs neben dem Webroot (error_log, proxy_error_log).
 	 * Gezeigt werden nur Fundorte und Anzahl, nie ein Schlüssel.
 	 *
 	 * ## OPTIONS
+	 *
+	 * [--log=<dateien>]
+	 * : Weitere Protokolldateien, mehrere mit Komma getrennt.
 	 *
 	 * [--format=<format>]
 	 * : table oder json.
@@ -44,6 +48,7 @@ final class CheckCommand {
 	 * ## EXAMPLES
 	 *
 	 *     wp lsec check secrets
+	 *     wp lsec check secrets --log=/var/log/php-fpm/www-error.log
 	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
@@ -75,15 +80,27 @@ final class CheckCommand {
 
 		// WP_DEBUG_LOG ist true (dann wp-content/debug.log) oder ein eigener Pfad.
 		$debug_log = defined( 'WP_DEBUG_LOG' ) ? (string) constant( 'WP_DEBUG_LOG' ) : '';
-		$logs      = array_unique(
-			array_filter(
-				array(
-					defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/debug.log' : '',
-					str_contains( $debug_log, '/' ) ? $debug_log : '',
-					(string) ini_get( 'error_log' ),
+		$extra     = array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $assoc_args['log'] ?? '' ) ) ) ) );
+		$logs      = array_values(
+			array_unique(
+				array_filter(
+					array_merge(
+						array(
+							defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/debug.log' : '',
+							str_contains( $debug_log, '/' ) ? $debug_log : '',
+							(string) ini_get( 'error_log' ),
+						),
+						self::plesk_logs( dirname( untrailingslashit( ABSPATH ) ) . '/logs' ),
+						$extra
+					)
 				)
 			)
 		);
+		foreach ( $extra as $file ) {
+			if ( ! is_readable( $file ) ) {
+				WP_CLI::warning( 'Nicht lesbar: ' . $file );
+			}
+		}
 
 		$rows  = array();
 		$found = 0;
@@ -130,6 +147,27 @@ final class CheckCommand {
 			WP_CLI::error( sprintf( '%d Fundstelle(n). Die betroffenen Schlüssel beim Anbieter erneuern und die Fundstellen löschen.', $found ) );
 		}
 		WP_CLI::success( 'Kein Schlüssel im Klartext gefunden (M8).' );
+	}
+
+	/**
+	 * Fehlerprotokolle von Plesk im Ordner logs neben dem Webroot (error_log, proxy_error_log und
+	 * deren noch nicht gepackte Vorgänger). Der Benutzer des Abonnements darf sie lesen.
+	 *
+	 * @param string $dir Ordner.
+	 * @return string[]
+	 */
+	private static function plesk_logs( string $dir ): array {
+		if ( ! is_dir( $dir ) || ! is_readable( $dir ) ) {
+			return array();
+		}
+		$files = glob( $dir . '/*error_log*' );
+		$out   = array();
+		foreach ( is_array( $files ) ? $files : array() as $file ) {
+			if ( is_file( $file ) && ! preg_match( '/\.(gz|zip|bz2)$/', $file ) ) {
+				$out[] = $file;
+			}
+		}
+		return $out;
 	}
 
 	/**
