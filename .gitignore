@@ -1,0 +1,17 @@
+*.zip
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Composer-Abhängigkeiten: werden beim Bau der ZIP mit --no-dev installiert
+vendor/
+
+# Werkzeuge und Testumgebung
+node_modules/
+build/
+.phpunit.result.cache
+.phpcs-cache
+/tmp/
