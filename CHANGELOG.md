@@ -5,7 +5,6 @@
 Erkenntnisse aus dem Test auf Staging.
 
 - Textfocus: Sprachliste mit Sprache, Land und Locale; `langs --save` legt die Locale mit ab (Standardcode jetzt `de`)
-
 - Entity-Erkennung: Beitragstitel wird als Klartext übergeben (vorher `&amp;` statt `&` in Fundstellen aus dem Titel)
 - Textfocus in WP-CLI: Hinweis, wenn wegen des Mindestabstands gewartet wird
 - HTTP: Bei Zertifikatsfehlern (cURL 60/51) Hinweis auf eine mögliche falsche DNS-Antwort des Servers
