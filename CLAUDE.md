@@ -21,16 +21,16 @@
 WordPress-Plugin für eine einzelne Website: recherchiert lokale SEO-Themen, erkennt und verknüpft Entitäten und erstellt daraus WordPress-Beitragsentwürfe mit Rank-Math-Angaben. Später optional automatische Veröffentlichung nach Freigabe.
 
 - Anforderungen: `docs/spezifikation/anforderungsspezifikation-v1.0.md`
-- Aktuelle technische Spezifikation: `docs/spezifikation/technische-spezifikation-v0.3.md`
+- Aktuelle technische Spezifikation: `docs/spezifikation/technische-spezifikation-v1.0.md` (v0.3 bleibt als Stand des Machbarkeitstests)
 - Plan und Stand: `PROJEKTPLAN.md`, Begriffe: `GLOSSAR.md`
 
-Implementiert wird erst nach bestandenem Machbarkeitstest (Spezifikation v0.3, Abschnitt 12). Die Spezifikation ist bindend; Abweichungen werden dort nachgetragen.
+Der Machbarkeitstest ist bestanden (M1–M18). MVP 1 wird in den Stufen A–F nach Spezifikation v1.0, Abschnitt 14 umgesetzt. Die Spezifikation ist bindend; Abweichungen werden dort nachgetragen.
 
 ## Technik
 
 - PHP ≥ 8.1, WordPress ≥ 6.4, Namespace `Lsec\` in `src/`, Präfix `lsec` für Tabellen, Optionen, Hooks und Capabilities.
 - Warteschlange: Action Scheduler (Composer-Paket `woocommerce/action-scheduler`), Gruppe `lsec`. Der fachliche Ablauf liegt in `lsec_runs` und `lsec_run_steps`; der Action Scheduler stößt nur Schritte an.
-- Cronjob auf dem Server: `wp lsec cron` alle 5 Minuten. Der Befehl schließt bei Bedarf die Datenmigration von Action Scheduler ab, gibt verwaiste Aufträge frei, startet den Watchdog und ruft dann `action-scheduler run --group=lsec` auf (Begründung: Spezifikation v0.3, Abschnitt 7.1).
+- Cronjob auf dem Server: `wp lsec cron` alle 5 Minuten. Der Befehl schließt bei Bedarf die Datenmigration von Action Scheduler ab, gibt verwaiste Aufträge frei, startet den Watchdog und ruft dann `action-scheduler run --group=lsec` auf (Begründung: Spezifikation v1.0, Abschnitt 7.1).
 - Prüfskript: `bin/machbarkeitstest.sh --path=<WordPress>` prüft M2–M5 auf einer echten Installation; läuft auch in der CI.
 - Datenbank: Schema in `src/Infrastructure/Database/Schema.php`, Migration über `dbDelta()` und Option `lsec_db_version`. Jede Schemaänderung erhöht `Schema::VERSION`.
 - Geheimnisse: Konstanten in `wp-config.php` haben Vorrang vor Optionen. Geheimnisse nie in Logs, Fehlermeldungen oder Exporte.

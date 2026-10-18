@@ -2,7 +2,7 @@
 ## WordPress Local SEO & Entity Content Plugin
 
 **Dokumentversion:** 1.0  
-**Status:** Fachliche Anforderungsaufnahme abgeschlossen  
+**Status:** Fachliche Anforderungsaufnahme abgeschlossen; Nachtrag vom 18.10.2026 zu Abschnitt 2 und 14  
 **Vorgehensmodell:** Grill-with-Docs  
 **Ziel:** Vorbereitung des Architekturvergleichs und Definition des MVP
 
@@ -23,7 +23,7 @@ Die Hauptaufgabe besteht darin, selbstständig relevante Themen für die lokale 
 | Produktform | WordPress-Plugin innerhalb der jeweiligen WordPress-Installation |
 | Hauptfunktion | Recherche, Planung und Erstellung neuer lokaler SEO-Beiträge |
 | Entity-Strategie | KI-gestützte Entity-Erkennung, Beziehungsanalyse und Entity-Integration in Inhalte |
-| KI | Zunächst ein festes KI-Modell für alle KI-Aufgaben |
+| KI | Ein festes Hauptmodell für alle KI-Aufgaben; optional ein eigenes Modell für die Recherche mit Websuche (Nachtrag 18.10.2026) |
 | SEO-Integration | Rank Math hat bei der Integration Vorrang |
 | Zielmarkt | Deutschland, Österreich und deutschsprachige Schweiz |
 | Website-Sprache | Zunächst einsprachige Websites |
@@ -290,9 +290,11 @@ Die erste Ausbaustufe konzentriert sich auf einsprachige Websites im deutschspra
 
 Das Plugin verwendet zunächst ein einziges KI-Modell für alle KI-Aufgaben.
 
+**Nachtrag 18.10.2026 (Entscheidung nach dem Machbarkeitstest):** Für den Rechercheschritt mit Websuche kann ein eigenes Modell desselben Anbieters eingestellt werden. Grund: Die Suchergebnisse machen den Großteil der Kosten aus (Recherche rund 0,14 US-Dollar gegenüber 0,005 US-Dollar für die Strukturierung). Alle übrigen Aufgaben verwenden weiterhin das Hauptmodell. Ohne eigene Einstellung gilt das Hauptmodell auch für die Recherche.
+
 Der API-Schlüssel kann über die Plugin-Einstellungen oder über die WordPress-Konfiguration in `wp-config.php` bereitgestellt werden. Die Konfiguration hat Vorrang, wenn beide Varianten befüllt sind. Geheimnisse dürfen nicht in Protokollen oder Fehlermeldungen offengelegt werden.
 
-Das Plugin zeigt verfügbare Nutzungs- und Kostendaten des KI-Dienstes an. Die eigentliche Begrenzung der Ausgaben erfolgt beim KI-Anbieter. Vor der Auswahl des konkreten Dienstes muss geprüft werden, welche Nutzungsdaten verfügbar sind und welche Kostenkontrollen der Anbieter tatsächlich ermöglicht.
+Das Plugin zeigt verfügbare Nutzungs- und Kostendaten des KI-Dienstes an. Die eigentliche Begrenzung der Ausgaben erfolgt beim KI-Anbieter. Zusätzlich hält das Plugin Abläufe an, wenn ein eingestelltes Monats- oder Ablaufbudget erreicht ist (Nachtrag 18.10.2026). Vor der Auswahl des konkreten Dienstes muss geprüft werden, welche Nutzungsdaten verfügbar sind und welche Kostenkontrollen der Anbieter tatsächlich ermöglicht.
 
 Der konkrete KI-Anbieter, die Bildgenerierung und zusätzliche SEO-Datenanbieter bleiben technische Auswahlentscheidungen.
 

@@ -1,7 +1,7 @@
 # WordPress Local SEO & Entity Content Plugin
 ## Technische Spezifikation v1.0
 
-**Status:** Entwurf vom 18.10.2026. Wird verbindliche Grundlage für MVP 1, sobald die mit **Entscheidung offen** markierten Punkte (Abschnitt 13) entschieden sind.  
+**Status:** Verbindliche Grundlage für MVP 1, Stand 18.10.2026. Noch offen: konkrete Modelle (vor Stufe D bzw. E) und KI-Sichtbarkeit (vor Ausbau 3), siehe Abschnitt 13.  
 **Entwicklung:** Machbarkeitstest abgeschlossen, M1–M18 bestanden (Version 0.2.4, Ergebnisse in `PROJEKTPLAN.md`)  
 **Grundlage:** Anforderungsspezifikation 1.0, Technische Spezifikation v0.1 bis v0.3, Ergebnisse des Machbarkeitstests  
 **Plugin / Präfix:** `local-seo-entity-plugin` / `lsec`
@@ -17,13 +17,13 @@
 | Verzeichnisstruktur | an den tatsächlichen Stand angepasst, neue Module für Themen, Qualität und Style Mimic | 3 |
 | Datenbank | Schemaversion 2 ist Stand; Schemaversion 3 für MVP 1: Wettbewerbswert, Ausschlussgrund bei Keywords, Zusammenführen von Entitäten | 4 |
 | Keyword-Quellen | Nachträge aus dem Test in den Haupttext übernommen; Filter für Wettbewerber und fremde Orte; Search Console als Signal für Sichtbarkeit ohne Klicks | 6 |
-| KI | Kostensteuerung (Budget, Einstellungen der Websuche), Faktenprüfung gegen den Quelltext, Mindest-Sicherheit und Zusammenführen bei der Entity-Erkennung | 8 |
+| KI | Kostensteuerung (Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell), Faktenprüfung gegen den Quelltext, Mindest-Sicherheit und Zusammenführen bei der Entity-Erkennung | 8 |
 | Qualitätsprüfung | `UNSUPPORTED_FACT` stützt sich auf die Faktenprüfung | 10 |
 | Sicherheit | Dienstkonto-Schlüssel, Prüfprotokoll, Abruf fremder Seiten | 11 |
 | Machbarkeitstest | Ergebnisse zusammengefasst | 12 |
 | Umsetzung | Plan für MVP 1 in Stufen mit Abnahmekriterien | 14 |
 
-Werte mit **Vorschlag** sind Ausgangswerte und werden während MVP 1 oder in der Testphase bestätigt. Punkte mit **Entscheidung offen** entscheidet Thomas vor Beginn der betroffenen Stufe.
+Werte mit **Vorschlag** sind Ausgangswerte und werden während MVP 1 oder in der Testphase bestätigt. Punkte mit **Entscheidung offen** entscheidet Thomas vor Beginn der betroffenen Stufe. Am 18.10.2026 entschieden: KI-Budget, Treffer der Websuche, eigenes Recherchemodell, Umfang der Testphase.
 
 ---
 
@@ -494,9 +494,11 @@ interface AiClient {
 
 Umgesetzt sind Adapter für **OpenRouter** (Chat Completions, `response_format` mit `json_schema`, Plugin `web`, Kosten aus der Antwort), **Anthropic** (Messages API) und **OpenAI** (Responses API, Werkzeug `web_search`). Alle drei wurden im Machbarkeitstest mit echten Aufrufen bzw. bei Anthropic bis zur Fehlermeldung des Kontos geprüft (M7, M7a, M7b).
 
-Der Administrator wählt einen Anbieter und ein Modell (`ai_provider`, `ai_model`), das für alle Aufgaben gilt (Anforderung 14). Preise für Anthropic und OpenAI stehen in der Einstellung `ai_prices` (USD je Million Token). Fehlt ein Preis, zeigt das Plugin „Kosten unbekannt“; das KI-Budget zählt solche Aufrufe dann mit einer Warnung nicht mit.
+Der Administrator wählt einen Anbieter und ein Hauptmodell (`ai_provider`, `ai_model`), das für alle Aufgaben gilt. Ausnahme (entschieden am 18.10.2026, Nachtrag zu Anforderung 14): Für den Schritt `research` mit Websuche kann `ai_research_model` ein eigenes Modell desselben Anbieters festlegen; leer bedeutet Hauptmodell. Die Strukturierung danach läuft mit dem Hauptmodell. `lsec_ai_calls.model` zeigt, welches Modell ein Aufruf verwendet hat. Preise für Anthropic und OpenAI stehen in der Einstellung `ai_prices` (USD je Million Token). Fehlt ein Preis, zeigt das Plugin „Kosten unbekannt“; das KI-Budget zählt solche Aufrufe dann mit einer Warnung nicht mit.
 
-**Modell (Vorschlag – Entscheidung offen):** OpenRouter mit `anthropic/claude-sonnet-5.5` als Startwert, weil es im Test gültige, sachlich vorsichtige Ergebnisse geliefert hat. Festgelegt wird nach dem Vergleich in Stufe E (14) mit drei deutschen Beispielbeiträgen der Testwebsite; verglichen werden Textqualität, Faktentreue nach 8.4a und Kosten je Beitrag.
+**Hauptmodell (Vorschlag – Entscheidung offen):** OpenRouter mit `anthropic/claude-sonnet-5.5` als Startwert, weil es im Test gültige, sachlich vorsichtige Ergebnisse geliefert hat. Festgelegt wird nach dem Vergleich in Stufe E (14) mit drei deutschen Beispielbeiträgen der Testwebsite; verglichen werden Textqualität, Faktentreue nach 8.4a und Kosten je Beitrag.
+
+**Recherchemodell (Entscheidung offen):** Auswahl in Stufe D. Kandidaten sind günstigere Modelle mit Websuche beim selben Anbieter; Maßstab ist der Anteil der Tatsachen, die die Faktenprüfung (8.4a) als `verified` einstuft, im Verhältnis zu den Kosten je Recherche.
 
 ### 8.1b Kostensteuerung
 
@@ -505,12 +507,12 @@ Der Test hat die Websuche als Kostentreiber gezeigt: Die Suchergebnisse werden a
 | Maßnahme | Festlegung |
 |---|---|
 | Ausgabenlimit beim Anbieter | bleibt die eigentliche Begrenzung (Anforderung 14); im Backend als Einrichtungshinweis |
-| KI-Budget im Plugin | zusätzliche Bremse: Monatsbudget `ai_monthly_budget` und Höchstbetrag je Ablauf `ai_run_budget` in USD, berechnet aus `lsec_ai_calls.cost_estimate`. Bei Erreichen gehen Abläufe auf `waiting`; manuelle Prüfbefehle laufen mit Warnung weiter. **Vorschlag:** 20 USD im Monat, 1 USD je Ablauf – **Entscheidung offen** |
-| Treffer der Websuche | einstellbar `ai_web_max_results`; **Vorschlag:** 3 statt bisher 5. Bei OpenAI zusätzlich `search_context_size: low`. Wirkung auf Kosten und Quellenqualität wird in Stufe D gemessen |
+| KI-Budget im Plugin | zusätzliche Bremse: Monatsbudget `ai_monthly_budget` und Höchstbetrag je Ablauf `ai_run_budget` in USD, berechnet aus `lsec_ai_calls.cost_estimate`. Bei Erreichen gehen Abläufe auf `waiting`; manuelle Prüfbefehle laufen mit Warnung weiter. **Festgelegt:** 20 USD im Monat, 1 USD je Ablauf (Standardwerte, einstellbar). Der Monat richtet sich nach der Zeitzone der Website |
+| Treffer der Websuche | einstellbar `ai_web_max_results`; **festgelegt:** Standard 3 statt bisher 5. Bei OpenAI zusätzlich `search_context_size: low`. In Stufe D werden 3 und 5 Treffer verglichen (Kosten, Anteil geprüfter Tatsachen); bei klarem Ergebnis wird der Standard angepasst |
 | Websuche nur wo nötig | nur im Schritt `research` der Themenrecherche; Briefing, Entwurf, Prüfung und Entity-Erkennung ohne Websuche |
 | Zwischenspeicher | keine neue Recherche, wenn für dieselbe Entität und Region in den letzten 14 Tagen (**Vorschlag**) schon geprüfte Aussagen vorliegen; die Ergebnisse stehen in `lsec_sources`, `lsec_claims` und `lsec_evidence` |
 | Anzeige | Kosten je Ablauf, je Beitrag und je Monat im Dashboard; Schätzung vor dem Start eines Sammelauftrags |
-| Eigenes Modell für die Recherche | würde die Anforderung „ein Modell für alle Aufgaben“ ändern. **Entscheidung offen**; Vorschlag: nicht in MVP 1, erst wenn die Messung in Stufe D zeigt, dass weniger Treffer nicht reichen |
+| Eigenes Modell für die Recherche | **festgelegt:** Einstellung `ai_research_model` (8.1a), umgesetzt in Stufe A; Auswahl des Modells in Stufe D. Die Anforderungsspezifikation ist um einen Nachtrag zu Abschnitt 14 ergänzt |
 
 **Grobe Schätzung je Beitrag (zu messen):** Recherche $0,05–0,15, Faktenprüfung bis $0,02, Briefing, Entwurf und Bewertung zusammen $0,05–0,15, also unter $0,50.
 
@@ -818,12 +820,12 @@ Die Prüfskripte bleiben Teil der CI und werden in MVP 1 um die neuen Abläufe e
 | Faktenprüfung gegen den Quelltext (8.4a) | festgelegt |
 | Filter für Wettbewerber und fremde Orte (6.4) | festgelegt |
 | Zusammenführen von Entitäten, Mindest-Sicherheit | festgelegt; Schwellenwert Vorschlag 0,6 |
-| Konkretes Modell | **Entscheidung offen** – Vorschlag: Start mit `anthropic/claude-sonnet-5.5` über OpenRouter, Festlegung nach Vergleich in Stufe E |
-| KI-Budget im Plugin | **Entscheidung offen** – Vorschlag: 20 USD/Monat, 1 USD je Ablauf |
-| Treffer der Websuche | **Entscheidung offen** – Vorschlag: 3, Messung in Stufe D |
-| Eigenes Modell für die Recherche | **Entscheidung offen** – Vorschlag: nicht in MVP 1 (würde Anforderung 14 ändern) |
+| Hauptmodell | **Entscheidung offen** – Vorschlag: Start mit `anthropic/claude-sonnet-5.5` über OpenRouter, Festlegung nach Vergleich in Stufe E |
+| KI-Budget im Plugin | festgelegt: 20 USD/Monat, 1 USD je Ablauf (18.10.2026) |
+| Treffer der Websuche | festgelegt: 3, Vergleich mit 5 in Stufe D (18.10.2026) |
+| Eigenes Modell für die Recherche | festgelegt: ja, `ai_research_model` (18.10.2026; Nachtrag zu Anforderung 14); **Modell offen** bis Stufe D |
 | KI-Sichtbarkeit (Screpy, optional Indexly) | **Entscheidung offen** – betrifft erst Ausbau 3 |
-| Umfang und Dauer der Testphase | **Entscheidung offen** – Vorschlag: 20 geprüfte Beiträge in 60 Tagen |
+| Umfang und Dauer der Testphase | festgelegt: 20 geprüfte Beiträge in 60 Tagen (18.10.2026) |
 | Mindestwerte der Qualitätsprüfung | Vorschlag, Kalibrierung in der Testphase |
 | Bilddienst | offen (Ausbau 2) |
 | Google Trends, DataForSEO | vorgesehen für Ausbau 2 |
@@ -837,11 +839,11 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 
 | Stufe | Inhalt | Abnahme | Version |
 |---|---|---|---|
-| A – Grundlage | Schemaversion 3; Einstellungen für Budget, Websuche, Mindest-Sicherheit; KI-Budget mit `waiting`; Restprüfung M8; React-Grundgerüst mit Dashboard und Einstellungen | Migration 2 → 3 ohne Datenverlust; Budget hält einen Ablauf an und gibt ihn nach Erhöhung frei; Dashboard zeigt Kosten, Credits, Cron | 0.3.0 |
+| A – Grundlage | Schemaversion 3; Einstellungen für Budget, Websuche, Recherchemodell, Mindest-Sicherheit; KI-Budget mit `waiting`; Restprüfung M8; React-Grundgerüst mit Dashboard und Einstellungen | Migration 2 → 3 ohne Datenverlust; Budget hält einen Ablauf an und gibt ihn nach Erhöhung frei; Dashboard zeigt Kosten, Credits, Cron | 0.3.0 |
 | B – Entitäten | Unternehmensprofil mit Servicegebiet; Inhaltsindex als Ablauf; Entity-Erkennung als Ablauf mit Ortsabgleich; schärfere Anweisung; Zusammenführen mit Vorschlägen; Entitäten-Seite in React | Index der Testwebsite vollständig; vier Schreibweisen des Firmennamens werden als Zusammenführung vorgeschlagen und zusammengeführt; Hemmingen wird `probable` | 0.4.0 |
 | C – Keywords | `keyword_sync` täglich; Import im Backend mit Spaltenzuordnung; Textfocus-Volumina im Ablauf; `competition`; Filter (6.4); Keywords-Seite | Search Console läuft täglich ohne Eingriff; `tf_related`-Ergebnisse für „flächenreinigung“ erhalten Ausschlussgründe für Wettbewerber und Hamburg | 0.5.0 |
-| D – Themen | `topic_research` mit Websuche, Faktenprüfung, Priorisierung und Überschneidung; Themen-Seite mit Freigabe; Messung der Websuche mit 3 und 5 Treffern | Eltze/Dollbergen-Fall: die falsch zugeordnete Jahreszahl wird nicht `verified`; eine Anfrage, für die eine passende Seite rankt, erscheint als Überschneidung | 0.6.0 |
+| D – Themen | `topic_research` mit Websuche, Faktenprüfung, Priorisierung und Überschneidung; Themen-Seite mit Freigabe; Vergleich der Websuche mit 3 und 5 Treffern und Auswahl des Recherchemodells | Eltze/Dollbergen-Fall: die falsch zugeordnete Jahreszahl wird nicht `verified`; eine Anfrage, für die eine passende Seite rankt, erscheint als Überschneidung | 0.6.0 |
 | E – Produktion | Briefing, Style Mimic, Entwurf, Qualitätsprüfung, `content_production` vollständig; Modellvergleich mit drei Beispielbeiträgen | Drei Entwürfe zu freigegebenen Themen entstehen über den Cronjob; ein Entwurf mit unbelegter Zahl wird `blocked`; Kosten je Beitrag gemessen | 0.7.0 |
 | F – Abschluss | Abläufe-Seite, Content- und Entity-Bericht, Sammelauftrag, Hinweise „bestehende Seite verbessern“; Integrationstests; Dokumentation | Abnahme MVP 1 durch Thomas auf Staging; danach Beginn der Testphase | 1.0.0 |
 
-**Vor Stufe A zu entscheiden:** KI-Budget. **Vor Stufe D:** Treffer der Websuche und eigenes Recherchemodell. **Vor Stufe E:** Modell. **Vor der Testphase:** Umfang und Dauer. KI-Sichtbarkeit erst vor Ausbau 3.
+**Entschieden am 18.10.2026:** KI-Budget, Treffer der Websuche, eigenes Recherchemodell, Testphase (20 Beiträge in 60 Tagen). **Noch offen:** Recherchemodell (Auswahl in Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
