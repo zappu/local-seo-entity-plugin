@@ -34,3 +34,36 @@ export const runAction = ( id, action ) =>
 
 export const refreshTextfocus = () =>
 	apiFetch( { path: `${ base }/textfocus/account`, method: 'POST' } );
+
+export const getProfile = () => apiFetch( { path: `${ base }/profile` } );
+export const saveProfile = ( profile ) =>
+	apiFetch( { path: `${ base }/profile`, method: 'POST', data: profile } );
+export const searchWikidata = ( q ) =>
+	apiFetch( { path: `${ base }/wikidata/search?q=${ encodeURIComponent( q ) }` } );
+export const setServiceArea = ( data ) =>
+	apiFetch( { path: `${ base }/service-area`, method: 'POST', data } );
+
+/**
+ * Entitäten mit Filtern.
+ *
+ * @param {Object} params type, status, search, min_confidence, limit.
+ * @return {Promise<Array>} Liste.
+ */
+export function getEntities( params ) {
+	const query = new URLSearchParams();
+	Object.entries( params ).forEach( ( [ k, v ] ) => {
+		if ( v !== '' && v !== null && v !== undefined ) {
+			query.set( k, v );
+		}
+	} );
+	return apiFetch( { path: `${ base }/entities?${ query.toString() }` } );
+}
+export const getEntity = ( id ) => apiFetch( { path: `${ base }/entities/${ id }` } );
+export const decideEntity = ( id, decision ) =>
+	apiFetch( { path: `${ base }/entities/${ id }/decision`, method: 'POST', data: { decision } } );
+export const mergeEntities = ( target, sources ) =>
+	apiFetch( { path: `${ base }/entities/merge`, method: 'POST', data: { target, sources } } );
+export const getMergeSuggestions = () => apiFetch( { path: `${ base }/entities/merge-suggestions` } );
+export const getIndex = () => apiFetch( { path: `${ base }/index` } );
+export const runIndex = ( all = false ) =>
+	apiFetch( { path: `${ base }/index/run`, method: 'POST', data: { all } } );

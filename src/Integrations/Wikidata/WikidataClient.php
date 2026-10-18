@@ -37,6 +37,20 @@ final class WikidataClient {
 	) {}
 
 	/**
+	 * Zugang für diese Website: Zwischenspeicher in lsec_provider_calls, Kennung mit Version und Adresse
+	 * der Website (Wikimedia verlangt eine aussagekräftige Kennung, keine E-Mail-Adresse nötig).
+	 *
+	 * @param HttpTransport $http HTTP.
+	 */
+	public static function for_site( HttpTransport $http ): self {
+		return new self(
+			$http,
+			new \Lsec\Integrations\Textfocus\ProviderCallRepository(),
+			sprintf( 'LocalSEOEntityPlugin/%s (WordPress; %s)', LSEC_VERSION, home_url( '/' ) )
+		);
+	}
+
+	/**
 	 * Sucht Einträge nach Name.
 	 *
 	 * @param string $name  Name.

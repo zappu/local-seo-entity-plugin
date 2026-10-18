@@ -7,6 +7,7 @@
 
 namespace Lsec\Admin;
 
+use Lsec\Core\Settings;
 use Lsec\Infrastructure\Security\Capabilities;
 
 /**
@@ -17,12 +18,16 @@ final class AppPage {
 
 	public const SLUG          = 'lsec';
 	public const SETTINGS_SLUG = 'lsec-settings';
+	public const PROFILE_SLUG  = 'lsec-profile';
+	public const ENTITIES_SLUG = 'lsec-entities';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
 	 */
 	private const VIEWS = array(
 		self::SLUG          => 'dashboard',
+		self::PROFILE_SLUG  => 'profile',
+		self::ENTITIES_SLUG => 'entities',
 		self::SETTINGS_SLUG => 'settings',
 	);
 
@@ -32,7 +37,7 @@ final class AppPage {
 	public function register(): void {
 		// Vor den übrigen Seiten, damit das Hauptmenü steht, wenn sie sich als Unterseiten eintragen.
 		add_action( 'admin_menu', array( $this, 'add_menu' ), 9 );
-		// Reihenfolge im Menü: Dashboard, Entitäten (20), Einstellungen (30), Technik (40).
+		// Reihenfolge im Menü: Dashboard, Unternehmen, Entitäten, Einstellungen (30), Technik (40).
 		add_action( 'admin_menu', array( $this, 'add_settings_menu' ), 30 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
@@ -56,6 +61,22 @@ final class AppPage {
 			__( 'Dashboard', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,
 			self::SLUG,
+			array( $this, 'render' )
+		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Unternehmen', 'local-seo-entity-plugin' ),
+			__( 'Unternehmen', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::PROFILE_SLUG,
+			array( $this, 'render' )
+		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Entitäten', 'local-seo-entity-plugin' ),
+			__( 'Entitäten', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::ENTITIES_SLUG,
 			array( $this, 'render' )
 		);
 	}
@@ -87,6 +108,20 @@ final class AppPage {
 		}
 		$asset = require $asset_file;
 		wp_enqueue_script( 'lsec-admin', LSEC_URL . 'assets/dist/admin.js', $asset['dependencies'], $asset['version'], true );
+		wp_add_inline_script(
+			'lsec-admin',
+			'window.lsecAdmin = ' . wp_json_encode(
+				array(
+					'minConfidence' => (float) Settings::get( 'entity_min_confidence' ),
+					'pages'         => array(
+						'profile'  => admin_url( 'admin.php?page=' . self::PROFILE_SLUG ),
+						'entities' => admin_url( 'admin.php?page=' . self::ENTITIES_SLUG ),
+						'settings' => admin_url( 'admin.php?page=' . self::SETTINGS_SLUG ),
+					),
+				)
+			) . ';',
+			'before'
+		);
 		wp_enqueue_style( 'wp-components' );
 		wp_enqueue_style( 'lsec-admin', LSEC_URL . 'assets/dist/admin.css', array( 'wp-components' ), $asset['version'] );
 		wp_style_add_data( 'lsec-admin', 'rtl', 'replace' );
@@ -102,6 +137,8 @@ final class AppPage {
 		$view   = self::current_view() ?? 'dashboard';
 		$titles = array(
 			'dashboard' => __( 'Local SEO – Dashboard', 'local-seo-entity-plugin' ),
+			'profile'   => __( 'Local SEO – Unternehmen', 'local-seo-entity-plugin' ),
+			'entities'  => __( 'Local SEO – Entitäten', 'local-seo-entity-plugin' ),
 			'settings'  => __( 'Local SEO – Einstellungen', 'local-seo-entity-plugin' ),
 		);
 		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ) . '</h1>';

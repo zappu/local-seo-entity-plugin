@@ -282,6 +282,41 @@ final class RunRepository {
 	}
 
 	/**
+	 * Speichert den Zwischenstand eines Schritts, der im nächsten Durchgang weiterläuft; der Versuch zählt nicht.
+	 *
+	 * @param int                  $step_id Schritt-ID.
+	 * @param array<string, mixed> $state   Zwischenstand.
+	 */
+	public function continue_step( int $step_id, array $state ): void {
+		$this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'run_steps' )} SET status = %s, attempt = GREATEST(attempt - 1, 0), output = %s, error_code = NULL, error_message = NULL, finished_at = %s WHERE id = %d",
+				StepStatus::Pending->value,
+				(string) wp_json_encode( $state ),
+				self::now(),
+				$step_id
+			)
+		);
+	}
+
+	/**
+	 * Gibt es einen nicht beendeten Ablauf dieses Typs?
+	 *
+	 * @param string $type Ablauftyp.
+	 */
+	public function has_active( string $type ): bool {
+		return (int) $this->db->get_var(
+			$this->db->prepare(
+				"SELECT COUNT(*) FROM {$this->t( 'runs' )} WHERE type = %s AND status IN (%s, %s, %s)",
+				$type,
+				RunStatus::Queued->value,
+				RunStatus::Running->value,
+				RunStatus::Waiting->value
+			)
+		) > 0;
+	}
+
+	/**
 	 * Wartende Abläufe mit einem bestimmten Grund.
 	 *
 	 * @param string $code  Grund, z. B. ai_budget.

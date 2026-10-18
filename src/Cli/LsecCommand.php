@@ -7,6 +7,7 @@
 
 namespace Lsec\Cli;
 
+use Lsec\Content\ContentIndexWorkflow;
 use Lsec\Core\Plugin;
 use Lsec\Infrastructure\Database\Migrator;
 use Lsec\Infrastructure\Database\Schema;
@@ -126,6 +127,11 @@ final class LsecCommand {
 		$released = $this->plugin->engine->resume_waiting( AiBudget::WAIT_CODE, static fn( int $run_id ): bool => $budget->allows( $run_id ) );
 		if ( array() !== $released ) {
 			WP_CLI::log( 'Budget reicht wieder, fortgesetzt: ' . implode( ', ', $released ) );
+		}
+
+		$index = ContentIndexWorkflow::maybe_start_scheduled( $this->plugin );
+		if ( null !== $index ) {
+			WP_CLI::log( 'Inhaltsindex für neue oder geänderte Inhalte gestartet: Ablauf ' . $index );
 		}
 
 		$group = ' --group=' . ActionSchedulerQueue::GROUP;

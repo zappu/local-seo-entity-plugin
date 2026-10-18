@@ -8,11 +8,15 @@
  */
 import { createElement, createRoot } from '@wordpress/element';
 import Dashboard from './dashboard';
+import Entities from './entities';
+import Profile from './profile';
 import Settings from './settings';
 import './admin.scss';
 
 const VIEWS = {
 	dashboard: Dashboard,
+	profile: Profile,
+	entities: Entities,
 	settings: Settings,
 };
 

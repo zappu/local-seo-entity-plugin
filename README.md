@@ -1,6 +1,6 @@
 # Local SEO & Entity Content
 
-WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **MVP 1, Stufe A** (Schemaversion 3, KI-Budget, Recherchemodell, Dashboard und Einstellungen im Backend) auf Grundlage des bestandenen Machbarkeitstests. Plan in Spezifikation v1.0, Abschnitt 14.
+WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **MVP 1, Stufe B** (Unternehmensprofil, Inhaltsindex, Entity-Erkennung als Ablauf, Zusammenführen von Entitäten; davor Stufe A mit KI-Budget, Dashboard und Einstellungen) auf Grundlage des bestandenen Machbarkeitstests. Plan in Spezifikation v1.0, Abschnitt 14.
 
 Spezifikationen und Plan: [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md).
 
@@ -62,7 +62,13 @@ wp lsec runs list --status=waiting
 wp lsec runs resume <id>       # wartenden Ablauf fortsetzen
 wp lsec check secrets          # Schlüssel im Klartext in Datenbank oder Protokoll?
 wp lsec settings set ai_research_model <modell>
+wp lsec profile show --format=json > profil.json   # Unternehmensprofil sichern / bearbeiten
+wp lsec index run --now        # Inhaltsindex; startet bei entity_auto_extract die Erkennung (KI-Kosten)
+wp lsec entities suggest-merges
+wp lsec entities merge <ziel> <quelle>…
 ```
+
+Stufe B (gleiches Skript): Inhaltsindex mit den eigenen Testbeiträgen, Entity-Erkennung als Ablauf über eine KI-Attrappe, Zusammenführen mit Vorschlägen, Profil unverändert speichern, REST-Schutz; mit `--online` zusätzlich der Ortsabgleich für Hemmingen. Testdaten heißen `LSECTEST …` und werden danach entfernt.
 
 ## Entwicklung
 

@@ -88,19 +88,33 @@ final class RestController {
 			array(
 				'methods'             => 'GET',
 				'callback'            => static fn( \WP_REST_Request $r ): \WP_REST_Response => new \WP_REST_Response(
-					( new EntityRepository() )->list( (string) $r->get_param( 'type' ), (string) $r->get_param( 'status' ), (int) $r->get_param( 'limit' ) )
+					( new EntityRepository() )->list(
+						(string) $r->get_param( 'type' ),
+						(string) $r->get_param( 'status' ),
+						(int) $r->get_param( 'limit' ),
+						(float) $r->get_param( 'min_confidence' ) > 0 ? (float) $r->get_param( 'min_confidence' ) : null,
+						(string) $r->get_param( 'search' )
+					)
 				),
 				'permission_callback' => $permission,
 				'args'                => array(
-					'type'   => array(
+					'type'           => array(
 						'type'    => 'string',
 						'default' => '',
 					),
-					'status' => array(
+					'status'         => array(
 						'type'    => 'string',
 						'default' => '',
 					),
-					'limit'  => array(
+					'search'         => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'min_confidence' => array(
+						'type'    => 'number',
+						'default' => 0,
+					),
+					'limit'          => array(
 						'type'    => 'integer',
 						'default' => 50,
 						'minimum' => 1,
@@ -144,6 +158,7 @@ final class RestController {
 		);
 
 		$this->register_admin_routes( $permission );
+		( new EntitiesController( $this->plugin ) )->register( $permission );
 	}
 
 	/**

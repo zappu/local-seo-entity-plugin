@@ -65,6 +65,62 @@ final class SelftestCommand {
 	}
 
 	/**
+	 * Führt die Entity-Erkennung für einen Beitrag mit fester KI-Antwort aus (ohne Kosten) und zeigt das Ergebnis.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <post-id>
+	 * : Beitrag.
+	 *
+	 * --response=<datei>
+	 * : JSON-Antwort, wie sie die KI liefern würde (Schema von EntityExtractor).
+	 *
+	 * [--online]
+	 * : Orte über Wikidata abgleichen. Ohne diese Option entfällt der Ortsabgleich.
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function extraction( array $args, array $assoc_args ): void {
+		$file = (string) ( $assoc_args['response'] ?? '' );
+		if ( ! is_readable( $file ) ) {
+			WP_CLI::error( 'Antwortdatei nicht lesbar: ' . $file );
+		}
+		$extra = array(
+			'stub_response' => (string) file_get_contents( $file ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			'offline'       => empty( $assoc_args['online'] ),
+			'selftest'      => wp_generate_uuid4(),
+		);
+		$run   = \Lsec\Entities\EntityExtractionWorkflow::start( $this->plugin, (int) $args[0], 'selftest', $extra );
+		for ( $i = 0; $i < 10; $i++ ) {
+			$this->plugin->engine->process( $run['run_id'] );
+			$status = (string) ( $this->plugin->runs->find( $run['run_id'] )['status'] ?? '' );
+			if ( ! in_array( $status, array( 'queued', 'running' ), true ) ) {
+				break;
+			}
+		}
+		$steps = array();
+		foreach ( $this->plugin->runs->steps( $run['run_id'] ) as $step ) {
+			$output                          = json_decode( (string) $step['output'], true );
+			$steps[ (string) $step['step'] ] = array(
+				'status' => $step['status'],
+				'output' => is_array( $output ) ? $output : null,
+				'error'  => $step['error_message'],
+			);
+		}
+		WP_CLI::line(
+			(string) wp_json_encode(
+				array(
+					'run_id' => $run['run_id'],
+					'status' => $this->plugin->runs->find( $run['run_id'] )['status'] ?? null,
+					'steps'  => $steps,
+				),
+				JSON_UNESCAPED_UNICODE
+			)
+		);
+	}
+
+	/**
 	 * Bericht zu einem Selbsttest-Ablauf.
 	 *
 	 * ## OPTIONS

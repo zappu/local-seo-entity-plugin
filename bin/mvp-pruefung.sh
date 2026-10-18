@@ -3,9 +3,11 @@
 # MVP 1: Prüfungen je Stufe auf einer echten WordPress-Installation, ohne Kosten.
 #   Stufe A: A1 Schemaversion 3 · A2 KI-Budget hält einen Ablauf an und gibt ihn nach Erhöhung frei
 #            A3 REST-Routen der Oberfläche geschützt · A4 Dashboard-Daten · A5 Geheimnisse (M8) · A6 Oberfläche gebaut
+#   Stufe B: B1 Inhaltsindex · B2 Entity-Erkennung als Ablauf (KI-Attrappe) · B3 Zusammenführen mit Vorschlägen
+#            B4 Unternehmensprofil · B5 REST-Routen · B6 Ortsabgleich Hemmingen (nur mit --online, fragt Wikidata)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
-#   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs
+#   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
 # Optional: WP="php /pfad/wp-cli.phar" bash bin/mvp-pruefung.sh ...
 #
 # Der Test ändert Einstellungen nur vorübergehend und stellt sie am Ende wieder her.
@@ -14,7 +16,14 @@
 set -u
 
 WP="${WP:-wp}"
-WP_ARGS=("$@")
+WP_ARGS=()
+ONLINE=0
+for arg in "$@"; do
+	case "$arg" in
+		--online) ONLINE=1 ;;
+		*) WP_ARGS+=("$arg") ;;
+	esac
+done
 PASS=0
 FAIL=0
 SKIP=0
@@ -26,7 +35,18 @@ cleanup() {
 		echo "$SAVED" | wpc option update lsec_settings --format=json >/dev/null
 	fi
 	wpc lsec selftest cleanup >/dev/null 2>&1
+	cleanup_b >/dev/null 2>&1
 	rm -rf "$TMP"
+}
+# Testdaten aus Stufe B: Entitäten und Beiträge mit dem Namensanfang LSECTEST.
+cleanup_b() {
+	[ -z "${PREFIX:-}" ] && return 0
+	local e="${PREFIX}lsec_entities"
+	wpc db query "DELETE a FROM ${PREFIX}lsec_entity_aliases a JOIN $e e ON e.id = a.entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
+	wpc db query "DELETE m FROM ${PREFIX}lsec_mentions m JOIN $e e ON e.id = m.entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
+	wpc db query "DELETE r FROM ${PREFIX}lsec_relations r JOIN $e e ON e.id = r.source_entity_id OR e.id = r.target_entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
+	wpc db query "DELETE FROM $e WHERE canonical_name LIKE 'LSECTEST%'"
+	for id in $(wpc post list --post_type=post --post_status=any --s=LSECTEST --field=ID); do wpc post delete "$id" --force; done
 }
 trap cleanup EXIT
 
@@ -84,7 +104,7 @@ drain() {
 	done
 }
 
-echo "MVP 1, Stufe A – $(date -u '+%Y-%m-%d %H:%M UTC')"
+echo "MVP 1, Stufen A und B – $(date -u '+%Y-%m-%d %H:%M UTC')"
 if [ -z "$(wpj lsec status --format=json | json plugin_version)" ]; then
 	echo "Abbruch: 'wp lsec' nicht verfügbar. Ist das Plugin aktiviert?"
 	exit 2
@@ -168,12 +188,96 @@ DIR=$(wpc plugin path local-seo-entity-plugin --dir | tail -1)
 check "assets/dist/admin.js vorhanden" "1" "$( [ -f "$DIR/assets/dist/admin.js" ] && echo 1 || echo 0 )"
 check "ohne react-jsx-runtime (WordPress 6.4)" "0" "$(grep -c 'react-jsx-runtime' "$DIR/assets/dist/admin.asset.php" 2>/dev/null | head -1)"
 
+# ===========================================================================
+echo "B1 Inhaltsindex"
+wpc lsec settings set entity_auto_extract false >/dev/null
+P1=$(wpc post create --post_type=post --post_status=publish --post_title="LSECTEST Pflasterreinigung in Hemmingen" --post_content="Die LSECTEST Musterbetrieb Flächenreinigung reinigt Pflaster und Terrassen in Hemmingen. Regelmäßige Wartung gehört dazu. Wir arbeiten mit dem Hochdruckreiniger LSECTEST Turbo." --porcelain | last_number)
+P2=$(wpc post create --post_type=post --post_status=publish --post_title="LSECTEST Zweiter Beitrag" --post_content="Kurzer Text." --porcelain | last_number)
+# Nur die Testbeiträge: Ein vollständiger Lauf ohne Erkennung würde die Inhalte der Website als erledigt markieren.
+OUT=$(wpc lsec index run --now --ids="$P1,$P2" 2>&1)
+contains "beide Testbeiträge gelesen" "Gelesen 2, neu oder geändert 2" "$OUT"
+check "Beitrag im Index" "1" "$(wpc lsec index show "$P1" | grep -c '"hash"')"
+OUT=$(wpc lsec index run --now --ids="$P1,$P2" 2>&1)
+contains "unverändert erkannt" "Gelesen 2, neu oder geändert 0" "$OUT"
+wpc post update "$P2" --post_content="Kurzer, geänderter Text." >/dev/null
+check "Änderung über save_post vorgemerkt" "1" "$(wpc post meta get "$P2" _lsec_index_dirty | last_number)"
+OUT=$(wpc lsec index run --now --ids="$P1,$P2" 2>&1)
+contains "nur der geänderte Beitrag als geändert" "Gelesen 2, neu oder geändert 1" "$OUT"
+
+# ---------------------------------------------------------------------------
+echo "B2 Entity-Erkennung als Ablauf (KI-Attrappe, ohne Kosten)"
+cat > "$TMP/antwort.json" <<'JSON'
+{"entities":[
+{"type":"organization","name":"LSECTEST Musterbetrieb Flächenreinigung","aliases":[],"description":"Die Firma","confidence":0.95,"evidence":[{"excerpt":"Die LSECTEST Musterbetrieb Flächenreinigung reinigt Pflaster und Terrassen in Hemmingen","location":"body"}]},
+{"type":"product","name":"LSECTEST Turbo","aliases":[],"description":"Gerät","confidence":0.8,"evidence":[{"excerpt":"mit dem Hochdruckreiniger LSECTEST Turbo","location":"body"}]},
+{"type":"concept","name":"LSECTEST Erfunden","aliases":[],"description":"steht nicht im Text","confidence":0.5,"evidence":[{"excerpt":"Dieser Satz steht nirgends","location":"body"}]}
+],"ambiguities":[]}
+JSON
+R=$(wpj lsec selftest extraction "$P1" --response="$TMP/antwort.json")
+check "Ablauf abgeschlossen" "succeeded" "$(echo "$R" | json status)"
+check "zwei Entitäten mit Fundstelle" "2" "$(echo "$R" | json steps.extract.output.entities.count)"
+check "erfundene Entität verworfen" "1" "$(echo "$R" | json steps.save.output.rejected)"
+check "Kandidat gespeichert" "1" "$(wpj lsec entities list --search='LSECTEST Musterbetrieb' --min-confidence=0 --format=json | json count)"
+
+# ---------------------------------------------------------------------------
+echo "B3 Zusammenführen"
+wpc lsec entities add organization "LSECTEST Musterbetrieb Flächenreinigungs-Service & Wassertechnik" --confirmed >/dev/null
+wpc lsec entities add organization "LSECTEST Musterbetrieb" >/dev/null
+wpc lsec entities add brand "LSECTEST Musterbetrieb Flächenreinigung & Wassertechnik" >/dev/null
+SUG=$(wpj lsec entities suggest-merges --format=json)
+TARGET=$(echo "$SUG" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $g){ if(str_starts_with($g["target"]["name"],"LSECTEST")){ echo $g["target"]["id"]; break; } }')
+SOURCES=$(echo "$SUG" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $g){ if(str_starts_with($g["target"]["name"],"LSECTEST")){ echo implode(" ", array_column($g["candidates"],"id")); break; } }')
+check "drei Schreibweisen vorgeschlagen" "3" "$(echo "$SOURCES" | wc -w | tr -d ' ')"
+wpc lsec entities merge "$TARGET" $SOURCES >/dev/null
+D=$(wpj lsec entities show "$TARGET" --format=json)
+check "drei Schreibweisen als Alias" "3" "$(echo "$D" | json aliases.count)"
+check "Fundstelle übernommen" "1" "$(echo "$D" | json mentions.count)"
+wpj lsec selftest extraction "$P1" --response="$TMP/antwort.json" >/dev/null
+check "erneute Erkennung findet das Ziel" "1" "$(wpj lsec entities show "$TARGET" --format=json | json mentions.count)"
+check "kein neuer Kandidat für die Schreibweise" "0" "$(wpj lsec entities list --search='LSECTEST Musterbetrieb Flächenreinigung' --min-confidence=0 --status=candidate --format=json | json count)"
+
+# ---------------------------------------------------------------------------
+echo "B4 Unternehmensprofil"
+wpj lsec profile show --format=json > "$TMP/profil.json"
+if [ -z "$(json organization.name < "$TMP/profil.json")" ]; then
+	skip "noch kein Profil angelegt (Local SEO → Unternehmen)"
+else
+	OUT=$(wpc lsec profile save "$TMP/profil.json" 2>&1)
+	contains "unverändert gespeichert, nichts entfernt" "0 entfernt" "$OUT"
+	check "Unternehmen bleibt bestätigt" "confirmed" "$(wpj lsec entities show "$(json organization.id < "$TMP/profil.json")" --format=json | json status)"
+fi
+
+# ---------------------------------------------------------------------------
+echo "B5 REST-Routen der Stufe B geschützt"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "alle Routen 403" "Routen geschützt" "$OUT"
+contains "Route profile" "/lsec/v1/profile" "$OUT"
+contains "Route merge" "/lsec/v1/entities/merge" "$OUT"
+
+# ---------------------------------------------------------------------------
+echo "B6 Ortsabgleich Hemmingen (Wikidata)"
+if [ "$ONLINE" -eq 0 ]; then
+	skip "nur mit --online"
+else
+	wpc lsec entities service-area --id=Q5963 >/dev/null
+	OUT=$($WP "${WP_ARGS[@]}" lsec entities resolve-place Hemmingen 2>&1)
+	if printf '%s' "$OUT" | grep -q "zu viele Anfragen"; then
+		skip "Wikidata meldet zu viele Anfragen, später wiederholen"
+	else
+		contains "mit Region Hannover probable" "Status: probable" "$OUT"
+		contains "Hemmingen in der Region Hannover" "Q534259" "$OUT"
+	fi
+fi
+cleanup_b >/dev/null 2>&1
+
 echo
 echo "Ergebnis: $PASS bestanden, $FAIL fehlgeschlagen, $SKIP übersprungen"
 cat <<'EOF'
 
-Von Hand im Backend (Local SEO → Dashboard und Einstellungen):
-  - Dashboard zeigt KI-Kosten, Textfocus-Credits (Knopf „Guthaben abfragen“), Cronjob und Hinweise
-  - Einstellungen: einen Wert ändern, speichern, Seite neu laden
+Von Hand im Backend:
+  - Dashboard: KI-Kosten, Textfocus-Credits, Cronjob, Hinweise, Karte „Inhalte und Entitäten“
+  - Unternehmen: Profil und Servicegebiet eintragen, speichern
+  - Entitäten: Vorschläge zum Zusammenführen, Bestätigen, Ablehnen, Details mit Fundstellen
+  - Mit Kosten: Index starten (Dashboard oder wp lsec index run); die Entity-Erkennung läuft danach über den Cronjob
 EOF
 [ "$FAIL" -eq 0 ]

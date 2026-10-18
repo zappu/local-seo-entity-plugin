@@ -17,6 +17,7 @@ final class StepResult {
 	public const FAIL  = 'fail';
 	public const BLOCK = 'block';
 	public const WAIT  = 'wait';
+	public const MORE  = 'more';
 
 	/**
 	 * Konstruktor.
@@ -60,6 +61,16 @@ final class StepResult {
 	 */
 	public static function fail( string $code, string $message ): self {
 		return new self( self::FAIL, array(), $code, $message );
+	}
+
+	/**
+	 * Der Schritt ist noch nicht fertig und läuft im nächsten Durchgang weiter, z. B. für Stapel.
+	 * Der Zwischenstand steht beim nächsten Mal in RunContext::$state. Der Versuch zählt nicht.
+	 *
+	 * @param array<string, mixed> $state Zwischenstand.
+	 */
+	public static function more( array $state ): self {
+		return new self( self::MORE, $state );
 	}
 
 	/**

@@ -9,7 +9,9 @@ namespace Lsec\Admin;
 
 use Lsec\Cli\GscCommand;
 use Lsec\Cli\LsecCommand;
+use Lsec\Content\ContentIndex;
 use Lsec\Content\DraftWriter;
+use Lsec\Entities\BusinessProfile;
 use Lsec\Core\Plugin;
 use Lsec\Core\Settings;
 use Lsec\Infrastructure\Database\Schema;
@@ -98,6 +100,12 @@ final class DashboardData {
 				'rank_math_editor' => self::rank_math_editor_ready(),
 				'elementor'        => (bool) $status['elementor_active'],
 			),
+			'content'      => array(
+				'index'        => ContentIndex::stats(),
+				'auto_extract' => (bool) Settings::get( 'entity_auto_extract' ),
+				'entities'     => self::entity_counts(),
+				'profile'      => null !== ( new BusinessProfile() )->organization_row(),
+			),
 		);
 
 		$data['hints'] = self::hints( $data, $status );
@@ -109,15 +117,16 @@ final class DashboardData {
 	 *
 	 * @param array<string, mixed> $data   Gesammelte Daten.
 	 * @param array<string, mixed> $status Systemstatus.
-	 * @return list<array{level: string, text: string, command: string}>
+	 * @return list<array{level: string, text: string, command: string, link: string}>
 	 */
 	private static function hints( array $data, array $status ): array {
 		$hints = array();
-		$add   = static function ( string $level, string $text, string $command = '' ) use ( &$hints ): void {
+		$add   = static function ( string $level, string $text, string $command = '', string $link = '' ) use ( &$hints ): void {
 			$hints[] = array(
 				'level'   => $level,
 				'text'    => $text,
 				'command' => $command,
+				'link'    => $link,
 			);
 		};
 
@@ -151,13 +160,36 @@ final class DashboardData {
 		} elseif ( '' === $data['gsc']['property'] ) {
 			$add( 'info', 'Search Console: Property noch nicht festgelegt.', 'wp lsec gsc sites --save=<property>' );
 		}
+		$profile_url = admin_url( 'admin.php?page=' . AppPage::PROFILE_SLUG );
+		if ( ! $data['content']['profile'] ) {
+			$add( 'info', 'Das Unternehmensprofil fehlt. Es ist die Grundlage für Entitäten und Themen.', '', $profile_url );
+		}
 		if ( array() === Settings::get( 'service_area' ) ) {
-			$add( 'info', 'Kein Servicegebiet hinterlegt. Ohne Servicegebiet bleiben gleichnamige Orte ungeklärt.', 'wp lsec entities service-area "<Landkreis oder Region>" --radius=40' );
+			$add( 'info', 'Kein Servicegebiet hinterlegt. Ohne Servicegebiet bleiben gleichnamige Orte ungeklärt.', '', $profile_url );
+		}
+		if ( null === $data['content']['index']['last_indexed_at'] ) {
+			$add( 'info', 'Der Inhaltsindex wurde noch nicht gestartet (Karte „Inhalte und Entitäten“).', 'wp lsec index run' );
 		}
 		if ( $data['integrations']['rank_math'] && ! $data['integrations']['rank_math_editor'] ) {
 			$add( 'info', 'Rank Math zeigt seine Editor-Funktionen erst nach Verbindung oder übersprungener Registrierung im Einrichtungsassistenten.' );
 		}
 		return $hints;
+	}
+
+	/**
+	 * Entitäten je Status, ohne zusammengeführte.
+	 *
+	 * @return array<string, int>
+	 */
+	private static function entity_counts(): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'entities' );
+		$rows  = (array) $wpdb->get_results( "SELECT status, COUNT(*) AS n FROM {$table} WHERE status <> 'merged' GROUP BY status", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$out   = array();
+		foreach ( $rows as $row ) {
+			$out[ (string) $row['status'] ] = (int) $row['n'];
+		}
+		return $out;
 	}
 
 	/**

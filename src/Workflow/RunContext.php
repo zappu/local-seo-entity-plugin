@@ -22,6 +22,7 @@ final class RunContext {
 	 * @param int                                 $attempt  Aktueller Versuch, ab 1.
 	 * @param array<string, mixed>                $input    Kontext, mit dem der Ablauf gestartet wurde.
 	 * @param array<string, array<string, mixed>> $outputs  Ergebnisse der bereits abgeschlossenen Schritte.
+	 * @param array<string, mixed>                $state    Zwischenstand eines Schritts, der in Durchgängen läuft (StepResult::more).
 	 */
 	public function __construct(
 		public readonly int $run_id,
@@ -30,7 +31,8 @@ final class RunContext {
 		public readonly string $step,
 		public readonly int $attempt,
 		public readonly array $input,
-		public readonly array $outputs
+		public readonly array $outputs,
+		public readonly array $state = array()
 	) {}
 
 	/**

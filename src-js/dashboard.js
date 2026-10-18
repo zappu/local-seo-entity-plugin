@@ -6,7 +6,7 @@
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/components';
-import { getDashboard, refreshTextfocus, runAction } from './api';
+import { getDashboard, refreshTextfocus, runAction, runIndex } from './api';
 import { ago, dateTime, number, RUN_STATUS, usd } from './format';
 
 const REFRESH_MS = 60000;
@@ -78,7 +78,15 @@ function Hints( { hints } ) {
 		<div className="lsec-hints">
 			{ hints.map( ( hint, index ) => (
 				<Notice key={ index } status={ hint.level } isDismissible={ false }>
-					<p>{ hint.text }</p>
+					<p>
+						{ hint.text }
+						{ hint.link && (
+							<>
+								{ ' ' }
+								<a href={ hint.link }>Öffnen</a>
+							</>
+						) }
+					</p>
 					{ hint.command && <code className="lsec-command">{ hint.command }</code> }
 				</Notice>
 			) ) }
@@ -154,6 +162,41 @@ function TextfocusCard( { tf, onRefresh, busy } ) {
 						</dl>
 					</>
 				) }
+			</CardBody>
+		</Card>
+	);
+}
+
+function ContentCard( { content, onRunIndex, busy } ) {
+	const { index, entities } = content;
+	const open = ( entities.candidate || 0 ) + ( entities.probable || 0 ) + ( entities.unresolved || 0 );
+	const pages = ( window.lsecAdmin && window.lsecAdmin.pages ) || {};
+	return (
+		<Card>
+			<CardHeader>
+				<h2>Inhalte und Entitäten</h2>
+				<Button variant="secondary" size="small" onClick={ onRunIndex } isBusy={ busy } disabled={ busy }>
+					Index starten
+				</Button>
+			</CardHeader>
+			<CardBody>
+				<p className="lsec-figure">
+					{ number( index.indexed ) }
+					<span className="lsec-figure__limit"> von { number( index.published ) } Inhalten im Index</span>
+				</p>
+				<p className="lsec-muted">
+					{ index.last_indexed_at ? `Letzter Lauf ${ ago( index.last_indexed_at.replace( ' ', 'T' ) + 'Z' ) }` : 'Noch nicht gestartet' }
+				</p>
+				<Meter value={ index.indexed } limit={ index.published || 1 } />
+				<dl>
+					<Row label="Neu oder geändert">{ number( index.pending ) }</Row>
+					<Row label="Automatische Erkennung">{ content.auto_extract ? 'ein' : 'aus' }</Row>
+					<Row label="Entitäten offen">
+						{ pages.entities ? <a href={ pages.entities }>{ number( open ) }</a> : number( open ) }
+					</Row>
+					<Row label="Bestätigt">{ number( entities.confirmed || 0 ) }</Row>
+					<Row label="Abgelehnt">{ number( entities.rejected || 0 ) }</Row>
+				</dl>
 			</CardBody>
 		</Card>
 	);
@@ -273,6 +316,7 @@ export default function Dashboard() {
 	const [ message, setMessage ] = useState( null );
 	const [ busyId, setBusyId ] = useState( null );
 	const [ tfBusy, setTfBusy ] = useState( false );
+	const [ indexBusy, setIndexBusy ] = useState( false );
 
 	const load = useCallback( () => {
 		getDashboard()
@@ -316,6 +360,25 @@ export default function Dashboard() {
 			} );
 	};
 
+	const onRunIndex = () => {
+		const pending = data.content.index.pending;
+		const text = data.content.auto_extract
+			? `Index starten? Für ${ pending } neue oder geänderte Inhalte startet danach die Entity-Erkennung (KI, etwa 0,04 USD je Beitrag, im Rahmen des KI-Budgets).`
+			: 'Index starten? Die automatische Entity-Erkennung ist ausgeschaltet.';
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( text ) ) {
+			return;
+		}
+		setIndexBusy( true );
+		runIndex()
+			.then( ( run ) => setMessage( { status: 'success', text: `Inhaltsindex eingeplant (Ablauf ${ run.run_id }); der Cronjob arbeitet ihn ab.` } ) )
+			.catch( ( e ) => setMessage( { status: 'error', text: e.message } ) )
+			.finally( () => {
+				setIndexBusy( false );
+				load();
+			} );
+	};
+
 	if ( error && ! data ) {
 		return <Notice status="error" isDismissible={ false }>{ error }</Notice>;
 	}
@@ -330,6 +393,7 @@ export default function Dashboard() {
 			<Hints hints={ data.hints } />
 			<div className="lsec-grid">
 				<AiCard ai={ data.ai } />
+				<ContentCard content={ data.content } onRunIndex={ onRunIndex } busy={ indexBusy } />
 				<TextfocusCard tf={ data.textfocus } onRefresh={ onRefreshTf } busy={ tfBusy } />
 				<CronCard cron={ data.cron } />
 				<SiteCard data={ data } />

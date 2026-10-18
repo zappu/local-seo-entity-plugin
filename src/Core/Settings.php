@@ -30,6 +30,7 @@ final class Settings {
 		'ai_run_budget'            => 1.0,
 		'ai_web_max_results'       => 3,
 		'entity_min_confidence'    => 0.6,
+		'entity_auto_extract'      => true,
 		'openai_endpoint'          => '',
 		'textfocus_lang'           => '',
 		'textfocus_locale'         => '',

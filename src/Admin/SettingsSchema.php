@@ -121,6 +121,11 @@ final class SettingsSchema {
 		'entities'  => array(
 			'label'  => 'Entitäten',
 			'fields' => array(
+				'entity_auto_extract'   => array(
+					'label' => 'Entitäten automatisch erkennen',
+					'type'  => 'toggle',
+					'help'  => 'Der Inhaltsindex startet für neue und geänderte Beiträge die Entity-Erkennung (KI, etwa 0,04 USD je Beitrag, im Rahmen des KI-Budgets).',
+				),
 				'entity_min_confidence' => array(
 					'label' => 'Mindest-Sicherheit für die Anzeige',
 					'type'  => 'number',

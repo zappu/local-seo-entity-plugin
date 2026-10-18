@@ -70,4 +70,27 @@ final class ServiceArea {
 			'radius_km' => $this->radius_km,
 		);
 	}
+
+	/**
+	 * Servicegebiet aus einem Wikidata-Eintrag (Verwaltungseinheit) mit Mittelpunkt.
+	 *
+	 * @param \Lsec\Integrations\Wikidata\WikidataClient $wikidata  Wikidata.
+	 * @param string                                     $qid       Q-ID.
+	 * @param float                                      $radius_km Zusätzlicher Umkreis.
+	 * @return array{area: self, description: string}
+	 * @throws \InvalidArgumentException Bei unbekannter ID.
+	 */
+	public static function from_wikidata( \Lsec\Integrations\Wikidata\WikidataClient $wikidata, string $qid, float $radius_km = 0.0 ): array {
+		if ( ! preg_match( '/^Q\d+$/', $qid ) ) {
+			throw new \InvalidArgumentException( 'Ungültige Wikidata-ID: ' . $qid ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
+		$entity = $wikidata->entities( array( $qid ) )[ $qid ] ?? null;
+		if ( null === $entity ) {
+			throw new \InvalidArgumentException( 'Eintrag ' . $qid . ' nicht gefunden.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
+		return array(
+			'area'        => new self( '' !== $entity['label'] ? $entity['label'] : $qid, array( $qid ), $entity['coord'], max( 0.0, $radius_km ) ),
+			'description' => (string) $entity['description'],
+		);
+	}
 }

@@ -22,9 +22,10 @@ final class SelftestAiClient implements AiClient {
 	/**
 	 * Konstruktor.
 	 *
-	 * @param float $cost Kosten je Aufruf in USD.
+	 * @param float  $cost Kosten je Aufruf in USD.
+	 * @param string $text Feste Antwort, z. B. JSON für einen Ablauf im Selbsttest.
 	 */
-	public function __construct( private readonly float $cost ) {}
+	public function __construct( private readonly float $cost, private readonly string $text = 'ok' ) {}
 
 	/**
 	 * {@inheritDoc}
@@ -46,6 +47,6 @@ final class SelftestAiClient implements AiClient {
 	 * @param AiRequest $request Anfrage.
 	 */
 	public function send( AiRequest $request ): AiResponse {
-		return new AiResponse( self::PROVIDER, 'selftest-stub', 'ok', null, array(), 10, 2, $this->cost, 1 );
+		return new AiResponse( self::PROVIDER, 'selftest-stub', $this->text, null, array(), 10, 2, $this->cost, 1 );
 	}
 }

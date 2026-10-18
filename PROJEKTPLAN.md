@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 18.10.2026 · Phase: MVP 1, Stufe A auf Staging bestanden (0.3.0); nächster Schritt Stufe B
+**Stand:** 18.10.2026 · Phase: MVP 1, Stufe B umgesetzt (0.4.0), Staging offen
 
 ## Ziel
 
@@ -17,7 +17,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | erledigt (18.10.2026): KI-Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell, Testphase 20 Beiträge in 60 Tagen |
-| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A bestanden (0.3.0, auch auf Staging); als Nächstes Stufe B |
+| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A bestanden (0.3.0/0.3.1); Stufe B umgesetzt (0.4.0), Staging offen |
 
 ## Machbarkeitstest: Prüfpunkte
 
@@ -98,7 +98,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Stufe | Inhalt | Version | Stand |
 |---|---|---|---|
 | A | Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, Dashboard und Einstellungen | 0.3.0 | bestanden: lokal mit WordPress 6.4.5 und 7.1.3, CI, Staging am 18.10.2026 (`mvp-pruefung.sh` 25/25, `check secrets` ohne Fund für alle vier Schlüssel und den Dienstkonto-Schlüssel) |
-| B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | offen |
+| B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | umgesetzt; lokal mit WordPress 6.4.5 und 7.1.3 (`mvp-pruefung.sh` 43/43 ohne Online-Teil, Oberfläche im Browser); Staging offen: Profil eintragen, Index mit Erkennung, Zusammenführen der Staats-Schreibweisen, Hemmingen |
 | C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | offen |
 | D | Themen mit Faktenprüfung | 0.6.0 | offen |
 | E | Produktion | 0.7.0 | offen |
@@ -108,6 +108,11 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 - `@wordpress/scripts` übersetzt JSX standardmäßig für `react-jsx-runtime`; dieses Skript gibt es erst ab WordPress 6.6. Die Quellen nutzen deshalb die klassische Übersetzung je Datei und keinen JSX-Spread.
 - WordPress prüft Pflichtfelder einer REST-Route vor der Berechtigung. Ein als `required` markiertes Feld ließe Besucher 400 statt 403 sehen (M15); Pflichtfelder werden deshalb im Callback geprüft.
+
+## Erkenntnisse aus Stufe B
+
+- Ein vollständiger Indexlauf mit ausgeschalteter Erkennung markiert alle Inhalte als gelesen. Deshalb merkt sich jeder Beitrag zusätzlich, für welchen Inhalt die Erkennung gelaufen ist; das Prüfskript liest nur seine eigenen Testbeiträge (`--ids`).
+- Der Selbsttest M4a in `machbarkeitstest.sh` geht davon aus, dass sonst nichts in der Warteschlange steht. Startet der Cronjob gleichzeitig einen geplanten Indexlauf, kann er einmal fehlschlagen; ein zweiter Lauf ist dann grün.
 
 ## Nächste Schritte
 

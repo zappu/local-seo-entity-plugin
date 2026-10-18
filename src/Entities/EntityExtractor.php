@@ -37,7 +37,7 @@ final class EntityExtractor {
 	 *
 	 * @param string   $title  Titel.
 	 * @param string   $text   Text des Beitrags.
-	 * @param string[] $known  Bereits bekannte Entitäten (Namen), damit die KI dieselbe Schreibweise nutzt.
+	 * @param string[] $known  Bereits bekannte Entitäten (Name, optional mit Typ in Klammern), damit die KI dieselbe Schreibweise nutzt.
 	 * @param int|null $run_id Ablauf.
 	 * @return array{entities: array<int, array{type: string, name: string, aliases: string[], description: string, confidence: float, evidence: array<int, array{excerpt: string, location: string}>}>, rejected: array<int, array{name: string, reason: string}>, ambiguities: array<int, array{name: string, reason: string}>, cost: float|null}
 	 */
@@ -45,7 +45,12 @@ final class EntityExtractor {
 		$excerpt  = mb_substr( $text, 0, self::MAX_CHARS );
 		$system   = 'Du erkennst Entitäten für die lokale Suchmaschinenoptimierung eines deutschen Unternehmens. '
 			. 'Entitäten sind Dinge mit eigener Identität: Unternehmen, Marken, Orte, Einzugsgebiete, Leistungen, Produkte, Personen, Wettbewerber, Fachbegriffe. '
-			. 'Keine allgemeinen Wörter, keine Adjektive, keine Satzteile. '
+			. 'Erfasse nur Benanntes: Firmen- und Markennamen, Orte und Ortsteile, konkrete Leistungen und Produkte, Personen mit Namen, '
+			. 'Wettbewerber mit Namen und feste Fachbegriffe der Branche. '
+			. 'Nicht erfassen: allgemeine Tätigkeiten oder Eigenschaften (z. B. „regelmäßige Wartung“, „schnelle Reaktionszeit“, „professionelle Reinigung“), '
+			. 'Zielgruppen, Werbeaussagen, Floskeln, Adjektive und Satzteile. '
+			. 'Die eigene Firma ist eine Entität, auch wenn sie unterschiedlich geschrieben wird; nutze dann die bekannte Schreibweise und trage die Variante unter aliases ein. '
+			. 'confidence: 0,9 und mehr bei eindeutig benannten Dingen, 0,6 bis 0,8 bei wahrscheinlichen, darunter bei unsicheren. '
 			. 'Jede Fundstelle ist ein wörtliches Zitat aus dem Text (5 bis 25 Wörter), unverändert, ohne Auslassungen. '
 			. 'Wenn ein Name mehrdeutig ist (z. B. ein Ort, den es mehrfach gibt), trage ihn zusätzlich unter ambiguities ein. '
 			. 'Erfinde nichts. Antworte auf Deutsch.';

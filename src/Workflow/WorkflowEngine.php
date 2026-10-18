@@ -175,6 +175,7 @@ final class WorkflowEngine {
 		}
 
 		$input   = json_decode( (string) $run['context'], true );
+		$state   = json_decode( (string) $next['output'], true );
 		$context = new RunContext(
 			$run_id,
 			(string) $run['uuid'],
@@ -182,7 +183,8 @@ final class WorkflowEngine {
 			$step_name,
 			$attempt,
 			is_array( $input ) ? $input : array(),
-			$outputs
+			$outputs,
+			is_array( $state ) ? $state : array()
 		);
 
 		try {
@@ -243,6 +245,12 @@ final class WorkflowEngine {
 				}
 				$this->runs->finish_step( $step_id, StepStatus::Failed, null, $result->code, $result->message );
 				$this->fail_run( $run_id, (string) $result->code, (string) $result->message );
+				return;
+
+			case StepResult::MORE:
+				$this->runs->continue_step( $step_id, $result->output );
+				$this->runs->update_run( $run_id, array( 'status' => RunStatus::Queued->value ) );
+				$this->queue->enqueue( $run_id );
 				return;
 
 			case StepResult::WAIT:

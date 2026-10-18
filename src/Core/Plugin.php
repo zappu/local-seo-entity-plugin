@@ -8,7 +8,6 @@
 namespace Lsec\Core;
 
 use Lsec\Admin\AppPage;
-use Lsec\Admin\EntitiesPage;
 use Lsec\Admin\StatusPage;
 use Lsec\Entities\EntityRepository;
 use Lsec\Cli\AiCommand;
@@ -16,6 +15,8 @@ use Lsec\Cli\CheckCommand;
 use Lsec\Cli\DraftCommand;
 use Lsec\Cli\GscCommand;
 use Lsec\Cli\RunsCommand;
+use Lsec\Cli\IndexCommand;
+use Lsec\Cli\ProfileCommand;
 use Lsec\Cli\EntitiesCommand;
 use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
@@ -36,6 +37,9 @@ use Lsec\Research\Keywords\KeywordRepository;
 use Lsec\Workflow\RetryPolicy;
 use Lsec\Workflow\RunRepository;
 use Lsec\Workflow\Selftest\SelftestWorkflow;
+use Lsec\Content\ContentIndex;
+use Lsec\Content\ContentIndexWorkflow;
+use Lsec\Entities\EntityExtractionWorkflow;
 use Lsec\Workflow\Watchdog;
 use Lsec\Workflow\WorkflowEngine;
 use Lsec\Workflow\WorkflowRegistry;
@@ -172,6 +176,8 @@ final class Plugin {
 		Migrator::maybe_migrate();
 
 		$this->workflows->register( SelftestWorkflow::definition( (int) apply_filters( 'lsec_selftest_lock_ttl', 10 ) ) );
+		$this->workflows->register( ContentIndexWorkflow::definition( $this ) );
+		$this->workflows->register( EntityExtractionWorkflow::definition( $this ) );
 
 		/**
 		 * Weitere Ablauftypen registrieren.
@@ -198,6 +204,8 @@ final class Plugin {
 			3
 		);
 		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
+		add_action( 'save_post', array( ContentIndex::class, 'mark_dirty' ), 10, 2 );
+		add_action( 'deleted_post', array( EntityRepository::class, 'forget_post' ) );
 		add_action( 'rest_api_init', array( new RestController( $this ), 'register' ) );
 		add_action( 'action_scheduler_init', array( $this, 'schedule_heartbeat' ) );
 		add_action( 'action_scheduler_before_process_queue', array( $this, 'mark_cli_queue_run' ) );
@@ -205,7 +213,6 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AppPage() )->register();
 			( new StatusPage( $this ) )->register();
-			( new EntitiesPage( $this ) )->register();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -220,6 +227,8 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec draft', new DraftCommand() );
 			\WP_CLI::add_command( 'lsec gsc', new GscCommand( $this, new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec runs', new RunsCommand( $this ) );
+			\WP_CLI::add_command( 'lsec index', new IndexCommand( $this ) );
+			\WP_CLI::add_command( 'lsec profile', new ProfileCommand( $this ) );
 		}
 	}
 

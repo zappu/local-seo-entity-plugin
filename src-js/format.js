@@ -95,3 +95,31 @@ export const RUN_STATUS = {
 	failed: 'fehlgeschlagen',
 	cancelled: 'abgebrochen',
 };
+
+export const ENTITY_TYPES = {
+	organization: 'Unternehmen',
+	brand: 'Marke',
+	place: 'Ort',
+	service_area: 'Servicegebiet',
+	service: 'Leistung',
+	product: 'Produkt',
+	person: 'Person',
+	competitor: 'Wettbewerber',
+	concept: 'Begriff',
+};
+
+export const ENTITY_STATUS = {
+	candidate: 'Kandidat',
+	probable: 'wahrscheinlich',
+	confirmed: 'bestätigt',
+	unresolved: 'ungeklärt',
+	rejected: 'abgelehnt',
+	merged: 'zusammengeführt',
+};
+
+export const ORIGINS = {
+	business_profile: 'Profil',
+	ai_extraction: 'KI',
+	manual: 'von Hand',
+	import: 'Import',
+};

@@ -10,12 +10,12 @@ namespace Lsec\Cli;
 use Lsec\Core\Plugin;
 use Lsec\Content\ContentReader;
 use Lsec\Core\Settings;
+use Lsec\Entities\EntityExtractionWorkflow;
 use Lsec\Entities\EntityExtractor;
 use Lsec\Entities\EntityRepository;
 use Lsec\Entities\PlaceResolver;
 use Lsec\Entities\TextfocusEntityImport;
 use Lsec\Entities\ServiceArea;
-use Lsec\Integrations\Textfocus\ProviderCallRepository;
 use Lsec\Integrations\Wikidata\WikidataClient;
 use Lsec\Workflow\RetryableException;
 use WP_CLI;
@@ -157,16 +157,13 @@ final class EntitiesCommand {
 				}
 				$id = $hits[0]['id'];
 			}
-			$entity = $wikidata->entities( array( $id ) )[ $id ] ?? null;
-		} catch ( \RuntimeException $e ) {
+			$found = ServiceArea::from_wikidata( $wikidata, $id, (float) ( $assoc_args['radius'] ?? 0 ) );
+		} catch ( \RuntimeException | \InvalidArgumentException $e ) {
 			WP_CLI::error( $e->getMessage() );
 		}
-		if ( null === $entity ) {
-			WP_CLI::error( 'Eintrag ' . $id . ' nicht gefunden.' );
-		}
-		$area = new ServiceArea( '' !== $entity['label'] ? $entity['label'] : (string) ( $args[0] ?? $id ), array( $id ), $entity['coord'], (float) ( $assoc_args['radius'] ?? 0 ) );
+		$area = $found['area'];
 		Settings::set( 'service_area', $area->to_array() );
-		WP_CLI::success( sprintf( 'Servicegebiet: %s (%s, %s)%s', $area->label, $id, $entity['description'], $area->radius_km > 0 ? ', Umkreis ' . $area->radius_km . ' km' : '' ) );
+		WP_CLI::success( sprintf( 'Servicegebiet: %s (%s, %s)%s', $area->label, $id, $found['description'], $area->radius_km > 0 ? ', Umkreis ' . $area->radius_km . ' km' : '' ) );
 	}
 
 	/**
@@ -182,6 +179,9 @@ final class EntitiesCommand {
 	 * [--dry-run]
 	 * : Nur anzeigen, nichts speichern.
 	 *
+	 * [--queue]
+	 * : Als Ablauf über den Cronjob ausführen (mit Ortsabgleich und KI-Budget), statt sofort hier.
+	 *
 	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
 	 */
@@ -189,6 +189,13 @@ final class EntitiesCommand {
 		$post = get_post( (int) ( $args[0] ?? 0 ) );
 		if ( ! $post instanceof \WP_Post ) {
 			WP_CLI::error( 'Beitrag nicht gefunden.' );
+		}
+		if ( ! empty( $assoc_args['queue'] ) ) {
+			$content = ContentReader::read( $post );
+			$hash    = \Lsec\Content\ContentIndex::hash( ContentReader::title( $post ), $content['text'] );
+			$run     = EntityExtractionWorkflow::start( $this->plugin, $post->ID, $hash, array( 'manual' => gmdate( 'c' ) ) );
+			WP_CLI::success( 'Ablauf ' . $run['run_id'] . ' eingeplant. Stand: wp lsec runs list' );
+			return;
 		}
 		$content = ContentReader::read( $post );
 		$title   = ContentReader::title( $post );
@@ -320,23 +327,48 @@ final class EntitiesCommand {
 	}
 
 	/**
-	 * Zeigt eine Entität mit Fundstellen.
+	 * Zeigt eine Entität mit Aliassen, Fundstellen und Beziehungen.
 	 *
 	 * ## OPTIONS
 	 *
 	 * <id>
 	 * : Entität.
 	 *
+	 * [--format=<format>]
+	 * : table oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function show( array $args, array $assoc_args ): void {
-		$rows = $this->entities->mentions( (int) $args[0] );
-		WP_CLI\Utils\format_items( 'table', $rows, array( 'object_type', 'object_id', 'location', 'excerpt' ) );
+		$detail = $this->entities->detail( (int) $args[0] );
+		if ( null === $detail ) {
+			WP_CLI::error( 'Entität nicht gefunden.' );
+		}
+		if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
+			WP_CLI::line( (string) wp_json_encode( $detail, JSON_UNESCAPED_UNICODE ) );
+			return;
+		}
+		WP_CLI::log( sprintf( '%d %s (%s) · %s · %s', $detail['id'], $detail['canonical_name'], $detail['type'], $detail['status'], $detail['origin'] ) );
+		if ( array() !== $detail['aliases'] ) {
+			WP_CLI::log( 'Aliasse: ' . implode( ', ', $detail['aliases'] ) );
+		}
+		foreach ( $detail['merged_from'] as $source ) {
+			WP_CLI::log( sprintf( 'Zusammengeführt: %d %s (%s)', $source['id'], $source['canonical_name'], $source['type'] ) );
+		}
+		foreach ( $detail['relations'] as $relation ) {
+			WP_CLI::log( sprintf( 'Beziehung: %s → %s → %s', $relation['source_name'], $relation['relation_type'], $relation['target_name'] ) );
+		}
+		if ( array() !== $detail['mentions'] ) {
+			WP_CLI\Utils\format_items( 'table', $detail['mentions'], array( 'object_id', 'title', 'location', 'excerpt' ) );
+		}
 	}
 
 	/**
-	 * Zeigt Entitäten.
+	 * Zeigt Entitäten. Zusammengeführte nur mit --status=merged.
 	 *
 	 * ## OPTIONS
 	 *
@@ -346,22 +378,149 @@ final class EntitiesCommand {
 	 * [--status=<status>]
 	 * : Status, z. B. unresolved.
 	 *
+	 * [--search=<text>]
+	 * : Teil des Namens oder eines Alias.
+	 *
+	 * [--min-confidence=<wert>]
+	 * : Schwächere Kandidaten ausblenden (0 bis 1). Standard: Einstellung entity_min_confidence; 0 zeigt alle.
+	 *
+	 * [--limit=<n>]
+	 * : Anzahl.
+	 * ---
+	 * default: 50
+	 * ---
+	 *
+	 * [--format=<format>]
+	 * : table, csv oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function list( array $args, array $assoc_args ): void {
-		$rows = $this->entities->list( (string) ( $assoc_args['type'] ?? '' ), (string) ( $assoc_args['status'] ?? '' ) );
-		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'type', 'canonical_name', 'status', 'confidence', 'mentions', 'external_ids', 'origin', 'decided_by', 'decided_at' ) );
+		$min  = (float) ( $assoc_args['min-confidence'] ?? Settings::get( 'entity_min_confidence' ) );
+		$rows = $this->entities->list(
+			(string) ( $assoc_args['type'] ?? '' ),
+			(string) ( $assoc_args['status'] ?? '' ),
+			(int) ( $assoc_args['limit'] ?? 50 ),
+			$min > 0 ? $min : null,
+			(string) ( $assoc_args['search'] ?? '' )
+		);
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'id', 'type', 'canonical_name', 'status', 'confidence', 'posts', 'mentions', 'aliases', 'origin', 'merged_into' ) );
+	}
+
+	/**
+	 * Legt eine Entität von Hand an (Kandidat oder bestätigt).
+	 *
+	 * ## OPTIONS
+	 *
+	 * <type>
+	 * : organization, brand, place, service_area, service, product, person, competitor oder concept.
+	 *
+	 * <name>
+	 * : Name.
+	 *
+	 * [--confirmed]
+	 * : Gleich bestätigen.
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function add( array $args, array $assoc_args ): void {
+		try {
+			$out = $this->entities->add( (string) $args[0], (string) $args[1], empty( $assoc_args['confirmed'] ) ? 'candidate' : 'confirmed', 'manual', get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		WP_CLI::success( ( $out['created'] ? 'Angelegt: ' : 'Schon vorhanden: ' ) . $out['id'] );
+	}
+
+	/**
+	 * Führt Entitäten zusammen: Die Namen der Quellen werden Aliasse des Ziels, Fundstellen und Beziehungen wandern mit.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <target>
+	 * : Ziel-Entität.
+	 *
+	 * <source>...
+	 * : Eine oder mehrere Quell-Entitäten.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec entities merge 12 31 44 45
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function merge( array $args, array $assoc_args ): void {
+		$target  = (int) array_shift( $args );
+		$sources = array_map( 'intval', $args );
+		try {
+			$out = $this->entities->merge( $target, $sources, get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		$this->plugin->logger->audit(
+			'Entitäten zusammengeführt',
+			array(
+				'target'  => $target,
+				'sources' => $out['merged'],
+				'user_id' => get_current_user_id(),
+				'via'     => 'cli',
+			)
+		);
+		WP_CLI::success( sprintf( '%d in %d zusammengeführt: %d neue Aliasse, %d Fundstellen übernommen.', count( $out['merged'] ), $target, $out['aliases'], $out['mentions'] ) );
+	}
+
+	/**
+	 * Schlägt Schreibweisen der eigenen Firma oder Marke zum Zusammenführen vor.
+	 *
+	 * Grundlage sind bestätigte Organisationen und Marken, z. B. aus dem Unternehmensprofil.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--apply]
+	 * : Alle Vorschläge übernehmen.
+	 *
+	 * [--format=<format>]
+	 * : table oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * @subcommand suggest-merges
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function suggest_merges( array $args, array $assoc_args ): void {
+		$suggestions = $this->entities->merge_suggestions();
+		if ( 'json' === ( $assoc_args['format'] ?? 'table' ) && empty( $assoc_args['apply'] ) ) {
+			WP_CLI::line( (string) wp_json_encode( $suggestions, JSON_UNESCAPED_UNICODE ) );
+			return;
+		}
+		if ( array() === $suggestions ) {
+			WP_CLI::success( 'Keine Vorschläge. Grundlage sind bestätigte Organisationen und Marken.' );
+			return;
+		}
+		foreach ( $suggestions as $group ) {
+			WP_CLI::log( sprintf( 'Ziel %d %s (%s):', $group['target']['id'], $group['target']['name'], $group['target']['type'] ) );
+			foreach ( $group['candidates'] as $c ) {
+				WP_CLI::log( sprintf( '  %d %s (%s, %s, %d Fundstellen)', $c['id'], $c['name'], $c['type'], $c['status'], $c['mentions'] ) );
+			}
+			if ( ! empty( $assoc_args['apply'] ) ) {
+				$this->merge( array( (string) $group['target']['id'], ...array_map( static fn( array $c ): string => (string) $c['id'], $group['candidates'] ) ), array() );
+			}
+		}
 	}
 
 	/**
 	 * Wikidata-Zugang mit Zwischenspeicher.
 	 */
 	private function wikidata(): WikidataClient {
-		return new WikidataClient(
-			$this->plugin->http,
-			new ProviderCallRepository(),
-			sprintf( 'LocalSEOEntityPlugin/%s (WordPress; %s)', LSEC_VERSION, home_url( '/' ) )
-		);
+		return WikidataClient::for_site( $this->plugin->http );
 	}
 }

@@ -195,6 +195,8 @@ Alle Tabellen tragen das Präfix `{$wpdb->prefix}lsec_`. Sie werden über `dbDel
 
 Unternehmen, Standorte, Leistungen und Servicegebiete sind Entitäten mit `origin = business_profile` und `status = confirmed`. Die Eingabemaske schreibt direkt in das Entity-Modell. Öffnungszeiten und Adressen sind Aussagen mit der Quelle `manual`. Das Servicegebiet steht zusätzlich als Einstellung `service_area` (Wikidata-IDs der Verwaltungseinheiten, optional Mittelpunkt und Radius), weil der Ortsabgleich es bei jeder Abfrage braucht.
 
+**Umsetzung Stufe B (Nachtrag 18.10.):** Seite „Local SEO → Unternehmen“, REST `GET|POST lsec/v1/profile`, `wp lsec profile show|save`. Standorte sind Entitäten vom Typ `place` mit `properties.kind = location`; Straße, PLZ, Ort, Telefon und Öffnungszeiten sind bestätigte Aussagen. Beziehungen vom Unternehmen aus: `located_in` (Standort), `offers` (Leistung, fremde Marke), `owns_brand` (eigene Marke), `competes_with` (Wettbewerber), `serves_area` (Servicegebiet als Entität vom Typ `service_area` mit Wikidata-ID). Gibt es schon eine Entität gleichen Namens (z. B. von der KI erkannt), wird sie übernommen und bestätigt. Einträge, die aus dem Profil verschwinden, werden abgelehnt, nicht gelöscht. Das Servicegebiet wird über eine Wikidata-Suche gewählt (`GET lsec/v1/wikidata/search`, `POST lsec/v1/service-area`).
+
 ### 4.3 Keywords und Themen
 
 **`lsec_keywords`**: id, keyword, normalized (INDEX), locale (`de_DE`, `de_AT`, `de_CH`), region (NULL oder Ort/PLZ), intent (`informational`, `commercial`, `transactional`, `navigational`, `local`), ab v3 `exclusion` (NULL, `competitor`, `brand`, `foreign_place`, `off_topic`, `manual`), first_seen_at, updated_at; UNIQUE (normalized, locale, region)
@@ -285,6 +287,8 @@ Die Migration ergänzt nur Spalten; vorhandene Daten bleiben. Bereits importiert
 - Ähnlichkeit über Keyword- und Entity-Überschneidung sowie die Search-Console-Zuordnung (welche Seite erscheint für welche Anfrage). Kein Vektorindex im MVP.
 
 Prüfbefehl: `wp lsec check content <id>` (vorhanden), neu `wp lsec index run|status`.
+
+**Umsetzung Stufe B (Nachtrag 18.10.):** Post-Meta `_lsec_index` (Hash, Titel, Wörter, Quelle, Überschriften, Kategorien, Fokus-Keyword, Zeitpunkt), `_lsec_index_dirty` (von `save_post` gesetzt) und `_lsec_extracted_hash` (Inhalt, für den die Entity-Erkennung zuletzt lief). Der Ablauf `content_index` läuft in Durchgängen zu 20 Beiträgen (`StepResult::more`, 7.4). Die Erkennung startet für Inhalte ab 50 Wörtern, deren `_lsec_extracted_hash` nicht zum aktuellen Hash passt, wenn `entity_auto_extract` an ist (Standard). Der Cronjob prüft höchstens stündlich auf neue oder geänderte Inhalte, aber erst nachdem der Administrator den Index einmal selbst gestartet hat; so beginnt die erste Erkennung mit KI-Kosten nicht unbemerkt. `wp lsec index run [--all] [--now] [--ids=…]`, `status`, `show <id>`; im Dashboard Karte „Inhalte und Entitäten“ mit „Index starten“. Beim Löschen eines Beitrags werden seine Fundstellen entfernt.
 
 ---
 
@@ -456,7 +460,7 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.
 
-**`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen.
+**`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.
 
 **`keyword_sync`**: Search Console abrufen, Textfocus-Volumina für neue Keywords ohne Volumen nachholen (innerhalb des Budgets, Tippfehlerprüfung vorher).
 
@@ -470,6 +474,7 @@ Umgesetzt und geprüft in M4–M6:
 - **Idempotenz:** `idempotency_key = sha256(type + subject + Briefing-Version)`.
 - **Kein doppelter Beitrag:** `create_post` sucht zuerst nach `_lsec_run_id`.
 - **Wiederholungen:** höchstens 3 Versuche je Schritt nach 1, 5 und 30 Minuten.
+- **Schritte in Durchgängen (Nachtrag 18.10., Stufe B):** Ein Schritt kann `StepResult::more( $zwischenstand )` zurückgeben. Er bleibt `pending`, der Zwischenstand steht beim nächsten Durchgang in `RunContext::$state`, der Versuch zählt nicht. Genutzt vom Inhaltsindex.
 
 | Fehlerart | Verhalten |
 |---|---|
@@ -576,6 +581,14 @@ Ergebnisvertrag:
 - Befehle: `wp lsec entities service-area`, `resolve-place <name>`.
 
 **Abgleich über Kontext:** Externe Zuordnungen (Textfocus, Wikidata) gelten erst nach Prüfung von Typ, übergeordneter Verwaltungseinheit und Nähe zum Servicegebiet als `probable`. Für Nicht-Orte (z. B. „Böden“ → Bodenkunde bei Textfocus) bleibt die Zuordnung in MVP 1 ein Hinweis; die Prüfung folgt in Ausbau 2.
+
+**Umsetzung Stufe B (Nachtrag 18.10.):**
+
+- Abgleich mit Vorhandenem (`EntityRepository::find`): gleicher Typ und Name, gleicher Typ und Alias, dann eine *bestätigte* Entität gleichen Namens oder Alias mit anderem Typ (die KI ordnet die eigene Firma mal als Unternehmen, mal als Marke ein). Eine zusammengeführte Entität verweist über `merged_into` auf ihr Ziel. Bekannte Entitäten gehen mit Typ in die Anfrage.
+- Zusammenführen: Name und Aliasse der Quellen werden Aliasse des Ziels; Fundstellen, Aussagen, Belege, Beziehungen und Themenbezüge wandern mit (doppelte Kanten entfallen); fehlt dem Ziel eine Wikidata-ID, übernimmt es die der Quelle. Quellen erhalten `merged`. `wp lsec entities merge <ziel> <quelle>…`, REST `POST lsec/v1/entities/merge`.
+- Vorschläge (`wp lsec entities suggest-merges [--apply]`, REST `GET lsec/v1/entities/merge-suggestions`): Ziel ist eine bestätigte Organisation oder Marke. Ein Kandidat passt, wenn er mit demselben Wort beginnt und jedes seiner Wörter der Anfang eines Worts des Ziels ist oder umgekehrt; Umlaute vereinheitlicht, Füllwörter und Rechtsformen (und, GmbH, KG …) zählen nicht. Geprüft mit den vier Schreibweisen aus dem Textfocus-Export.
+- Anweisung an die KI geschärft: nur Benanntes, ausdrücklich keine allgemeinen Tätigkeiten, Zielgruppen und Werbeaussagen; Stufen für `confidence`.
+- Oberfläche „Local SEO → Entitäten“ (React, ersetzt die PHP-Seite): Vorschläge zum Zusammenführen, Filter nach Typ, Status und Name, unsichere Vorschläge unter `entity_min_confidence` standardmäßig ausgeblendet, Bestätigen, Ablehnen, Zusammenführen mehrerer ausgewählter Einträge, Details mit Schreibweisen, Ortsabgleich, Beziehungen und Fundstellen je Beitrag. Die Graphansicht folgt in Stufe F.
 
 **Textfocus-Entitäten (umgesetzt):** `wp lsec entities import <datei>` legt Kandidaten mit `origin = import` an; Name = Begriff auf der Seite, Wikidata-Vorschlag nur in `properties.textfocus`. „&“ und „und“ gelten beim Abgleich als gleich.
 
