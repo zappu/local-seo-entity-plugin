@@ -8,7 +8,10 @@
 namespace Lsec\Core;
 
 use Lsec\Admin\StatusPage;
+use Lsec\Entities\EntityRepository;
 use Lsec\Cli\AiCommand;
+use Lsec\Cli\CheckCommand;
+use Lsec\Cli\EntitiesCommand;
 use Lsec\Cli\KeywordsCommand;
 use Lsec\Cli\LsecCommand;
 use Lsec\Cli\SelftestCommand;
@@ -23,6 +26,7 @@ use Lsec\Infrastructure\Logging\Redactor;
 use Lsec\Infrastructure\Queue\ActionSchedulerQueue;
 use Lsec\Infrastructure\Queue\Queue;
 use Lsec\Infrastructure\Security\Secrets;
+use Lsec\Rest\RestController;
 use Lsec\Research\Keywords\KeywordRepository;
 use Lsec\Workflow\RetryPolicy;
 use Lsec\Workflow\RunRepository;
@@ -173,6 +177,7 @@ final class Plugin {
 
 		add_action( ActionSchedulerQueue::HOOK, array( $this->engine, 'process' ), 10, 1 );
 		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
+		add_action( 'rest_api_init', array( new RestController( $this ), 'register' ) );
 		add_action( 'action_scheduler_init', array( $this, 'schedule_heartbeat' ) );
 		add_action( 'action_scheduler_before_process_queue', array( $this, 'mark_cli_queue_run' ) );
 
@@ -187,6 +192,8 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec settings', new SettingsCommand() );
 			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec textfocus', new TextfocusCommand( $this, new KeywordRepository() ) );
+			\WP_CLI::add_command( 'lsec entities', new EntitiesCommand( $this, new EntityRepository() ) );
+			\WP_CLI::add_command( 'lsec check', new CheckCommand() );
 		}
 	}
 

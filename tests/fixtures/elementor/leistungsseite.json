@@ -1,0 +1,11 @@
+[{"id":"a1b2c3d","elType":"container","settings":{"content_width":"boxed","background_color":"#F4F4F4"},"elements":[
+ {"id":"h1aaaaa","elType":"widget","widgetType":"heading","settings":{"title":"Flächenreinigung in Burgdorf","header_size":"h1","title_color":"#222222"},"elements":[]},
+ {"id":"t1aaaaa","elType":"widget","widgetType":"text-editor","settings":{"editor":"<p>Wir reinigen <strong>Pflaster, Terrassen</strong> und Einfahrten in der Region&nbsp;Hannover.</p><p>Schonend mit Heißwasser &amp; ohne Chemie.</p>","_margin":{"unit":"px","top":"10"}},"elements":[]}
+]},
+{"id":"b2c3d4e","elType":"section","settings":{},"elements":[{"id":"c3d4e5f","elType":"column","settings":{"_column_size":50},"elements":[
+ {"id":"h2aaaaa","elType":"widget","widgetType":"heading","settings":{"title":"Häufige Fragen","header_size":"h2"},"elements":[]},
+ {"id":"acc1aaa","elType":"widget","widgetType":"accordion","settings":{"tabs":[{"tab_title":"Wie lange dauert die Reinigung?","tab_content":"<p>Meist einen Tag.</p>","_id":"x1"},{"tab_title":"Was kostet es?","tab_content":"Ab 4 € pro m².","_id":"x2"}]},"elements":[]},
+ {"id":"btn1aaa","elType":"widget","widgetType":"button","settings":{"text":"Angebot anfordern","link":{"url":"https://example.org/kontakt/"}},"elements":[]},
+ {"id":"html1aa","elType":"widget","widgetType":"html","settings":{"html":"<script>tracking()</script>"},"elements":[]},
+ {"id":"ib1aaaa","elType":"widget","widgetType":"icon-box","settings":{"title_text":"Thermische Reinigung","description_text":"Entfernt Moos und Algen.","selected_icon":{"value":"fas fa-star"}},"elements":[]}
+]}]}]

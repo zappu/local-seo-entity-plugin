@@ -30,6 +30,7 @@ final class Settings {
 		'textfocus_daily_budget'   => 25,
 		'textfocus_min_interval'   => 60,
 		'textfocus_batch_size'     => 10,
+		'service_area'             => array(),
 	);
 
 	/**
