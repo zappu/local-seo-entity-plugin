@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.1.1 – 18.10.2026
+
+- Machbarkeitstest: bricht mit klarer Meldung ab, wenn PHP, WP-CLI oder das Plugin nicht erreichbar sind
+- Machbarkeitstest: verträgt PHP-Hinweise anderer Plugins in der WP-CLI-Ausgabe (z. B. „Deprecated“ unter PHP 8.4)
+- CI zusätzlich mit PHP 8.4
+
 ## 0.1.0 – 18.10.2026
 
 Grundgerüst für den Machbarkeitstest, Etappe 1.

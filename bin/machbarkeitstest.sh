@@ -32,7 +32,12 @@ wpc() {
 		{ print }'
 	return "${PIPESTATUS[0]}"
 }
-json() { php -r '$d=json_decode(stream_get_contents(STDIN),true); $p=explode(".",$argv[1]); foreach($p as $k){ $d=$d[$k]??null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
+# Liest JSON aus der WP-CLI-Ausgabe. PHP-Hinweise anderer Plugins (z. B. "Deprecated" unter
+# PHP 8.4) können vor oder nach dem JSON stehen; sie werden übersprungen.
+json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i;$j--){ $t=json_decode(implode("\n",array_slice($l,$i,$j-$i+1)),true); if(is_array($t)){ $d=$t; break; } } } $p=explode(".",$argv[1]); foreach($p as $k){ $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
+# Letzte Zeile, die nur aus einer Zahl bzw. einem Bezeichner besteht.
+last_number() { grep -E '^[0-9]+$' | tail -1; }
+last_word() { grep -E '^[A-Za-z0-9_]+$' | tail -1; }
 check() {
 	local name="$1" expected="$2" actual="$3"
 	if [ "$expected" = "$actual" ]; then
@@ -61,12 +66,12 @@ if ! command -v php >/dev/null 2>&1; then
 	echo "Abbruch: 'php' ist nicht im PATH. Beispiel: PATH=/opt/plesk/php/8.4/bin:\$PATH"
 	exit 2
 fi
-if ! WP_VERSION=$(wpc core version 2>&1); then
+if ! WP_VERSION=$(wpc core version 2>/dev/null | grep -E '^[0-9]+\.[0-9]' | tail -1) || [ -z "$WP_VERSION" ]; then
 	echo "Abbruch: WP-CLI nicht aufrufbar ($WP). Ausgabe: $WP_VERSION"
 	echo "Beispiel: WP=\"php /pfad/zu/wp-cli.phar\" bash $0 --path=/pfad/zu/httpdocs"
 	exit 2
 fi
-if ! wpc lsec status --format=json >/dev/null 2>&1; then
+if [ -z "$(wpc lsec status --format=json 2>/dev/null | json plugin_version)" ]; then
 	echo "Abbruch: 'wp lsec' nicht verfügbar. Ist das Plugin aktiviert?"
 	exit 2
 fi
@@ -78,14 +83,14 @@ STATUS=$(wpc lsec status --format=json)
 check "keine fehlenden Tabellen" "[]" "$(echo "$STATUS" | json missing_tables)"
 check "Schemaversion installiert = Code" "$(echo "$STATUS" | json schema_version_code)" "$(echo "$STATUS" | json schema_version_installed)"
 
-PREFIX=$(wpc db prefix)
+PREFIX=$(wpc db prefix 2>/dev/null | last_word)
 TOPICS="${PREFIX}lsec_topics"
 wpc db query "INSERT INTO ${TOPICS} (title, format, status, rationale, created_at, updated_at) VALUES ('M2-Testthema', 'article', 'proposed', 'bleibt', UTC_TIMESTAMP(), UTC_TIMESTAMP())" >/dev/null
 wpc db query "ALTER TABLE ${TOPICS} DROP COLUMN rationale" >/dev/null
 wpc option update lsec_db_version 0 >/dev/null
 wpc lsec migrate >/dev/null
 check "Spalte per Migration wiederhergestellt" "1" "$(wpc db query "SHOW COLUMNS FROM ${TOPICS} LIKE 'rationale'" --skip-column-names | grep -c '^rationale')"
-check "Datensatz erhalten" "1" "$(wpc db query "SELECT COUNT(*) FROM ${TOPICS} WHERE title='M2-Testthema'" --skip-column-names | tr -d ' ')"
+check "Datensatz erhalten" "1" "$(wpc db query "SELECT COUNT(*) FROM ${TOPICS} WHERE title='M2-Testthema'" --skip-column-names 2>/dev/null | tr -d ' ' | last_number)"
 wpc db query "DELETE FROM ${TOPICS} WHERE title='M2-Testthema'" >/dev/null
 
 echo "M3 Cronjob über WP-CLI"
@@ -132,7 +137,7 @@ echo "M5a Doppelter Start mit gleichem Schlüssel"
 KEY="m5a-$RANDOM$RANDOM"
 for i in 1 2 3 4 5; do wpc lsec selftest start --key="$KEY" >/dev/null 2>&1 & done
 wait
-check "genau ein Ablauf" "1" "$(wpc lsec selftest count "$KEY")"
+check "genau ein Ablauf" "1" "$(wpc lsec selftest count "$KEY" 2>/dev/null | last_number)"
 
 echo "M5b Gleichzeitige Bearbeitung desselben Ablaufs"
 ID=$(wpc lsec selftest start --key="m5b-$RANDOM$RANDOM" | run_id)
