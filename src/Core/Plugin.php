@@ -8,8 +8,13 @@
 namespace Lsec\Core;
 
 use Lsec\Admin\StatusPage;
+use Lsec\Cli\AiCommand;
 use Lsec\Cli\LsecCommand;
 use Lsec\Cli\SelftestCommand;
+use Lsec\Cli\SettingsCommand;
+use Lsec\Infrastructure\Http\HttpTransport;
+use Lsec\Infrastructure\Http\WpHttpTransport;
+use Lsec\Integrations\AI\AiClientFactory;
 use Lsec\Infrastructure\Database\Migrator;
 use Lsec\Infrastructure\Logging\Logger;
 use Lsec\Infrastructure\Logging\Redactor;
@@ -103,6 +108,20 @@ final class Plugin {
 	 */
 	public readonly Watchdog $watchdog;
 	/**
+	 * HTTP für externe Dienste.
+	 *
+	 * @var HttpTransport
+	 */
+	public readonly HttpTransport $http;
+
+	/**
+	 * Erzeugt den konfigurierten KI-Adapter.
+	 *
+	 * @var AiClientFactory
+	 */
+	public readonly AiClientFactory $ai;
+
+	/**
 	 * Konstruktor: einfache, handgeschriebene Verdrahtung ohne Container-Bibliothek.
 	 */
 	private function __construct() {
@@ -114,6 +133,8 @@ final class Plugin {
 		$this->workflows = new WorkflowRegistry();
 		$this->engine    = new WorkflowEngine( $this->workflows, $this->runs, $this->queue, new RetryPolicy(), $this->logger );
 		$this->watchdog  = new Watchdog( $this->runs, $this->queue, $this->logger );
+		$this->http      = new WpHttpTransport();
+		$this->ai        = new AiClientFactory( $this->secrets, $this->http );
 	}
 
 	/**
@@ -159,6 +180,8 @@ final class Plugin {
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'lsec', new LsecCommand( $this ) );
 			\WP_CLI::add_command( 'lsec selftest', new SelftestCommand( $this ) );
+			\WP_CLI::add_command( 'lsec ai', new AiCommand( $this ) );
+			\WP_CLI::add_command( 'lsec settings', new SettingsCommand() );
 		}
 	}
 
