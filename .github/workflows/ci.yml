@@ -111,7 +111,8 @@ jobs:
         working-directory: /tmp/wp
         run: |
           touch wp-content/debug.log
-          if grep -E "PHP (Fatal error|Warning|Notice|Deprecated)" wp-content/debug.log | grep -i "local-seo-entity-plugin"; then
+          # Nur eigener Code zählt; Meldungen aus vendor/ (z. B. Action Scheduler unter PHP 8.4) stammen von Dritten.
+          if grep -E "PHP (Fatal error|Warning|Notice|Deprecated)" wp-content/debug.log | grep -i "local-seo-entity-plugin" | grep -v "/vendor/"; then
             echo "PHP-Meldungen aus dem Plugin gefunden."; exit 1
           fi
           echo "Keine PHP-Meldungen aus dem Plugin."

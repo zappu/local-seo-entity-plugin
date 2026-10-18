@@ -19,11 +19,17 @@ FAIL=0
 # Nach einem simulierten Absturz gelten Aufträge nach 10 Sekunden als verwaist (Produktion: 600).
 STALE=10
 
-# WP-CLI zeigt bei WP_DEBUG PHP-Hinweise anderer Plugins (z. B. "Deprecated" unter PHP 8.4)
-# in der normalen Ausgabe an. Diese Zeilen und Leerzeilen werden herausgefiltert, damit die
-# Prüfungen nur die Ausgabe der Befehle auswerten.
+# WP-CLI zeigt bei WP_DEBUG PHP-Hinweise anderer Plugins in der normalen Ausgabe an,
+# z. B. "Deprecated: ..." von Elementor unter PHP 8.4, und Elementors Protokoll hängt beim
+# Beenden einen mehrzeiligen Block an ("PHP: <Datum> [notice ...]"). Beides wird
+# herausgefiltert, damit die Prüfungen nur die Ausgabe der Befehle auswerten.
 wpc() {
-	$WP "${WP_ARGS[@]}" "$@" 2>/dev/null | grep -v -E '^(PHP )?(Deprecated|Notice|Warning|Strict Standards|Fatal error): ' | sed '/^[[:space:]]*$/d'
+	$WP "${WP_ARGS[@]}" "$@" 2>/dev/null | awk '
+		/^PHP: [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] / { skip = 1 }
+		skip { next }
+		/^(PHP )?(Deprecated|Notice|Warning|Strict Standards|Fatal error): / { next }
+		/^[[:space:]]*$/ { next }
+		{ print }'
 	return "${PIPESTATUS[0]}"
 }
 json() { php -r '$d=json_decode(stream_get_contents(STDIN),true); $p=explode(".",$argv[1]); foreach($p as $k){ $d=$d[$k]??null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d):$d);' "$1"; }
