@@ -2,7 +2,7 @@
 ## Technische Spezifikation v0.3
 
 **Status:** Architekturentwurf mit konkretem Datenmodell, Aufgabenmodell und Machbarkeitstest (überarbeitet am 18.10.2026)  
-**Entwicklung:** Noch nicht begonnen – nächster Schritt ist der Machbarkeitstest (Abschnitt 12)  
+**Entwicklung:** Machbarkeitstest läuft: Etappe 1 bestanden (0.1.1), Etappe 3 umgesetzt (0.2.0), Ergebnisse in `PROJEKTPLAN.md`  
 **Grundlage:** Anforderungsspezifikation 1.0, Technische Spezifikation v0.1 und v0.2  
 **Arbeitstitel / Präfix:** `local-seo-entity-content` / `lsec`
 
@@ -23,6 +23,7 @@
 | Textfocus (18.10.) | Textfocus-API als vierte Keyword-Quelle im MVP, mit Credit-Budget und Zwischenspeicher (Abschnitte 4.4, 6.5) |
 | Screpy, Indexly (18.10.) | Eingeordnet für Ausbau 3: Ranking-Verlauf, Backlinks, Site-Audit, KI-Sichtbarkeit (Abschnitt 6.3) |
 | Erkenntnisse aus der Testauswertung (18.10.) | Importregeln je Quelle, Tippfehlerprüfung, Entity-Abgleich über Kontext, Prüfungen auf Ortsbezug und Titeldubletten (Abschnitte 6.6, 6.7, 8.3, 10.1, 12) |
+| Nachträge aus Etappe 3 (18.10.) | Rank-Math-Erkennung über `rank_math/loaded`, Block-Markup je WordPress-Version, Zwischenspeicher in `lsec_provider_calls.response_body` (Schemaversion 2), Prüfung der Fundstellen bei der Entity-Erkennung, Ortsabgleich über Wikidata, Protokollstufe `audit` (Abschnitte 4.4, 6.5, 8.3, 8.5, 9.2, 11) |
 
 Werte, die als **Vorschlag** gekennzeichnet sind, gelten als Ausgangspunkt und werden im Machbarkeitstest bestätigt oder angepasst.
 
@@ -560,6 +561,10 @@ Preistabellen für die Kostenberechnung bei Anthropic und OpenAI werden als bear
 
 Neue Entitäten werden immer mit `status = candidate` gespeichert. Mehrdeutige Entitäten erhalten `unresolved`.
 
+**Prüfung der Fundstellen (Nachtrag 18.10.):** Ein Vorschlag der KI wird nur übernommen, wenn mindestens eine Fundstelle wörtlich im Text steht (Vergleich ohne Groß-/Kleinschreibung und mit vereinheitlichten Anführungszeichen und Leerraum). Ohne gültiges Zitat genügt der Name selbst, wenn er im Text vorkommt; dann wird seine Satzumgebung gespeichert. Alle übrigen Vorschläge werden verworfen und angezeigt. Fundstellen stehen in `lsec_mentions` und werden bei einer erneuten Erkennung desselben Beitrags ersetzt. Entscheidungen im Backend setzen `decided_by` und `decided_at` und werden mit der Stufe `audit` protokolliert, die unabhängig von `WP_DEBUG` schreibt.
+
+**Ortsabgleich über Wikidata (Nachtrag 18.10.):** Suche nach dem Namen (nur Treffer in der Sprache der Website), dann nur Einträge mit Koordinaten (P625) im Land der Website (P17). Einträge, die in einem anderen Kandidaten liegen (P131, z. B. Ortskern oder Bahnhof), entfallen. Das Servicegebiet besteht aus Verwaltungseinheiten (Wikidata-IDs, geprüft über die P131-Kette bis Tiefe 3) und optional einem Umkreis um den Mittelpunkt. Ein Kandidat im Gebiet → `probable`; mehrere oder keiner → `unresolved`. Wikidata-Antworten werden 30 Tage in `lsec_provider_calls` zwischengespeichert.
+
 **Abgleich über Kontext:** Externe Zuordnungen (Wikidata-IDs aus Textfocus oder eigener Abfrage) werden gegen den Kontext geprüft, bevor sie den Status `probable` erhalten. Beispiele aus der Testauswertung: Textfocus ordnete „Böden“ (Bodenbeläge) der Bodenkunde zu, und „Burgdorf“ gibt es in Niedersachsen zweimal (Region Hannover und Landkreis Wolfenbüttel). Geprüft werden Typ (Ort, Fachbegriff, Unternehmen), übergeordnete Verwaltungseinheit und Nähe zum Servicegebiet. Bei mehreren passenden Kandidaten bleibt der Status `unresolved`, bis der Administrator entscheidet.
 
 ### 8.4 Themenrecherche (`topic_research`) und Briefing (`create_brief`)
@@ -620,6 +625,8 @@ Briefing:
 
 Erlaubte Blöcke im MVP (Vorschlag): `paragraph`, `heading`, `list`, `list-item`, `table`, `quote`, `separator`, `details` (für FAQ). Das Plugin baut das Block-Markup aus einer Zwischenstruktur selbst zusammen, statt rohes HTML der KI zu übernehmen. So entsteht immer gültiges Markup, und der Inhalt wird mit `wp_kses_post()` bereinigt.
 
+**Zwischenstruktur (Nachtrag 18.10.):** Statt `blocks` liefert die KI `content` als Liste von Knoten: `{type: paragraph, text}`, `{type: heading, level, text}`, `{type: list, ordered, items}`, `{type: table, head, rows}`, `{type: quote, text, cite}`, `{type: separator}`, `{type: details, summary, text}`. Texte dürfen `<strong>`, `<em>`, `<a href>` und `<br>` enthalten. Das Markup folgt der `save()`-Ausgabe der Core-Blöcke der jeweiligen WordPress-Version (Liste mit Klasse `wp-block-list` erst ab 6.6, Tabelle mit ausdrücklichem `hasFixedLayout`). Geprüft im Block-Editor mit WordPress 6.4.5 und 7.1.3. Interne Links bleiben nur, wenn sie auf einen veröffentlichten Inhalt der Website zeigen; sonst bleibt der Ankertext.
+
 ### 8.6 Style Mimic (`style_profile`)
 
 ```json
@@ -658,9 +665,9 @@ Das Profil ist im Backend bearbeitbar. Jede Änderung erzeugt eine neue Version.
 
 ### 9.2 Rank Math
 
-- Erkennung über die Rank-Math-Hauptklasse bzw. die Plugin-Konstante.
+- Erkennung über die Aktion `rank_math/loaded` (Nachtrag 18.10.). Rank Math definiert seine Konstanten schon vor der eigenen Versionsprüfung und bleibt auf zu alten WordPress-Versionen inaktiv; Rank Math 1.0.280 verlangt WordPress 6.7. Die Plugin-Konstante allein reicht deshalb nicht.
 - Für neue Beiträge werden die Rank-Math-Metafelder gesetzt: `rank_math_title`, `rank_math_description`, `rank_math_focus_keyword` (Haupt-Keyword zuerst, weitere kommagetrennt).
-- Die genauen Schlüssel und Formate werden im Machbarkeitstest gegen die aktuelle Rank-Math-Version geprüft, auch die Anzeige in der Rank-Math-Seitenleiste.
+- Geprüft am 18.10. mit Rank Math 1.0.280 und WordPress 7.1.3: `rank_math_title`, `rank_math_description` und `rank_math_focus_keyword` (kommagetrennt) erscheinen in der Seitenleiste; Variablen wie `%sep%` und `%sitename%` werden in der Vorschau aufgelöst. Die Editor-Funktionen von Rank Math erscheinen erst nach Verbindung oder übersprungener Registrierung im Einrichtungsassistenten.
 - Strukturierte Daten über Rank Math folgen in Ausbau 2.
 - Ohne Rank Math werden die SEO-Angaben nur als Vorschlag im Plugin gespeichert und nicht selbst ausgegeben. So entstehen keine doppelten Meta-Tags.
 - Die Content Analysis API wird erst genutzt, wenn Plugin-Empfehlungen im Editor erscheinen sollen.
@@ -752,7 +759,7 @@ Der Machbarkeitstest ist ein schmaler, lauffähiger Durchstich durch alle Schich
 | M15 | Zugriffsschutz | Alle REST-Routen antworten Nicht-Administratoren mit 403 |
 | M16 | Textfocus-API | `tf_account` zeigt API-Zugang und Restguthaben; `tf_langs` liefert den Code für Deutschland; `tf_keyword` mit mehreren Keywords liefert Volumina (oder es ist dokumentiert, dass der Tarif sie nicht enthält); eine wiederholte Anfrage wird aus dem Zwischenspeicher bedient und verbraucht kein Credit; bei erreichtem Tagesbudget wartet der Ablauf |
 | M17 | Tippfehlerprüfung | „flächenreingung“ wird vor dem Aufruf eines Anbieters als mögliche Schreibvariante von „Flächenreinigung“ erkannt |
-| M18 | Entity-Abgleich | „Burgdorf“ erhält ohne weiteren Kontext den Status `unresolved` mit zwei Kandidaten; mit Servicegebiet Region Hannover wird der passende Kandidat `probable` |
+| M18 | Entity-Abgleich | „Burgdorf“ erhält ohne weiteren Kontext den Status `unresolved` mit mindestens zwei Kandidaten (Wikidata liefert am 18.10. drei in Deutschland); mit Servicegebiet Region Hannover wird der passende Kandidat `probable` |
 
 Nach dem Machbarkeitstest werden die offenen Entscheidungen (Abschnitt 13) getroffen und als v1.0 der technischen Spezifikation festgeschrieben. Erst danach beginnt die eigentliche MVP-Umsetzung.
 

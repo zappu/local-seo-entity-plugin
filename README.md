@@ -1,6 +1,6 @@
 # Local SEO & Entity Content
 
-WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **Machbarkeitstest, Etappe 1** (Grundgerüst, Datenbank, Warteschlange, Cronjob, Wiederaufnahme, Doppelschutz).
+WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **Machbarkeitstest, Etappe 3** (KI-Adapter, Keyword-Import, Textfocus, Tippfehlerprüfung, Entitäten mit Ortsabgleich, Entwürfe mit Rank Math, Elementor-Text, REST-Schutz).
 
 Spezifikationen und Plan: [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md).
 
@@ -36,6 +36,15 @@ Als Benutzer des Abonnements ausführen, nicht als root.
 
 Das Skript prüft M2 (Tabellen und Migration), M3 (Cronjob über WP-CLI), M4 (Wiederaufnahme nach simuliertem Absturz) und M5 (Doppelschutz) und räumt danach auf.
 
+Etappe 3 (gleicher Aufruf, anderes Skript):
+
+```bash
+sudo -u "$U" env PATH=/opt/plesk/php/8.4/bin:/usr/bin:/bin WP="php $PWD/wp-cli.phar" \
+  bash httpdocs/wp-content/plugins/local-seo-entity-plugin/bin/machbarkeitstest-etappe3.sh --path="$PWD/httpdocs" --online
+```
+
+Es prüft ohne Kosten M10 (Import), M12/M13 (Entwurf, Rank Math), M14 (Elementor), M15 (REST), M17 (Tippfehler) und mit `--online` M18 (Wikidata). Mit `--keep-draft` bleibt der Testentwurf für die Sichtprüfung im Block-Editor stehen. Am Ende listet es die Befehle für die Prüfpunkte mit Kosten (KI, Textfocus).
+
 ## Entwicklung
 
 ```bash
@@ -45,4 +54,4 @@ composer analyse     # PHPStan
 composer test:unit   # PHPUnit
 ```
 
-GitHub Actions führt dieselben Prüfungen und den Machbarkeitstest mit PHP 8.1/WordPress 6.4 und PHP 8.3/aktuelles WordPress aus.
+GitHub Actions führt dieselben Prüfungen und beide Machbarkeitstest-Skripte mit PHP 8.1/WordPress 6.4 und PHP 8.3/8.4 mit aktuellem WordPress, Rank Math und Elementor aus.
