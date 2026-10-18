@@ -60,6 +60,9 @@ jobs:
           - php: '8.4'
             wp: 'latest'
             extras: 'seo-by-rank-math elementor'
+          - php: '8.4'
+            wp: 'latest'
+            extras: 'seo-by-rank-math elementor'
     services:
       mysql:
         image: mysql:8.0
