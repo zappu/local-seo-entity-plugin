@@ -16,6 +16,7 @@ Machbarkeitstest, Etappe 3: Bausteine für Recherche, Entitäten und Entwürfe.
 - REST-Namensraum `lsec/v1`, 403 für alle ohne `lsec_manage` (`wp lsec check rest`)
 - Datenbank: Schemaversion 2 (Spalte `response_body` in `lsec_provider_calls`)
 - Prüfskript `bin/machbarkeitstest-etappe3.sh` für M10, M12–M15, M17 und mit `--online` M18
+- JSON-Ausgaben der WP-CLI-Befehle enden mit Zeilenumbruch; vorher hängte der Elementor-Logger unter PHP 8.4 seine Meldung an das JSON. Beide Prüfskripte lesen JSON auch mit Text dahinter
 
 ## 0.1.1 – 18.10.2026
 
