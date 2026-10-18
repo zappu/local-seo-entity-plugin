@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.2.4 – 18.10.2026
+
+- `wp lsec keywords list` zeigt Klicks, Impressionen, CTR, Position und Seite aus der Search Console; mit `--source=gsc` eigene Ansicht, sortiert nach Impressionen
+
 ## 0.2.3 – 18.10.2026
 
 - Google Search Console über ein Dienstkonto: `wp lsec gsc sites [--save]` und `wp lsec gsc fetch [--days] [--country] [--dry-run]`; Suchanfragen der letzten 28 Tage für Deutschland als Quelle `gsc` (Klicks, Impressionen, CTR, Position, Seite)

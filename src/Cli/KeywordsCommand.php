@@ -151,17 +151,27 @@ final class KeywordsCommand {
 		$rows = array();
 		foreach ( $this->repository->list_with_metrics( (string) ( $assoc_args['search'] ?? '' ), (string) ( $assoc_args['source'] ?? '' ), (int) ( $assoc_args['limit'] ?? 50 ) ) as $row ) {
 			$trend  = null === $row['trend'] ? null : json_decode( (string) $row['trend'], true );
+			$gsc    = 'gsc' === $row['source'];
 			$rows[] = array(
-				'keyword'    => $row['keyword'],
-				'quelle'     => $row['source'],
-				'volumen'    => null === $row['search_volume'] ? 'unbekannt' : $row['search_volume'],
-				'schwierig'  => (string) $row['difficulty'],
-				'cpc'        => (string) $row['cpc'],
-				'intention'  => (string) $row['intent'],
-				'spannweite' => is_array( $trend ) ? $trend['min'] . '–' . $trend['max'] : '',
+				'keyword'      => $row['keyword'],
+				'quelle'       => $row['source'],
+				'volumen'      => $gsc ? '' : ( null === $row['search_volume'] ? 'unbekannt' : $row['search_volume'] ),
+				'klicks'       => null === $row['clicks'] ? '' : (string) $row['clicks'],
+				'impressionen' => null === $row['impressions'] ? '' : (string) $row['impressions'],
+				'ctr'          => null === $row['ctr'] ? '' : number_format( (float) $row['ctr'] * 100, 1, ',', '' ) . ' %',
+				'position'     => null === $row['position'] ? '' : number_format( (float) $row['position'], 1, ',', '' ),
+				'seite'        => null === $row['page_url'] ? '' : (string) wp_parse_url( (string) $row['page_url'], PHP_URL_PATH ),
+				'schwierig'    => (string) $row['difficulty'],
+				'cpc'          => (string) $row['cpc'],
+				'intention'    => (string) $row['intent'],
+				'spannweite'   => is_array( $trend ) ? $trend['min'] . '–' . $trend['max'] : '',
 			);
 		}
-		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'keyword', 'quelle', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+		// Search Console liefert Klicks und Impressionen, die übrigen Quellen Suchvolumen und Kennzahlen der Tools.
+		$fields = 'gsc' === ( $assoc_args['source'] ?? '' )
+			? array( 'keyword', 'klicks', 'impressionen', 'ctr', 'position', 'seite' )
+			: array( 'keyword', 'quelle', 'volumen', 'impressionen', 'position', 'cpc', 'schwierig', 'intention', 'spannweite' );
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, $fields );
 	}
 
 	/**

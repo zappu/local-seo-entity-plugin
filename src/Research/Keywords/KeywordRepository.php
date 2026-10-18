@@ -292,12 +292,12 @@ final class KeywordRepository {
 		$params[] = $limit;
 
 		// Neueste Kennzahl je Keyword und Quelle.
-		$sql = "SELECT k.id, k.keyword, k.locale, k.region, k.intent, m.source, m.search_volume, m.difficulty, m.cpc, m.trend, m.created_at
+		$sql = "SELECT k.id, k.keyword, k.locale, k.region, k.intent, m.source, m.search_volume, m.difficulty, m.cpc, m.trend, m.impressions, m.clicks, m.ctr, m.position, m.page_url, m.period_start, m.period_end, m.created_at
 			FROM {$k} k
 			JOIN {$m} m ON m.keyword_id = k.id
 			JOIN ( SELECT keyword_id, source, MAX(id) AS id FROM {$m} GROUP BY keyword_id, source ) latest ON latest.id = m.id
 			{$where}
-			ORDER BY m.search_volume IS NULL, m.search_volume DESC, k.normalized
+			ORDER BY COALESCE(m.search_volume, m.impressions) IS NULL, COALESCE(m.search_volume, m.impressions) DESC, m.clicks DESC, k.normalized
 			LIMIT %d";
 
 		return (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared

@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 18.10.2026 · Phase: Machbarkeitstest, Etappe 3 auf Staging bestanden (0.2.1); offen M9 Search Console
+**Stand:** 18.10.2026 · Phase: Machbarkeitstest abgeschlossen (M1–M18 bestanden); nächster Schritt Spezifikation v1.0
 
 ## Ziel
 
@@ -15,7 +15,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Testauswertung | Keywords und Entitäten für flaechenreiniger-wassertechnik.de mit echten Exporten | erledigt (17.10.2026) |
 | Machbarkeitstest, Etappe 1 | Grundgerüst, Datenbank, Warteschlange, Cronjob, Wiederaufnahme, Doppelschutz (M1–M5) | erledigt (18.10.2026), auf Staging bestätigt |
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
-| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | auf Staging bestanden am 18.10.2026 (0.2.0/0.2.1, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor), auch die Prüfpunkte mit Kosten; offen nur M9 (Search Console, wartet auf Dienstkonto) |
+| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | offen |
 | MVP 1 | Umsetzung nach Spezifikation v1.0 | offen |
 
@@ -33,7 +33,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | bestanden auf Staging am 18.10.2026: 5 Quellen mit URL gespeichert, Strukturierung gültig; Kosten $0,148, davon $0,142 für die Recherche (44.229 Eingabe-Token durch die eingefügten Suchergebnisse) |
 | M7b | Adapterwechsel | 3 | bestanden auf Staging am 18.10.2026: derselbe Aufruf über den OpenAI-Adapter (gpt-6.1-sol) mit gültigem JSON, auch zweistufig mit Websuche (4 Quellen); Anthropic direkt: Konto bis 01.11.2026 am Ausgabenlimit, vom Plugin richtig als endgültiger Fehler (HTTP 400) mit Klartext gemeldet |
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
-| M9 | Search Console | 3 | umgesetzt in 0.2.3 (Dienstkonto, Abruf und Speicherung, Schnittstellentest mit signiertem JWT); Dienstkonto `lsec-staging` angelegt und Schlüssel auf Staging abgelegt; Abruf auf Staging offen |
+| M9 | Search Console | 3 | bestanden auf Staging am 18.10.2026: Dienstkonto `lsec-staging` sieht die Property `https://flaechenreiniger-wassertechnik.de/` (siteRestrictedUser), 96 Zeilen (Suchanfrage × Seite) für 18.09.–15.10.2026, Deutschland, als 79 Suchanfragen gespeichert |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026 (Keyword Revealer, Keyword Chef) und echten Textfocus-Exporten vom 18.10.2026 (Keyword-Volumen, Entitäten-Tabelle); auf Staging bestätigt (CSV) |
 | M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | bestanden auf Staging am 18.10.2026 (Seite 516, 1.333 Wörter): 9 Kandidaten mit 11 wörtlichen Fundstellen, $0,04 je Lauf; Bestätigen und Ablehnen im Backend mit Benutzer und Zeit gespeichert |
 | M12 | Entwurf mit gültigen Blöcken | 3 | bestanden im Block-Editor (WordPress 6.4.5 und 7.1.3: 16 Blöcke gültig, keine Warnung); auf Staging bestätigt |
@@ -92,11 +92,13 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Textfocus-Entitäten der Startseite: 19 Einträge, darunter vier Schreibweisen des eigenen Firmennamens („Staats“, „Staats Flächenreinigung“, „Staats Flächenreinigung & Wassertechnik“, „Staats Flächenreinigungs-Service & Wassertechnik“), Orte außerhalb der Region (Braunschweig, Peine, Gifhorn, Celle) und sachfremde Begriffe (Kaugummi, Tartan). Für v1.0: Zusammenführen von Entitäten als Aliasse im Backend.
 - Die Semantik-Analyse von Textfocus lieferte für „flächenreinigung hannover“ keine Ergebnisse (zu wenig Wettbewerber für das regionale Keyword).
 
+- Search Console der Testwebsite (28 Tage): keine Klicks, Impressionen vor allem auf Positionen 20–90. Viele Anfragen mit „in der Nähe“ und Umlaut-Varianten („naehe“) laufen auf die Seite `/flaechenreinigung-hannover`; lokale Landingpages wie Wolfsburg (Position 7,3) und Laatzen ranken für eng passende Anfragen. Für die Themenrecherche: Search Console zeigt, wo Seiten schon sichtbar sind, aber nicht klicken (Titel/Beschreibung, Inhalt), und welche Orte gesucht werden.
+
 ## Nächste Schritte
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
 2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16~~ erledigt am 18.10.2026.
 3. ~~Textfocus: Tarif, Sprachcode, Excel-Exporte~~ erledigt (AppSumo, API-Zugang, Code `de`; Exporte Keyword-Volumen und Entitäten in 0.2.2 eingebaut).
 4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
-5. ~~Google-Dienstkonto für M9~~ angelegt am 18.10.2026; Abruf auf Staging mit 0.2.3 prüfen.
+5. ~~Google-Dienstkonto für M9~~ erledigt, Abruf auf Staging bestanden.
 6. Danach Spezifikation v1.0 mit den offenen Entscheidungen.
