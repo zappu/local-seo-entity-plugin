@@ -1,5 +1,18 @@
 # Änderungsprotokoll
 
+## 0.4.0 – 18.10.2026
+
+MVP 1, Stufe B (Spezifikation v1.0, Abschnitt 14).
+
+- Unternehmensprofil unter „Local SEO → Unternehmen“: Unternehmen, Servicegebiet mit Wikidata-Suche, Standorte mit Adresse und Öffnungszeiten, Leistungen, Marken, Wettbewerber; alles als bestätigte Entitäten mit Beziehungen (`wp lsec profile show|save`)
+- Inhaltsindex aller veröffentlichten Beiträge und Seiten als Ablauf in Durchgängen zu 20; geänderte Beiträge werden vorgemerkt (`wp lsec index run|status|show`, Dashboard-Karte „Inhalte und Entitäten“)
+- Entity-Erkennung als Ablauf mit Ortsabgleich über Wikidata; startet für neue und geänderte Inhalte automatisch (Einstellung `entity_auto_extract`), nie zweimal für denselben Inhalt
+- Zusammenführen von Entitäten mit Vorschlägen für Schreibweisen der eigenen Firma (`wp lsec entities merge`, `suggest-merges`); spätere Erkennungen finden das Ziel
+- Neue Seite „Local SEO → Entitäten“ mit Filtern, Vorschlägen, Zusammenführen und Details; ersetzt die bisherige Seite
+- Schärfere Anweisung für die Entity-Erkennung; unsichere Vorschläge standardmäßig ausgeblendet
+- `wp lsec entities add`, `list --search --min-confidence`, `show` mit Aliassen und Beziehungen
+- Prüfskript `bin/mvp-pruefung.sh` um Stufe B erweitert (B6 Hemmingen mit `--online`)
+
 ## 0.3.1 – 18.10.2026
 
 - `wp lsec check secrets` durchsucht unter Plesk auch die Fehlerprotokolle im Ordner `logs` neben dem Webroot (`error_log`, `proxy_error_log`), die der Benutzer des Abonnements lesen darf; weitere Dateien mit `--log=<datei>[,<datei>]`
