@@ -15,6 +15,9 @@
 *.jpg binary
 *.webp binary
 
+# Testdateien unverändert lassen (BOM, CRLF, Windows-1252)
+tests/fixtures/** -text
+
 # Nicht in Release-ZIPs aus "git archive"
 /.github export-ignore
 /tests export-ignore
