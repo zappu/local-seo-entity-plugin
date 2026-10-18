@@ -29,8 +29,8 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M4 | Wiederaufnahme nach Abbruch | 1 | bestanden lokal, in CI und auf Staging (Abbruch in Schritt 2 und nach Beitragsanlage, verzögerte Wiederholung) |
 | M5 | Doppelschutz | 1 | bestanden lokal, in CI und auf Staging (5 gleichzeitige Starts, 24 gleichzeitige Bearbeitungsversuche) |
 | M6 | Wiederholungen (429 verzögert, 401 sofort `failed`) | 3 | bestanden als Schnittstellentest (KI-Adapter, Textfocus, Wikidata); echter 429 von Wikidata wurde korrekt als wiederholbar behandelt |
-| M7 | KI-Anbindung mit JSON-Schema, Korrekturversuch, Kosten | 3 | Schnittstellentest bestanden; echter Aufruf auf Staging offen (`wp lsec ai test`) |
-| M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | Schnittstellentest bestanden, Speicherung lokal geprüft; echter Aufruf offen (`wp lsec ai test --web`) |
+| M7 | KI-Anbindung mit JSON-Schema, Korrekturversuch, Kosten | 3 | bestanden auf Staging am 18.10.2026 (OpenRouter, anthropic/claude-sonnet-5.5: gültiges JSON, 401/283 Token, $0,0036, 4,9 s); Korrekturversuch als Schnittstellentest |
+| M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | bestanden auf Staging am 18.10.2026: 5 Quellen mit URL gespeichert, Strukturierung gültig; Kosten $0,148, davon $0,142 für die Recherche (44.229 Eingabe-Token durch die eingefügten Suchergebnisse) |
 | M7b | Adapterwechsel | 3 | bestanden als Schnittstellentest mit allen drei Adaptern; echte Aufrufe offen |
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
 | M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
@@ -71,6 +71,9 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Wikidata kennt mehr Orte namens Burgdorf als erwartet: neben Region Hannover und Landkreis Wolfenbüttel einen weiteren Eintrag im Landkreis Wolfenbüttel, dazu Ortskern, Bahnhof und Orte in der Schweiz. Ortsteile und Treffer über Aliasse anderer Sprachen werden ausgefiltert; ohne Kontext bleibt der Status `unresolved`.
 - Die KI-Erkennung von Entitäten übernimmt nur Vorschläge mit wörtlicher Fundstelle im Text. Erfundene Zitate fallen dadurch heraus.
 - Eine lokale Test-Installation ohne `AUTOMATIC_UPDATER_DISABLED` hat sich während eines Testlaufs selbst auf eine neue Hauptversion aktualisiert. Test-Installationen für feste Versionen brauchen diese Konstante.
+
+- Die Websuche über OpenRouter ist der Kostentreiber: Die Suchergebnisse landen als rund 44.000 Eingabe-Token im Prompt (Recherche $0,142 gegenüber $0,005 für die Strukturierung). Zu prüfen für v1.0: weniger Treffer (`max_results`), ein günstigeres Modell nur für den Rechercheschritt oder ein Tagesbudget für KI-Kosten.
+- Das Modell hat die Frage richtiggestellt (Uetze hat Ortsteile, keine Stadtteile) und nur belegte Tatsachen übernommen.
 
 ## Nächste Schritte
 
