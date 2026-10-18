@@ -90,6 +90,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
 2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M11, M16~~ erledigt am 18.10.2026; M7b nur mit echtem Anthropic- oder OpenAI-Schlüssel.
-3. Textfocus: Tarif und Sprachcode prüfen, einen Excel-Export einer Textfocus-Tabelle für M10 bereitstellen.
-4. Google-Dienstkonto für M9 (Search Console).
-5. Danach Spezifikation v1.0 mit den offenen Entscheidungen.
+3. Textfocus: ~~Tarif und Sprachcode prüfen~~ erledigt (AppSumo, API-Zugang, Code `de`); einen Excel-Export einer Textfocus-Tabelle für M10 bereitstellen.
+4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
+5. Google-Dienstkonto für M9 (Search Console).
+6. Danach Spezifikation v1.0 mit den offenen Entscheidungen.
