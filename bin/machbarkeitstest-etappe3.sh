@@ -43,6 +43,17 @@ wpc() {
 	return "${PIPESTATUS[0]}"
 }
 json() { php -r '$in=stream_get_contents(STDIN); $l=explode("\n",$in); $d=null; for($i=0;$i<count($l)&&$d===null;$i++){ if(!preg_match("/^\\s*[\\[{]/",$l[$i])) continue; for($j=count($l)-1;$j>=$i;$j--){ $t=json_decode(implode("\n",array_slice($l,$i,$j-$i+1)),true); if(is_array($t)){ $d=$t; break; } } } $p=explode(".",$argv[1]); foreach($p as $k){ if($k==="count"){ $d=is_array($d)?count($d):0; continue; } $d=is_array($d)?($d[$k]??null):null; } echo is_bool($d)?($d?"true":"false"):(is_array($d)?json_encode($d,JSON_UNESCAPED_UNICODE):$d);' "$1"; }
+# Ungefilterte Ausgabe für JSON: json() überspringt fremde Zeilen selbst. Der Filter in wpc() würde nach einem
+# mehrzeiligen Elementor-Protokollblock alles Weitere verwerfen, auch das JSON.
+wpj() { $WP "${WP_ARGS[@]}" "$@" 2>&1; }
+# Zeigt die Rohausgabe, wenn darin kein JSON gefunden wurde.
+diagnose() {
+	local label="$1" raw="$2"
+	if [ -z "$(printf '%s' "$raw" | json 0 2>/dev/null)$(printf '%s' "$raw" | json status 2>/dev/null)$(printf '%s' "$raw" | json source 2>/dev/null)" ]; then
+		echo "  Rohausgabe ($label):"
+		printf '%s\n' "$raw" | head -15 | cut -c1-300 | sed 's/^/    | /'
+	fi
+}
 last_number() { grep -E '^[0-9]+$' | tail -1; }
 last_word() { grep -E '^[A-Za-z0-9_]+$' | tail -1; }
 check() {
@@ -72,7 +83,7 @@ if ! command -v php >/dev/null 2>&1; then
 	echo "Abbruch: 'php' ist nicht im PATH. Beispiel: PATH=/opt/plesk/php/8.4/bin:\$PATH"
 	exit 2
 fi
-STATUS=$(wpc lsec status --format=json)
+STATUS=$(wpj lsec status --format=json)
 if [ -z "$(echo "$STATUS" | json plugin_version)" ]; then
 	echo "Abbruch: 'wp lsec' nicht verfügbar. Ist das Plugin aktiviert? (WP=$WP)"
 	exit 2
@@ -100,7 +111,8 @@ printf 'Keyword;Suchvolumen;CPC (EUR);Schwierigkeit\r\nFl\xe4chenreinigung Hanno
 OUT=$(wpc lsec keywords import "$TMP/keyword-revealer.csv" --source=csv:lsec_test)
 contains "Keyword Revealer erkannt" "Vorlage: Keyword Revealer" "$OUT"
 contains "UTF-8 mit BOM erkannt" "Kodierung: UTF-8 (BOM)" "$OUT"
-L=$(wpc lsec keywords list --source=csv:lsec_test --search="thermo" --format=json)
+L=$(wpj lsec keywords list --source=csv:lsec_test --search="thermo" --format=json)
+diagnose "keywords list" "$L"
 check "Umlaute korrekt" "thermo flächenreinigung" "$(echo "$L" | json 0.keyword)"
 check "Volumen" "20" "$(echo "$L" | json 0.volumen)"
 check "Monatswerte als Spannweite" "10–40" "$(echo "$L" | json 0.spannweite)"
@@ -132,7 +144,8 @@ DRAFT=$(wpc lsec draft sample --porcelain | last_number)
 if [ -z "$DRAFT" ]; then
 	check "Entwurf angelegt" "ja" "nein"
 else
-	D=$(wpc lsec draft show "$DRAFT" --format=json)
+	D=$(wpj lsec draft show "$DRAFT" --format=json)
+	diagnose "draft show" "$D"
 	check "Status Entwurf" "draft" "$(echo "$D" | json status)"
 	check "9 Blöcke" "9" "$(echo "$D" | json blocks.count)"
 	check "Block-Markup unverändert nach parse/serialize" "true" "$(echo "$D" | json roundtrip)"
@@ -166,7 +179,8 @@ ELEM='[{"id":"a1","elType":"container","settings":{},"elements":[{"id":"h1","elT
 PAGE=$(wpc post create --post_type=page --post_status=draft --post_title="lsec Elementor-Test" --porcelain | last_number)
 wpc post meta update "$PAGE" _elementor_edit_mode builder >/dev/null
 wpc post meta update "$PAGE" _elementor_data "$ELEM" >/dev/null
-C=$(wpc lsec check content "$PAGE" --format=json)
+C=$(wpj lsec check content "$PAGE" --format=json)
+diagnose "check content" "$C"
 check "Quelle elementor" "elementor" "$(echo "$C" | json source)"
 check "zwei Überschriften" "2" "$(echo "$C" | json headings.count)"
 check "H1 erkannt" "Flächenreinigung in Burgdorf" "$(echo "$C" | json headings.0.text)"
