@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.3.1 – 18.10.2026
+
+- `wp lsec check secrets` durchsucht unter Plesk auch die Fehlerprotokolle im Ordner `logs` neben dem Webroot (`error_log`, `proxy_error_log`), die der Benutzer des Abonnements lesen darf; weitere Dateien mit `--log=<datei>[,<datei>]`
+
 ## 0.3.0 – 18.10.2026
 
 MVP 1, Stufe A (Spezifikation v1.0, Abschnitt 14).
