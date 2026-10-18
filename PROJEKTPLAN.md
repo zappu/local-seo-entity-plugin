@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 18.10.2026 · Phase: Machbarkeitstest, Etappe 3 auf Staging bestätigt (0.2.0, 38/38 ohne Kosten); Prüfpunkte mit Kosten offen
+**Stand:** 18.10.2026 · Phase: Machbarkeitstest, Etappe 3 auf Staging bestanden (0.2.1); offen M9 Search Console
 
 ## Ziel
 
@@ -15,7 +15,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Testauswertung | Keywords und Entitäten für flaechenreiniger-wassertechnik.de mit echten Exporten | erledigt (17.10.2026) |
 | Machbarkeitstest, Etappe 1 | Grundgerüst, Datenbank, Warteschlange, Cronjob, Wiederaufnahme, Doppelschutz (M1–M5) | erledigt (18.10.2026), auf Staging bestätigt |
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
-| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | umgesetzt in 0.2.0 (ohne Search Console), lokal mit WordPress 6.4.5 und 7.1.3, in der CI und auf Staging geprüft (PHP 8.4.26, WP 7.1.3, Rank Math, Elementor: 38/38 am 18.10.2026); Prüfpunkte mit Kosten offen |
+| Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | auf Staging bestanden am 18.10.2026 (0.2.0/0.2.1, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor), auch die Prüfpunkte mit Kosten; offen nur M9 (Search Console, wartet auf Dienstkonto) und M7b mit echtem Anthropic-/OpenAI-Schlüssel |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | offen |
 | MVP 1 | Umsetzung nach Spezifikation v1.0 | offen |
 
@@ -40,7 +40,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M13 | Rank-Math-Seitenleiste | 3 | bestanden (Rank Math 1.0.280, WordPress 7.1.3: Titel, Beschreibung, drei Keywords in der Seitenleiste); auf Staging bestätigt |
 | M14 | Elementor-Text | 3 | bestanden; auf Staging bestätigt |
 | M15 | REST 403 | 3 | bestanden (5 Routen, Besucher und Abonnent 403); auf Staging bestätigt |
-| M16 | Textfocus-API | 3 | bestanden auf Staging am 18.10.2026: `tf_account` (API-Zugang, AppSumo, 1.490 Credits, 60 Aufrufe/Tag), `tf_langs` (Code `de`), `tf_keyword` mit 2 Keywords in 1 Aufruf für 1 Credit liefert Volumina (flächenreinigung 110, wie bei Keyword Revealer), Tagesbudget zählt mit; Zwischenspeicher bei `tf_langs` bestätigt, bei einem kostenpflichtigen Endpunkt noch offen |
+| M16 | Textfocus-API | 3 | bestanden auf Staging am 18.10.2026: `tf_account` (API-Zugang, AppSumo, 1.490 Credits, 60 Aufrufe/Tag), `tf_langs` (Code `de`), `tf_keyword` mit 2 Keywords in 1 Aufruf für 1 Credit liefert Volumina (flächenreinigung 110, wie bei Keyword Revealer), `tf_related` wiederholt aus dem Zwischenspeicher ohne Credit, Tagesbudget zählt mit; Warten bei erreichtem Budget als Schnittstellentest |
 | M17 | Tippfehlerprüfung | 3 | bestanden mit den echten Keywords; auf Staging bestätigt |
 | M18 | Ortsabgleich Burgdorf | 3 | bestanden mit echten Wikidata-Daten: ohne Kontext `unresolved`, mit Region Hannover `probable` (Q555618); auf Staging bestätigt; Praxistest Hemmingen aus der Entity-Erkennung: mit Servicegebiet Region Hannover `probable` (Q534259, 10,7 km), zweiter Kandidat 398 km entfernt |
 
@@ -83,10 +83,13 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Textfocus `tf_keyword`: Volumen und CPC kommen, `difficulty` war bei beiden Test-Keywords 0, `concurrency` (Wettbewerb 0–100) 74 bzw. 23. Ob 0 „unbekannt“ bedeutet, ist offen; für die Priorisierung vorerst `concurrency` nutzen. `force_refetch` kostet ebenfalls einen Credit. Das Restguthaben steht nicht im erwarteten Feld der Antwort; `tf_account` zeigt es zuverlässig.
 - Textfocus-Sprachcodes sind frei vergebene Kürzel mit Sprache und Land in eigenen Feldern: Deutsch gibt es als `de` (Deutschland), `at` (Österreich), `ch` (Schweiz) und `bm` (Belgien). Aus dem Kürzel lässt sich das Land also nicht ableiten. Ab 0.2.1 wird die Locale beim Speichern mit abgelegt; auf Staging bestätigt (`de` → `de_DE`).
 
+- Textfocus `tf_related` liefert für ein allgemeines Keyword vor allem Firmennamen (Hamburger Flächenreinigung, Helmut Günther, Aweka …) und andere Regionen (Hamburg, Seevetal), kaum Begriffe für die Region Hannover. Für die Themenrecherche braucht es einen Filter für Marken/Wettbewerber und fremde Orte (Abgleich mit Servicegebiet und Entitäten); regionale Abfragen besser mit Ortsnamen im Keyword.
+- Textfocus `difficulty` war bei allen 17 Keywords 0, `cost` (CPC) außer beim Hauptkeyword ebenfalls 0. Vorschlag für v1.0: Bei Textfocus 0 als „unbekannt“ (NULL) speichern, wie bei Keyword Chef (Regel 6.6.1).
+
 ## Nächste Schritte
 
 1. ~~0.2.0 auf Staging installieren und `bin/machbarkeitstest-etappe3.sh --online` ausführen~~ erledigt am 18.10.2026 (38/38).
-2. Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16 (Befehle am Ende des Prüfskripts).
+2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M11, M16~~ erledigt am 18.10.2026; M7b nur mit echtem Anthropic- oder OpenAI-Schlüssel.
 3. Textfocus: Tarif und Sprachcode prüfen, einen Excel-Export einer Textfocus-Tabelle für M10 bereitstellen.
 4. Google-Dienstkonto für M9 (Search Console).
 5. Danach Spezifikation v1.0 mit den offenen Entscheidungen.
