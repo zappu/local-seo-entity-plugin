@@ -125,6 +125,75 @@ final class KeywordRepository {
 	}
 
 	/**
+	 * Speichert Suchanfragen aus der Search Console als Quelle gsc (M9).
+	 * Ein erneuter Abruf für denselben Zeitraum ersetzt die vorherigen Werte.
+	 *
+	 * @param string                                                                                                                      $property Property.
+	 * @param array{start: string, end: string}                                                                                           $period   Zeitraum.
+	 * @param array<string, array{keyword: string, clicks: int, impressions: int, ctr: float, position: float, page: string, pages: int}> $rows     Zusammengefasste Zeilen je normalisierter Suchanfrage.
+	 * @param string                                                                                                                      $locale   Sprache.
+	 * @param int|null                                                                                                                    $user_id  Ausgeführt von.
+	 * @return array{import_id: int, created: int, updated: int}
+	 */
+	public function save_gsc( string $property, array $period, array $rows, string $locale, ?int $user_id = null ): array {
+		global $wpdb;
+		$now     = gmdate( 'Y-m-d H:i:s' );
+		$metrics = Schema::table( $wpdb->prefix, 'keyword_metrics' );
+		$k       = Schema::table( $wpdb->prefix, 'keywords' );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE m FROM {$metrics} m JOIN {$k} k ON k.id = m.keyword_id WHERE m.source = 'gsc' AND m.period_start = %s AND m.period_end = %s AND k.locale = %s",
+				$period['start'],
+				$period['end'],
+				$locale
+			)
+		);
+		$wpdb->insert(
+			Schema::table( $wpdb->prefix, 'imports' ),
+			array(
+				'source'         => 'gsc',
+				'filename'       => mb_substr( $property, 0, 255 ),
+				'rows_total'     => count( $rows ),
+				'rows_imported'  => count( $rows ),
+				'rows_skipped'   => 0,
+				'column_mapping' => wp_json_encode( $period ),
+				'created_by'     => $user_id,
+				'created_at'     => $now,
+			)
+		);
+		$import_id = (int) $wpdb->insert_id;
+		$created   = 0;
+		$updated   = 0;
+		foreach ( $rows as $normalized => $row ) {
+			$found = $this->upsert( $row['keyword'], (string) $normalized, $locale, '', null, $now );
+			$found['created'] ? ++$created : ++$updated;
+			$wpdb->insert(
+				$metrics,
+				array(
+					'keyword_id'      => $found['id'],
+					'source'          => 'gsc',
+					'period_start'    => $period['start'],
+					'period_end'      => $period['end'],
+					'impressions'     => $row['impressions'],
+					'clicks'          => $row['clicks'],
+					'ctr'             => $row['ctr'],
+					'position'        => $row['position'],
+					'page_url'        => '' !== $row['page'] ? $row['page'] : null,
+					'import_batch_id' => $import_id,
+					'created_at'      => $now,
+				)
+			);
+		}
+		// phpcs:enable
+		return array(
+			'import_id' => $import_id,
+			'created'   => $created,
+			'updated'   => $updated,
+		);
+	}
+
+	/**
 	 * Normalisierte Keywords, für die eine Quelle in den letzten Tagen schon Kennzahlen geliefert hat.
 	 *
 	 * @param string   $source Quelle.

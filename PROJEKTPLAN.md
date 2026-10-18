@@ -33,7 +33,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M7a | Recherche mit Websuche, Quellen in `lsec_sources` | 3 | bestanden auf Staging am 18.10.2026: 5 Quellen mit URL gespeichert, Strukturierung gültig; Kosten $0,148, davon $0,142 für die Recherche (44.229 Eingabe-Token durch die eingefügten Suchergebnisse) |
 | M7b | Adapterwechsel | 3 | bestanden auf Staging am 18.10.2026: derselbe Aufruf über den OpenAI-Adapter (gpt-6.1-sol) mit gültigem JSON, auch zweistufig mit Websuche (4 Quellen); Anthropic direkt: Konto bis 01.11.2026 am Ausgabenlimit, vom Plugin richtig als endgültiger Fehler (HTTP 400) mit Klartext gemeldet |
 | M8 | Geheimnisse | 3 | Schlüssel nie in Protokoll, Zwischenspeicher oder Fehlermeldung (Textfocus wiederholt ihn in `params`, wird nicht gespeichert); Suche auf Staging offen |
-| M9 | Search Console | 3 | offen, wartet auf Google-Dienstkonto |
+| M9 | Search Console | 3 | umgesetzt in 0.2.3 (Dienstkonto, Abruf und Speicherung, Schnittstellentest mit signiertem JWT); Dienstkonto `lsec-staging` angelegt und Schlüssel auf Staging abgelegt; Abruf auf Staging offen |
 | M10 | CSV-/Excel-Import | 3 | bestanden mit den echten Dateien vom 17.10.2026 (Keyword Revealer, Keyword Chef) und echten Textfocus-Exporten vom 18.10.2026 (Keyword-Volumen, Entitäten-Tabelle); auf Staging bestätigt (CSV) |
 | M11 | Entity-Erkennung mit Fundstellen, Entscheidung im Backend | 3 | bestanden auf Staging am 18.10.2026 (Seite 516, 1.333 Wörter): 9 Kandidaten mit 11 wörtlichen Fundstellen, $0,04 je Lauf; Bestätigen und Ablehnen im Backend mit Benutzer und Zeit gespeichert |
 | M12 | Entwurf mit gültigen Blöcken | 3 | bestanden im Block-Editor (WordPress 6.4.5 und 7.1.3: 16 Blöcke gültig, keine Warnung); auf Staging bestätigt |
@@ -98,5 +98,5 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 2. ~~Prüfpunkte mit Kosten von Hand: M7, M7a, M7b, M11, M16~~ erledigt am 18.10.2026.
 3. ~~Textfocus: Tarif, Sprachcode, Excel-Exporte~~ erledigt (AppSumo, API-Zugang, Code `de`; Exporte Keyword-Volumen und Entitäten in 0.2.2 eingebaut).
 4. Ticket bei Alfahosting wegen der falschen DNS-Antwort für textfocus.net; bis dahin Eintrag in `/etc/hosts` auf Staging.
-5. Google-Dienstkonto für M9 (Search Console).
+5. ~~Google-Dienstkonto für M9~~ angelegt am 18.10.2026; Abruf auf Staging mit 0.2.3 prüfen.
 6. Danach Spezifikation v1.0 mit den offenen Entscheidungen.

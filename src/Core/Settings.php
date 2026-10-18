@@ -32,6 +32,9 @@ final class Settings {
 		'textfocus_min_interval'   => 60,
 		'textfocus_batch_size'     => 10,
 		'service_area'             => array(),
+		'gsc_credentials_file'     => '',
+		'gsc_property'             => '',
+		'gsc_country'              => 'deu',
 	);
 
 	/**

@@ -26,6 +26,7 @@ final class Redactor {
 		'/sk-(?:proj-)?[A-Za-z0-9_\-]{20,}/',
 		'/AKIA[0-9A-Z]{16}/',
 		'/gh[pousr]_[A-Za-z0-9]{20,}/',
+		'/ya29\.[A-Za-z0-9._\-]{20,}/',
 		'/-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----/s',
 		'/((?:api[_-]?key|token|secret|password|passwort)["\']?\s*[:=]\s*["\']?)[^"\'\s&,}]{6,}/i',
 		'/(Bearer\s+)[A-Za-z0-9._\-]{10,}/i',

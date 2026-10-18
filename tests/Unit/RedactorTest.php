@@ -63,4 +63,11 @@ final class RedactorTest extends TestCase {
 		$this->assertSame( 'x [GESCHWÄRZT] y', $out['a']['b'] );
 		$this->assertSame( 5, $out['n'] );
 	}
+
+	public function test_google_service_account_secrets_are_masked(): void {
+		$redactor = new \Lsec\Infrastructure\Logging\Redactor();
+		$json     = '{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\\n-----END PRIVATE KEY-----\\n"}';
+		$this->assertStringNotContainsString( 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASC', $redactor->redact( $json ) );
+		$this->assertStringNotContainsString( 'abcdefghijklmnopqrstuvwxyz', $redactor->redact( 'token ya29.a0AfB_byabcdefghijklmnopqrstuvwxyz' ) );
+	}
 }

@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.2.3 – 18.10.2026
+
+- Google Search Console über ein Dienstkonto: `wp lsec gsc sites [--save]` und `wp lsec gsc fetch [--days] [--country] [--dry-run]`; Suchanfragen der letzten 28 Tage für Deutschland als Quelle `gsc` (Klicks, Impressionen, CTR, Position, Seite)
+- Schlüsseldatei standardmäßig in `private/gsc-service-account.json` neben dem Webroot
+- Protokolle schwärzen Google-Zugriffstoken
+
 ## 0.2.2 – 18.10.2026
 
 - Textfocus-Excel „Keyword volume search“ wird erkannt (Expression, Monthly volume, CPC, Difficulty); Nullwerte gelten als unbekannt, auch bei der API
