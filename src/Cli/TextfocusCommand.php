@@ -12,7 +12,9 @@ use Lsec\Core\Settings;
 use Lsec\Integrations\Textfocus\ProviderCallRepository;
 use Lsec\Integrations\Textfocus\TextfocusException;
 use Lsec\Integrations\Textfocus\TextfocusService;
+use Lsec\Research\Keywords\KeywordNormalizer;
 use Lsec\Research\Keywords\KeywordRepository;
+use Lsec\Research\Keywords\TypoChecker;
 use Lsec\Workflow\RetryableException;
 use WP_CLI;
 
@@ -107,6 +109,9 @@ final class TextfocusCommand {
 	 * [--dry-run]
 	 * : Nur anzeigen, wie viele Aufrufe nötig wären.
 	 *
+	 * [--ignore-typos]
+	 * : Trotz Hinweis auf eine mögliche Schreibvariante abfragen.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp lsec textfocus keyword "flächenreinigung" "terrassenreinigung hannover" --dry-run
@@ -118,11 +123,14 @@ final class TextfocusCommand {
 		$lang   = (string) ( $assoc_args['lang'] ?? TextfocusService::default_lang() );
 		$locale = TextfocusService::locale_for( $lang );
 		$force  = ! empty( $assoc_args['force'] );
+		if ( empty( $assoc_args['ignore-typos'] ) ) {
+			$this->stop_on_typos( $args );
+		}
 
 		$todo = $args;
 		if ( ! $force ) {
 			$fresh = $this->keywords->fresh( TextfocusService::PROVIDER, $args, $locale, TextfocusService::CACHE_DAYS['tf_keyword'] );
-			$todo  = array_values( array_filter( $args, static fn( string $k ): bool => ! in_array( \Lsec\Research\Keywords\KeywordNormalizer::normalize( $k ), $fresh, true ) ) );
+			$todo  = array_values( array_filter( $args, static fn( string $k ): bool => ! in_array( KeywordNormalizer::normalize( $k ), $fresh, true ) ) );
 			if ( array() !== $fresh ) {
 				WP_CLI::log( 'Schon vorhanden (jünger als 30 Tage): ' . implode( ', ', $fresh ) );
 			}
@@ -155,7 +163,7 @@ final class TextfocusCommand {
 					);
 				}
 				WP_CLI\Utils\format_items( 'table', $rows, array( 'keyword', 'volumen', 'cpc', 'schwierig', 'wettbewerb' ) );
-				$missing = array_diff( array_map( array( \Lsec\Research\Keywords\KeywordNormalizer::class, 'normalize' ), $todo ), array_keys( $out['keywords'] ) );
+				$missing = array_diff( array_map( array( KeywordNormalizer::class, 'normalize' ), $todo ), array_keys( $out['keywords'] ) );
 				if ( array() !== $missing ) {
 					WP_CLI::warning( 'Ohne Ergebnis: ' . implode( ', ', $missing ) );
 				}
@@ -185,6 +193,9 @@ final class TextfocusCommand {
 	 *
 	 * [--force]
 	 * : Zwischenspeicher umgehen.
+	 *
+	 * [--ignore-typos]
+	 * : Trotz Hinweis auf eine mögliche Schreibvariante abfragen.
 	 *
 	 * [--limit=<n>]
 	 * : Zeilen in der Anzeige.
@@ -221,6 +232,12 @@ final class TextfocusCommand {
 			'lang'    => (string) ( $assoc_args['lang'] ?? TextfocusService::default_lang() ),
 			'keyword' => (string) ( $args[1] ?? '' ),
 		);
+		if ( '' === $params['keyword'] ) {
+			WP_CLI::error( 'Bitte ein Keyword angeben.' );
+		}
+		if ( empty( $assoc_args['ignore-typos'] ) ) {
+			$this->stop_on_typos( array( $params['keyword'] ) );
+		}
 		if ( 'seo' === $name ) {
 			$url = esc_url_raw( (string) ( $assoc_args['url'] ?? '' ) );
 			if ( '' === $url ) {
@@ -252,6 +269,25 @@ final class TextfocusCommand {
 	public function calls( array $args, array $assoc_args ): void {
 		$rows = ( new ProviderCallRepository() )->recent( TextfocusService::PROVIDER, 30 );
 		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'endpoint', 'status', 'credits_used', 'credits_remaining', 'response_ref', 'cached_until', 'created_at' ) );
+	}
+
+	/**
+	 * Bricht ab, wenn ein Keyword wie eine Schreibvariante eines bekannten Begriffs aussieht (Spezifikation 6.7).
+	 *
+	 * @param string[] $keywords Keywords.
+	 */
+	private function stop_on_typos( array $keywords ): void {
+		$checker = new TypoChecker( $this->keywords->known_terms() );
+		$hints   = array();
+		foreach ( $keywords as $keyword ) {
+			$suggestion = $checker->suggest( $keyword );
+			if ( null !== $suggestion ) {
+				$hints[] = sprintf( '„%s“ → meinten Sie „%s“?', $keyword, $suggestion );
+			}
+		}
+		if ( array() !== $hints ) {
+			WP_CLI::error( "Mögliche Schreibvariante, keine Credits verbraucht:\n  " . implode( "\n  ", $hints ) . "\nKorrigieren oder mit --ignore-typos trotzdem abfragen." );
+		}
 	}
 
 	/**

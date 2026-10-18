@@ -9,6 +9,7 @@ namespace Lsec\Cli;
 
 use Lsec\Research\Import\KeywordImporter;
 use Lsec\Research\Keywords\KeywordRepository;
+use Lsec\Research\Keywords\TypoChecker;
 use WP_CLI;
 
 /**
@@ -161,6 +162,46 @@ final class KeywordsCommand {
 			);
 		}
 		WP_CLI\Utils\format_items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'keyword', 'quelle', 'volumen', 'schwierig', 'cpc', 'intention', 'spannweite' ) );
+	}
+
+	/**
+	 * Prüft Keywords auf mögliche Schreibvarianten bekannter Begriffe (M17).
+	 *
+	 * ## OPTIONS
+	 *
+	 * <keyword>...
+	 * : Keywords.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec keywords check "flächenreingung"
+	 *
+	 * @param string[]              $args       Keywords.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function check( array $args, array $assoc_args ): void {
+		$checker = new TypoChecker( $this->repository->known_terms() );
+		$rows    = array();
+		foreach ( $args as $keyword ) {
+			$findings = $checker->check( $keyword );
+			if ( array() === $findings ) {
+				$rows[] = array(
+					'keyword'   => $keyword,
+					'wort'      => '',
+					'vorschlag' => '',
+					'grund'     => 'unauffällig',
+				);
+			}
+			foreach ( $findings as $finding ) {
+				$rows[] = array(
+					'keyword'   => $keyword,
+					'wort'      => $finding['word'],
+					'vorschlag' => $finding['suggestion'],
+					'grund'     => 'umlaut' === $finding['reason'] ? 'Umlaut-Schreibweise' : 'Abstand ' . $finding['distance'] . ', bekannt ' . $finding['known_count'] . '×',
+				);
+			}
+		}
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'keyword', 'wort', 'vorschlag', 'grund' ) );
 	}
 
 	/**

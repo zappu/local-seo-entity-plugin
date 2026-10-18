@@ -250,6 +250,26 @@ final class KeywordRepository {
 	}
 
 	/**
+	 * Bekannte Begriffe für die Tippfehlerprüfung: Keywords, Entitäten (außer abgelehnten) und deren Aliasse.
+	 *
+	 * @return string[]
+	 */
+	public function known_terms(): array {
+		global $wpdb;
+		$k = Schema::table( $wpdb->prefix, 'keywords' );
+		$e = Schema::table( $wpdb->prefix, 'entities' );
+		$a = Schema::table( $wpdb->prefix, 'entity_aliases' );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$terms = array_merge(
+			(array) $wpdb->get_col( "SELECT keyword FROM {$k}" ),
+			(array) $wpdb->get_col( "SELECT canonical_name FROM {$e} WHERE status <> 'rejected'" ),
+			(array) $wpdb->get_col( "SELECT a.alias FROM {$a} a JOIN {$e} e ON e.id = a.entity_id WHERE e.status <> 'rejected'" )
+		);
+		// phpcs:enable
+		return array_map( 'strval', $terms );
+	}
+
+	/**
 	 * Anzahl der Keywords.
 	 */
 	public function count(): int {
