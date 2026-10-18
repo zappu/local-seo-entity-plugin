@@ -81,7 +81,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - Staging-Server (Alfahosting-VPS): Die Resolver des Hosters (cnr1/cnr2.alfahosting.info) liefern für www.textfocus.net zeitweise 81.88.34.218 (host243.alfahosting-server.de) statt 217.70.189.36. Folge: cURL-Fehler 60, etwa jeder zweite Aufruf. Vermutlich eine veraltete Zone beim Hoster. Das trifft jeden Server mit diesen Resolvern, also auch Live-Websites beim selben Hoster. Ab 0.2.1 nennt die Fehlermeldung diese mögliche Ursache.
 
 - Textfocus `tf_keyword`: Volumen und CPC kommen, `difficulty` war bei beiden Test-Keywords 0, `concurrency` (Wettbewerb 0–100) 74 bzw. 23. Ob 0 „unbekannt“ bedeutet, ist offen; für die Priorisierung vorerst `concurrency` nutzen. `force_refetch` kostet ebenfalls einen Credit. Das Restguthaben steht nicht im erwarteten Feld der Antwort; `tf_account` zeigt es zuverlässig.
-- Textfocus-Sprachcodes sind Kürzel wie `de` mit Sprache und Land in eigenen Feldern; ab 0.2.1 werden sie angezeigt und die Locale wird beim Speichern mit abgelegt.
+- Textfocus-Sprachcodes sind frei vergebene Kürzel mit Sprache und Land in eigenen Feldern: Deutsch gibt es als `de` (Deutschland), `at` (Österreich), `ch` (Schweiz) und `bm` (Belgien). Aus dem Kürzel lässt sich das Land also nicht ableiten. Ab 0.2.1 wird die Locale beim Speichern mit abgelegt; auf Staging bestätigt (`de` → `de_DE`).
 
 ## Nächste Schritte
 
