@@ -1,6 +1,6 @@
 # Änderungsprotokoll
 
-## Unveröffentlicht
+## 0.2.2 – 18.10.2026
 
 - Textfocus-Excel „Keyword volume search“ wird erkannt (Expression, Monthly volume, CPC, Difficulty); Nullwerte gelten als unbekannt, auch bei der API
 - Neuer Befehl `wp lsec entities import`: Entitäten-Tabelle einer Textfocus-Analyse als Kandidaten; Wikidata-Vorschlag nur als Hinweis
