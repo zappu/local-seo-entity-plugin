@@ -39,7 +39,7 @@ final class WpHttpTransport implements HttpTransport {
 			return array(
 				'status' => 0,
 				'body'   => '',
-				'error'  => $response->get_error_message(),
+				'error'  => self::explain( $response->get_error_message(), $url ),
 			);
 		}
 
@@ -48,5 +48,21 @@ final class WpHttpTransport implements HttpTransport {
 			'body'   => (string) wp_remote_retrieve_body( $response ),
 			'error'  => null,
 		);
+	}
+
+	/**
+	 * Ergänzt bei Zertifikatsfehlern einen Hinweis. cURL-Fehler 60 bzw. 51 bei einem Dienst mit gültigem
+	 * Zertifikat bedeuten meist, dass der DNS-Resolver des Servers eine falsche Adresse liefert
+	 * (beobachtet am 18.10.2026: Resolver eines Hosters mit veraltetem Eintrag für textfocus.net).
+	 *
+	 * @param string $message Fehlermeldung.
+	 * @param string $url     Adresse.
+	 */
+	public static function explain( string $message, string $url ): string {
+		if ( ! preg_match( '/cURL error (60|51)\b|certificate subject name|no alternative certificate/i', $message ) ) {
+			return $message;
+		}
+		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+		return $message . sprintf( ' – Hinweis: Das Zertifikat passt nicht zum Namen. Häufige Ursache ist ein DNS-Resolver des Servers, der für %1$s eine falsche Adresse liefert. Prüfen mit: getent ahosts %1$s', $host );
 	}
 }
