@@ -164,9 +164,9 @@ final class AiCommand {
 	/**
 	 * Gibt eine Antwort aus.
 	 *
-	 * @param string                                  $title    Überschrift.
+	 * @param string                           $title    Überschrift.
 	 * @param \Lsec\Integrations\AI\AiResponse $response Antwort.
-	 * @param bool                                    $as_json  Daten als JSON zeigen.
+	 * @param bool                             $as_json  Daten als JSON zeigen.
 	 */
 	private function print_response( string $title, \Lsec\Integrations\AI\AiResponse $response, bool $as_json ): void {
 		WP_CLI::log( '== ' . $title . ' ==' );

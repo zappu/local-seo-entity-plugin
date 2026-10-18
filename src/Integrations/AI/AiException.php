@@ -41,6 +41,6 @@ class AiException extends \RuntimeException {
 		if ( 0 === $status || 408 === $status || 429 === $status || $status >= 500 ) {
 			throw new RetryableException( $code, $msg ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
-		throw new self( $code, $msg ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		throw new AiException( $code, $msg ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 	}
 }

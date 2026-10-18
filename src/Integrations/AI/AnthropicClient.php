@@ -28,7 +28,7 @@ final class AnthropicClient implements AiClient {
 	 *
 	 * @param HttpTransport $http    HTTP.
 	 * @param string        $api_key Schlüssel.
-	 * @param string        $model   Modell, z. B. claude-sonnet-…
+	 * @param string        $model   Modell, z. B. claude-sonnet-5-5.
 	 */
 	public function __construct(
 		private readonly HttpTransport $http,

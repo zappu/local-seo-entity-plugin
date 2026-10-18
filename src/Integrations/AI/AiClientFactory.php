@@ -47,11 +47,12 @@ final class AiClientFactory {
 			throw new AiException( 'not_configured', 'Kein API-Schlüssel für ' . $provider . '. Konstante ' . Secrets::constant_name( $provider . '_api_key' ) . ' in wp-config.php setzen.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
+		$endpoint = (string) Settings::get( 'openai_endpoint' );
 		return match ( $provider ) {
 			'openrouter' => new OpenRouterClient( $this->http, $key, $model, function_exists( 'home_url' ) ? home_url() : '' ),
 			'anthropic'  => new AnthropicClient( $this->http, $key, $model ),
-			'openai'     => new OpenAiClient( $this->http, $key, $model, '' !== (string) Settings::get( 'openai_endpoint' ) ? (string) Settings::get( 'openai_endpoint' ) : OpenAiClient::ENDPOINT ),
-			default      => throw new AiException( 'not_configured', 'Unbekannter Anbieter: ' . $provider ),
+			'openai'     => new OpenAiClient( $this->http, $key, $model, '' !== $endpoint ? $endpoint : OpenAiClient::ENDPOINT ),
+			default      => throw new AiException( 'not_configured', 'Unbekannter Anbieter: ' . $provider ), // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		};
 	}
 

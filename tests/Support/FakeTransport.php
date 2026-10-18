@@ -61,7 +61,7 @@ final class FakeTransport implements HttpTransport {
 			'headers' => $headers,
 			'body'    => is_array( $decoded ) ? $decoded : null,
 		);
-		$next = array_shift( $this->responses );
+		$next             = array_shift( $this->responses );
 		if ( null === $next ) {
 			return array(
 				'status' => 500,

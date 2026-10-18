@@ -112,7 +112,7 @@ final class KeywordsCommand {
 				$result,
 				(string) ( $assoc_args['locale'] ?? 'de_DE' ),
 				(string) ( $assoc_args['region'] ?? '' ),
-				get_current_user_id() ?: null
+				0 !== get_current_user_id() ? get_current_user_id() : null
 			);
 		} catch ( \RuntimeException $e ) {
 			WP_CLI::error( $e->getMessage() );

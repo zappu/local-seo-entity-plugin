@@ -23,6 +23,7 @@ final class AiRequest {
 	 * @param bool                      $web_search        Websuche erlauben. Nie zusammen mit json_schema (siehe AiService::research()).
 	 * @param int                       $max_output_tokens Obergrenze für die Antwort.
 	 * @param int                       $timeout           Zeitlimit in Sekunden.
+	 * @throws \InvalidArgumentException Wenn Schema und Websuche zusammen verlangt werden.
 	 */
 	public function __construct(
 		public readonly string $task,

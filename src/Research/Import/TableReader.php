@@ -126,7 +126,7 @@ final class TableReader {
 		}
 
 		$rows = array();
-		foreach ( $doc->sheetData->row as $row ) {
+		foreach ( $doc->sheetData->row as $row ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 			$cells = array();
 			foreach ( $row->c as $cell ) {
 				$ref   = (string) $cell['r'];

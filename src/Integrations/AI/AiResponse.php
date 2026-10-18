@@ -15,16 +15,16 @@ final class AiResponse {
 	/**
 	 * Konstruktor.
 	 *
-	 * @param string                                      $provider      Anbieter.
-	 * @param string                                      $model         Modell laut Antwort.
-	 * @param string                                      $text          Antworttext.
-	 * @param array<string, mixed>|null                   $data          Geprüftes JSON-Ergebnis, falls ein Schema verlangt war.
+	 * @param string                                        $provider      Anbieter.
+	 * @param string                                        $model         Modell laut Antwort.
+	 * @param string                                        $text          Antworttext.
+	 * @param array<string, mixed>|null                     $data          Geprüftes JSON-Ergebnis, falls ein Schema verlangt war.
 	 * @param array<int, array{url: string, title: string}> $sources       Quellen aus der Websuche.
-	 * @param int|null                                    $input_tokens  Eingabe-Token.
-	 * @param int|null                                    $output_tokens Ausgabe-Token.
-	 * @param float|null                                  $cost          Kosten in US-Dollar, falls bekannt.
-	 * @param int                                         $duration_ms   Dauer.
-	 * @param string                                      $finish        Abschlussgrund, z. B. stop oder length.
+	 * @param int|null                                      $input_tokens  Eingabe-Token.
+	 * @param int|null                                      $output_tokens Ausgabe-Token.
+	 * @param float|null                                    $cost          Kosten in US-Dollar, falls bekannt.
+	 * @param int                                           $duration_ms   Dauer.
+	 * @param string                                        $finish        Abschlussgrund, z. B. stop oder length.
 	 */
 	public function __construct(
 		public readonly string $provider,

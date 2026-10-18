@@ -40,8 +40,7 @@ final class KeywordImporter {
 	 * @param string $profile  Vorlage oder leer.
 	 * @param string $map      Zusätzliche Spaltenzuordnung.
 	 * @param string $source   Eigene Quellkennung oder leer.
-	 * @throws \RuntimeException Wenn die Datei nicht lesbar ist.
-	 * @throws \InvalidArgumentException Bei falscher Vorlage oder Zuordnung.
+	 * @throws \InvalidArgumentException Bei falscher Vorlage, Zuordnung oder Quelle. TableReader wirft \RuntimeException, wenn die Datei nicht lesbar ist.
 	 */
 	public static function from_file( string $path, string $filename = '', string $profile = '', string $map = '', string $source = '' ): ImportResult {
 		$name   = '' !== $filename ? $filename : basename( $path );
@@ -54,7 +53,7 @@ final class KeywordImporter {
 			}
 			$chosen = $chosen->with_source( $source );
 		}
-		$result = self::apply( $table['header'], $table['rows'], $chosen );
+		$result            = self::apply( $table['header'], $table['rows'], $chosen );
 		$result->filename  = $name;
 		$result->encoding  = $table['encoding'];
 		$result->delimiter = $table['delimiter'];
@@ -162,7 +161,8 @@ final class KeywordImporter {
 			return null;
 		}
 		$values = array();
-		foreach ( preg_split( '/[,;|]/', $value ) ?: array() as $part ) {
+		$parts  = preg_split( '/[,;|]/', $value );
+		foreach ( false === $parts ? array() : $parts as $part ) {
 			$number = NumberParser::int( $part );
 			if ( null !== $number ) {
 				$values[] = $number;

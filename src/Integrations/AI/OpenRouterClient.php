@@ -27,7 +27,7 @@ final class OpenRouterClient implements AiClient {
 	 *
 	 * @param HttpTransport $http     HTTP.
 	 * @param string        $api_key  Schlüssel.
-	 * @param string        $model    Modell, z. B. anthropic/claude-sonnet-…
+	 * @param string        $model    Modell, z. B. anthropic/claude-sonnet-5.5.
 	 * @param string        $site_url Website (Kopfzeile HTTP-Referer).
 	 */
 	public function __construct(
@@ -104,8 +104,8 @@ final class OpenRouterClient implements AiClient {
 	 * @throws AiException Bei unbrauchbarer Antwort.
 	 */
 	public function send( AiRequest $request ): AiResponse {
-		$start    = microtime( true );
-		$headers  = array(
+		$start   = microtime( true );
+		$headers = array(
 			'Authorization' => 'Bearer ' . $this->api_key,
 			'Content-Type'  => 'application/json',
 			'X-Title'       => 'Local SEO Entity Plugin',

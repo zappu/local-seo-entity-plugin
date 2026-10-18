@@ -150,7 +150,7 @@ final class KeywordImportTest extends TestCase {
 		try {
 			$result = KeywordImporter::from_file( $path, 'textfocus-semantik.xlsx' );
 		} finally {
-			unlink( $path );
+			unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 		}
 
 		$this->assertSame( 'textfocus', $result->profile->id );
