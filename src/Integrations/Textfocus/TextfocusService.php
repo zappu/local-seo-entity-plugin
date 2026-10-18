@@ -121,15 +121,29 @@ final class TextfocusService {
 	 */
 	public static function default_lang(): string {
 		$lang = (string) Settings::get( 'textfocus_lang' );
-		return '' !== $lang ? $lang : 'de-DE';
+		return '' !== $lang ? $lang : 'de';
 	}
 
 	/**
-	 * Locale des Plugins zum Textfocus-Sprachcode: de-DE → de_DE.
+	 * Locale des Plugins zum Textfocus-Sprachcode. Gespeichert mit wp lsec textfocus langs --save,
+	 * sonst aus der Form de-AT abgeleitet, sonst de_DE. Textfocus nutzt Kürzel wie „de“, die das Land
+	 * nicht erkennen lassen.
 	 *
 	 * @param string $lang Sprachcode.
 	 */
 	public static function locale_for( string $lang ): string {
+		if ( (string) Settings::get( 'textfocus_lang' ) === $lang && '' !== (string) Settings::get( 'textfocus_locale' ) ) {
+			return (string) Settings::get( 'textfocus_locale' );
+		}
+		return self::locale_from_code( $lang );
+	}
+
+	/**
+	 * Locale aus einem Code der Form de-AT oder de_AT.
+	 *
+	 * @param string $lang Sprachcode.
+	 */
+	public static function locale_from_code( string $lang ): string {
 		if ( preg_match( '/^([a-z]{2})[-_]([a-z]{2})$/i', $lang, $m ) ) {
 			return strtolower( $m[1] ) . '_' . strtoupper( $m[2] );
 		}
@@ -163,22 +177,38 @@ final class TextfocusService {
 	 * Verfügbare Sprachen.
 	 *
 	 * @param bool $wait Warten statt Fehler.
-	 * @return array<int, array{id: string, label: string}>
+	 * @return array<int, array{id: string, label: string, locale: string}>
 	 */
 	public function langs( bool $wait = true ): array {
-		$out   = $this->request( 'tf_langs', array(), false, $wait );
+		$out = $this->request( 'tf_langs', array(), false, $wait );
+		return self::parse_langs( $out['result'] );
+	}
+
+	/**
+	 * Liest die Sprachliste. Aufbau laut Antwort vom 18.10.2026:
+	 * {"id":"de","language_code":"de","country_iso_code":"DE","language_name":"German","location_name":"Germany"}.
+	 *
+	 * @param mixed $result Feld result.
+	 * @return array<int, array{id: string, label: string, locale: string}>
+	 */
+	public static function parse_langs( mixed $result ): array {
 		$langs = array();
-		foreach ( is_array( $out['result'] ) ? $out['result'] : array() as $key => $entry ) {
-			if ( is_array( $entry ) ) {
-				$id    = (string) ( $entry['id'] ?? $key );
-				$label = (string) ( $entry['name'] ?? $entry['label'] ?? $entry['lang'] ?? '' );
-			} else {
-				$id    = is_string( $key ) ? $key : (string) $entry;
-				$label = (string) $entry;
+		foreach ( is_array( $result ) ? $result : array() as $key => $entry ) {
+			if ( ! is_array( $entry ) ) {
+				$langs[] = array(
+					'id'     => is_string( $key ) ? $key : (string) $entry,
+					'label'  => (string) $entry,
+					'locale' => '',
+				);
+				continue;
 			}
-			$langs[] = array(
-				'id'    => $id,
-				'label' => $label,
+			$language = strtolower( (string) ( $entry['language_code'] ?? '' ) );
+			$country  = strtoupper( (string) ( $entry['country_iso_code'] ?? '' ) );
+			$label    = trim( (string) ( $entry['language_name'] ?? $entry['name'] ?? '' ) . ' – ' . (string) ( $entry['location_name'] ?? '' ), ' –' );
+			$langs[]  = array(
+				'id'     => (string) ( $entry['id'] ?? $key ),
+				'label'  => $label,
+				'locale' => preg_match( '/^[a-z]{2}$/', $language ) && preg_match( '/^[A-Z]{2}$/', $country ) ? $language . '_' . $country : '',
 			);
 		}
 		return $langs;

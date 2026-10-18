@@ -321,8 +321,39 @@ final class TextfocusServiceTest extends TestCase {
 		);
 	}
 
-	public function test_locale_mapping(): void {
-		$this->assertSame( 'de_AT', TextfocusService::locale_for( 'de-AT' ) );
-		$this->assertSame( 'de_DE', TextfocusService::locale_for( 'de' ) );
+	public function test_locale_from_code(): void {
+		$this->assertSame( 'de_AT', TextfocusService::locale_from_code( 'de-AT' ) );
+		$this->assertSame( 'de_DE', TextfocusService::locale_from_code( 'de' ) );
+	}
+
+	public function test_langs_structure_from_real_response(): void {
+		// Aufbau der Antwort vom 18.10.2026 (Ausschnitt).
+		$langs = TextfocusService::parse_langs(
+			array(
+				array(
+					'id'               => 'ae',
+					'language_code'    => 'ar',
+					'country_iso_code' => 'AE',
+					'language_name'    => 'Arabic',
+					'location_name'    => 'United Arab Emirates',
+				),
+				array(
+					'id'               => 'de',
+					'language_code'    => 'de',
+					'country_iso_code' => 'DE',
+					'language_name'    => 'German',
+					'location_name'    => 'Germany',
+				),
+			)
+		);
+		$this->assertSame(
+			array(
+				'id'     => 'de',
+				'label'  => 'German – Germany',
+				'locale' => 'de_DE',
+			),
+			$langs[1]
+		);
+		$this->assertSame( 'ar_AE', $langs[0]['locale'] );
 	}
 }

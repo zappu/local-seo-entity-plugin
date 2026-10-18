@@ -40,7 +40,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | M13 | Rank-Math-Seitenleiste | 3 | bestanden (Rank Math 1.0.280, WordPress 7.1.3: Titel, Beschreibung, drei Keywords in der Seitenleiste); auf Staging bestätigt |
 | M14 | Elementor-Text | 3 | bestanden; auf Staging bestätigt |
 | M15 | REST 403 | 3 | bestanden (5 Routen, Besucher und Abonnent 403); auf Staging bestätigt |
-| M16 | Textfocus-API | 3 | `tf_account` auf Staging bestanden: API-Zugang ja, Tarif AppSumo, 1.490 Credits, 60 Aufrufe pro Tag, Entitäten-Zugang ja; weitere Aufrufe scheiterten zeitweise an der DNS-Auflösung des Staging-Servers (siehe Erkenntnisse) |
+| M16 | Textfocus-API | 3 | bestanden auf Staging am 18.10.2026: `tf_account` (API-Zugang, AppSumo, 1.490 Credits, 60 Aufrufe/Tag), `tf_langs` (Code `de`), `tf_keyword` mit 2 Keywords in 1 Aufruf für 1 Credit liefert Volumina (flächenreinigung 110, wie bei Keyword Revealer), Tagesbudget zählt mit; Zwischenspeicher bei `tf_langs` bestätigt, bei einem kostenpflichtigen Endpunkt noch offen |
 | M17 | Tippfehlerprüfung | 3 | bestanden mit den echten Keywords; auf Staging bestätigt |
 | M18 | Ortsabgleich Burgdorf | 3 | bestanden mit echten Wikidata-Daten: ohne Kontext `unresolved`, mit Region Hannover `probable` (Q555618); auf Staging bestätigt; Praxistest Hemmingen aus der Entity-Erkennung: mit Servicegebiet Region Hannover `probable` (Q534259, 10,7 km), zweiter Kandidat 398 km entfernt |
 
@@ -79,6 +79,9 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 - WordPress speichert „&“ im Titel als `&amp;`; der Titel wird vor der Erkennung in Klartext umgewandelt (ab 0.2.1).
 
 - Staging-Server (Alfahosting-VPS): Die Resolver des Hosters (cnr1/cnr2.alfahosting.info) liefern für www.textfocus.net zeitweise 81.88.34.218 (host243.alfahosting-server.de) statt 217.70.189.36. Folge: cURL-Fehler 60, etwa jeder zweite Aufruf. Vermutlich eine veraltete Zone beim Hoster. Das trifft jeden Server mit diesen Resolvern, also auch Live-Websites beim selben Hoster. Ab 0.2.1 nennt die Fehlermeldung diese mögliche Ursache.
+
+- Textfocus `tf_keyword`: Volumen und CPC kommen, `difficulty` war bei beiden Test-Keywords 0, `concurrency` (Wettbewerb 0–100) 74 bzw. 23. Ob 0 „unbekannt“ bedeutet, ist offen; für die Priorisierung vorerst `concurrency` nutzen. `force_refetch` kostet ebenfalls einen Credit. Das Restguthaben steht nicht im erwarteten Feld der Antwort; `tf_account` zeigt es zuverlässig.
+- Textfocus-Sprachcodes sind Kürzel wie `de` mit Sprache und Land in eigenen Feldern; ab 0.2.1 werden sie angezeigt und die Locale wird beim Speichern mit abgelegt.
 
 ## Nächste Schritte
 

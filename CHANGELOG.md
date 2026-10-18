@@ -1,6 +1,10 @@
 # Änderungsprotokoll
 
-## Unveröffentlicht
+## 0.2.1 – 18.10.2026
+
+Erkenntnisse aus dem Test auf Staging.
+
+- Textfocus: Sprachliste mit Sprache, Land und Locale; `langs --save` legt die Locale mit ab (Standardcode jetzt `de`)
 
 - Entity-Erkennung: Beitragstitel wird als Klartext übergeben (vorher `&amp;` statt `&` in Fundstellen aus dem Titel)
 - Textfocus in WP-CLI: Hinweis, wenn wegen des Mindestabstands gewartet wird

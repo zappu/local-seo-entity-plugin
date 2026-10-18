@@ -63,7 +63,7 @@ final class TextfocusCommand {
 	 * ## OPTIONS
 	 *
 	 * [--search=<text>]
-	 * : Filter, z. B. de.
+	 * : Filter auf Code, Sprache oder Land, z. B. german oder austria.
 	 *
 	 * [--save=<id>]
 	 * : Sprachcode als Einstellung textfocus_lang speichern.
@@ -74,17 +74,24 @@ final class TextfocusCommand {
 	public function langs( array $args, array $assoc_args ): void {
 		$this->run(
 			function ( TextfocusService $tf ) use ( $assoc_args ): void {
-				$search = strtolower( (string) ( $assoc_args['search'] ?? '' ) );
+				$search = mb_strtolower( (string) ( $assoc_args['search'] ?? '' ) );
+				$langs  = $tf->langs();
 				$rows   = array_values(
 					array_filter(
-						$tf->langs(),
-						static fn( array $l ): bool => '' === $search || str_contains( strtolower( $l['id'] . ' ' . $l['label'] ), $search )
+						$langs,
+						static fn( array $l ): bool => '' === $search || str_contains( mb_strtolower( $l['id'] . ' ' . $l['label'] . ' ' . $l['locale'] ), $search )
 					)
 				);
-				WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'label' ) );
+				WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'label', 'locale' ) );
 				if ( ! empty( $assoc_args['save'] ) ) {
-					Settings::set( 'textfocus_lang', (string) $assoc_args['save'] );
-					WP_CLI::success( 'textfocus_lang = ' . $assoc_args['save'] );
+					$id    = (string) $assoc_args['save'];
+					$match = array_values( array_filter( $langs, static fn( array $l ): bool => $l['id'] === $id ) );
+					if ( array() === $match ) {
+						WP_CLI::error( 'Code ' . $id . ' steht nicht in der Liste von Textfocus.' );
+					}
+					Settings::set( 'textfocus_lang', $id );
+					Settings::set( 'textfocus_locale', '' !== $match[0]['locale'] ? $match[0]['locale'] : TextfocusService::locale_from_code( $id ) );
+					WP_CLI::success( sprintf( 'textfocus_lang = %s (%s, Locale %s)', $id, $match[0]['label'], (string) Settings::get( 'textfocus_locale' ) ) );
 				}
 			}
 		);
@@ -101,7 +108,7 @@ final class TextfocusCommand {
 	 * : Ein oder mehrere Keywords.
 	 *
 	 * [--lang=<lang>]
-	 * : Sprachcode. Standard: Einstellung textfocus_lang oder de-DE.
+	 * : Sprachcode. Standard: Einstellung textfocus_lang oder de.
 	 *
 	 * [--force]
 	 * : Auch frische Werte neu abfragen (verbraucht Credits).
