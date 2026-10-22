@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.7.4 – 22.10.2026
+
+- **Kein erfundener Ablauf mehr:** Ohne Leistungsbeschreibung im Profil plant das Briefing keinen Abschnitt „So arbeiten wir“, und der Entwurf sagt dem Leser keine Schritte zu („Sie schildern uns …“). Stattdessen erklärt er das Verfahren allgemein.
+- **Style Mimic:** Die Beispielsätze gehen nicht mehr an den Entwurf (sie wurden wörtlich übernommen), nur an die Bewertung.
+- **Entwurf:** Keywords natürlicher, Servicegebiet und Standort nur einmal, keine unbelegte Ortskenntnis.
+- **Bericht:** zeigt, zu welchen Leistungen eine Beschreibung im Profil vorliegt.
+
 ## 0.7.3 – 22.10.2026
 
 - **Zahlenprüfung:** Ziffern in E-Mail-Adressen, Internetadressen und Domainnamen gelten nicht als Zahlen (auf Staging stehen sie im Hostnamen, z. B. „89-22-101-72“).

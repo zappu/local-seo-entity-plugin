@@ -334,7 +334,8 @@ final class ContentProductionWorkflow {
 				'keywords'      => $keywords,
 				'link_targets'  => self::link_targets( $topic ),
 				'categories'    => $categories,
-				'style'         => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'] ),
+				'style'         => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'], false ),
+				'style_full'    => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'] ),
 				'style_version' => null === $style ? null : (int) $style['version'],
 				'length'        => self::length( $format ),
 			)

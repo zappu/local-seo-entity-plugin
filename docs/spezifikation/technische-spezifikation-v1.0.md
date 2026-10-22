@@ -568,6 +568,11 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
   | 124 | `openai/gpt-6-luna` | 0,0047 USD | 974 | 86,8 | 0,73 | 0,95 | Zahlen (Prüfungsfehler) und unbelegter Ablauf |
 
   Beide blockierten wegen „89, 22, 101, 72“: Die Ziffern stehen im Hostnamen der E-Mail-Adresse der Staging-Website. Ziffern in E-Mail-Adressen, Internetadressen und Domainnamen prüft die Zahlenprüfung seit 0.7.3 nicht mehr. Die KI-Bewertung erhält einen Hinweis, dass die Textfassung vereinfacht ist (sie bemängelte die Tabellendarstellung), und Tabellen mit Trennzeile. Der Bericht warnt, wenn KI-Aufrufe ohne Kostenangabe sind. Die Entscheidung über das Hauptmodell folgt, wenn Thomas beide Texte gelesen hat.
+- **Lauf 125 (Nachtrag 22.10., 0.7.4):** `anthropic/claude-sonnet-5.5`, 850 Wörter, 0,197 USD, Bewertung 82,5, blockiert mit `AI_UNSUPPORTED_FACT` für einen Ablauf, der dem Leser zugesagt wird („Sie schildern uns …“, „Gemeinsam sehen Sie sich …“), ohne Leistungsbeschreibung im Profil. Die Beispielsätze des Style Mimic standen zum dritten Mal fast wörtlich im Text. Geändert:
+  - Briefing plant einen Abschnitt „So arbeiten wir“ nur mit Angabe des Unternehmens zur Leistung, sonst einen Abschnitt zum Verfahren allgemein.
+  - Entwurf: keine Ablaufzusagen an den Leser und keine Behauptungen über Erfahrung oder Ortskenntnis ohne Beleg; Keywords natürlich (Titel, Einleitung, eine Zwischenüberschrift); Servicegebiet und Standort höchstens einmal.
+  - Briefing und Entwurf erhalten den Style Mimic ohne Beispielsätze; die Bewertung erhält ihn mit Beispielen und prüft, dass sie nicht wörtlich übernommen sind.
+  - Der Bericht nennt, zu welchen Leistungen eine Beschreibung im Profil vorlag.
 - **Bericht:** `wp lsec production report <ablauf>` bzw. `GET lsec/v1/production/<ablauf>` mit Modell, Kosten je KI-Aufruf, Wörtern, Bewertung, Mängeln und Hinweisen; `wp lsec production list` zeigt freigegebene und erstellte Themen mit Prüfergebnis. Grundlage für die Messung „Kosten je Beitrag“ und den Modellvergleich (`--model`).
 
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.

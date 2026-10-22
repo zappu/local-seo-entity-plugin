@@ -101,9 +101,13 @@ final class StyleProfiler {
 	/**
 	 * Kurzfassung des Profils für Briefing und Entwurf.
 	 *
-	 * @param array<string, mixed>|null $profile Profil (8.7) oder null.
+	 * Nachtrag 22.10. (0.7.4): Die Beispielsätze übernahm die KI dreimal fast wörtlich in Entwürfe. Briefing und
+	 * Entwurf erhalten das Profil deshalb ohne Beispiele; nur die Bewertung sieht sie.
+	 *
+	 * @param array<string, mixed>|null $profile  Profil (8.7) oder null.
+	 * @param bool                      $examples Beispiele „so – nicht so“ mit ausgeben.
 	 */
-	public static function prompt_text( ?array $profile ): string {
+	public static function prompt_text( ?array $profile, bool $examples = true ): string {
 		if ( null === $profile || array() === $profile ) {
 			return 'Kein Style Mimic hinterlegt: sachlich, freundlich, Anrede „Sie“, kurze bis mittlere Sätze, keine Werbefloskeln.';
 		}
@@ -125,7 +129,7 @@ final class StyleProfiler {
 		foreach ( (array) ( $profile['rules'] ?? array() ) as $rule ) {
 			$lines[] = 'Regel: ' . $rule;
 		}
-		foreach ( (array) ( $profile['examples'] ?? array() ) as $example ) {
+		foreach ( $examples ? (array) ( $profile['examples'] ?? array() ) : array() as $example ) {
 			$lines[] = sprintf( 'So: „%s“ – nicht so: „%s“', (string) ( $example['do'] ?? '' ), (string) ( $example['dont'] ?? '' ) );
 		}
 		return implode( "\n", array_filter( $lines, static fn( string $l ): bool => ! str_ends_with( $l, ': ' ) ) );
