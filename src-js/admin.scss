@@ -367,3 +367,38 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+.lsec-proposal {
+	margin-top: 8px;
+	padding: 12px 16px;
+	background: #f6f7f7;
+	border-radius: 4px;
+
+	h3 {
+		margin: 12px 0 4px;
+		font-size: 13px;
+	}
+
+	details ul {
+		margin: 4px 0 0 18px;
+		list-style: disc;
+	}
+}
+
+.lsec-pick {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	padding: 2px 0;
+}
+
+.lsec-pick__done {
+	display: inline-block;
+	width: 16px;
+	color: #00a32a;
+}
+
+.lsec-savebar--inline {
+	position: static;
+	background: transparent;
+}

@@ -9,6 +9,7 @@ import { createElement, Fragment, useEffect, useRef, useState } from '@wordpress
 import {
 	Button,
 	Card,
+	CheckboxControl,
 	CardBody,
 	CardHeader,
 	Notice,
@@ -17,7 +18,8 @@ import {
 	TextareaControl,
 	ToggleControl,
 } from '@wordpress/components';
-import { getProfile, saveProfile, searchWikidata, setServiceArea } from './api';
+import { analyzeProfile, getProfile, saveProfile, searchWikidata, setServiceArea } from './api';
+import { usd } from './format';
 
 /**
  * Listen des Profils mit ihren Feldern.
@@ -128,8 +130,13 @@ function ListEditor( { list, items, onChange } ) {
 	);
 }
 
-function ServiceAreaCard( { area, onSaved } ) {
+function ServiceAreaCard( { area, onSaved, suggestion } ) {
 	const [ query, setQuery ] = useState( '' );
+	useEffect( () => {
+		if ( suggestion ) {
+			setQuery( suggestion );
+		}
+	}, [ suggestion ] );
 	const [ hits, setHits ] = useState( [] );
 	const [ radius, setRadius ] = useState( String( ( area && area.radius_km ) || 0 ) );
 	const [ busy, setBusy ] = useState( false );
@@ -231,11 +238,182 @@ function ServiceAreaCard( { area, onSaved } ) {
 	);
 }
 
+const ORG_FIELDS = { name: 'Name', website: 'Website', phone: 'Telefon', email: 'E-Mail', description: 'Kurzbeschreibung' };
+const norm = ( t ) => String( t || '' ).trim().toLowerCase();
+
+/**
+ * Welche Vorschläge sind neu? Unternehmensfelder: anders als bisher; Listen: Name noch nicht vorhanden.
+ *
+ * @param {Object} proposal Vorschlag.
+ * @param {Object} profile  Bisheriges Profil.
+ * @return {Object} Auswahl mit Vorbelegung.
+ */
+function initialPicks( proposal, profile ) {
+	const picks = {};
+	Object.keys( ORG_FIELDS ).forEach( ( key ) => {
+		const value = proposal.organization[ key ];
+		if ( value && norm( value ) !== norm( profile.organization[ key ] ) ) {
+			// Leere Felder füllen wir vor; vorhandene Werte überschreibt nur, wer es ankreuzt.
+			picks[ `org.${ key }` ] = ! profile.organization[ key ];
+		}
+	} );
+	LISTS.forEach( ( list ) => {
+		( proposal[ list.key ] || [] ).forEach( ( item, i ) => {
+			const exists = ( profile[ list.key ] || [] ).some( ( e ) => norm( e.name ) === norm( item.name ) );
+			if ( ! exists ) {
+				picks[ `${ list.key }.${ i }` ] = true;
+			}
+		} );
+	} );
+	return picks;
+}
+
+function SourcesCard( { profile, onApply, onArea } ) {
+	const [ text, setText ] = useState( ( profile.source_urls || [] ).join( '\n' ) );
+	const [ busy, setBusy ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const [ result, setResult ] = useState( null );
+	const [ picks, setPicks ] = useState( {} );
+
+	const read = () => {
+		setBusy( true );
+		setError( null );
+		setResult( null );
+		analyzeProfile( text )
+			.then( ( r ) => {
+				setResult( r );
+				setText( r.urls.join( '\n' ) );
+				setPicks( initialPicks( r.proposal, profile ) );
+			} )
+			.catch( ( e ) => setError( e.message ) )
+			.finally( () => setBusy( false ) );
+	};
+
+	const apply = () => {
+		const p = result.proposal;
+		const next = { ...profile, organization: { ...profile.organization } };
+		Object.keys( ORG_FIELDS ).forEach( ( key ) => {
+			if ( picks[ `org.${ key }` ] ) {
+				next.organization[ key ] = p.organization[ key ];
+			}
+		} );
+		LISTS.forEach( ( list ) => {
+			const add = ( p[ list.key ] || [] ).filter( ( _, i ) => picks[ `${ list.key }.${ i }` ] ).map( ( item ) => ( { ...list.empty, ...item } ) );
+			next[ list.key ] = [ ...( profile[ list.key ] || [] ), ...add ];
+		} );
+		onApply( next );
+		setResult( null );
+	};
+
+	const pick = ( key ) => (
+		<CheckboxControl
+			checked={ !! picks[ key ] }
+			onChange={ ( v ) => setPicks( ( old ) => ( { ...old, [ key ]: v } ) ) }
+			__nextHasNoMarginBottom
+		/>
+	);
+	const proposal = result && result.proposal;
+	const offered = Object.keys( picks ).length;
+
+	return (
+		<Card className="lsec-profile__group">
+			<CardHeader>
+				<h2>Aus Webseiten übernehmen</h2>
+				{ busy && <Spinner /> }
+			</CardHeader>
+			<CardBody>
+				{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
+				<TextareaControl
+					label="Seiten, aus denen die Angaben gelesen werden"
+					help="Eine Adresse pro Zeile, auch Pfade wie /impressum, /kontakt oder /leistungen; höchstens 8. Leer = Startseite. Die KI liest die Seiten und schlägt Angaben vor (ein Aufruf, wenige Cent). Übernommen wird nur, was wörtlich auf den Seiten steht; gespeichert wird erst mit „Profil speichern“."
+					rows={ 5 }
+					value={ text }
+					onChange={ setText }
+					className="lsec-mono"
+					__nextHasNoMarginBottom
+				/>
+				<p>
+					<Button variant="secondary" onClick={ read } isBusy={ busy } disabled={ busy }>
+						Angaben lesen
+					</Button>
+				</p>
+				{ proposal && (
+					<div className="lsec-proposal">
+						<p className="lsec-muted">
+							Gelesen: { result.pages.map( ( pg ) => `${ pg.url } (${ pg.chars.toLocaleString( 'de-DE' ) } Zeichen)` ).join( ', ' ) }
+							{ result.failed.length > 0 && ` · nicht lesbar: ${ result.failed.join( ', ' ) }` }
+							{ result.cost !== null && ` · Kosten ${ usd( result.cost ) }` }
+						</p>
+						{ offered === 0 && <p>Nichts Neues gefunden; alles steht schon im Profil.</p> }
+						{ Object.keys( ORG_FIELDS ).some( ( k ) => `org.${ k }` in picks ) && (
+							<>
+								<h3>Unternehmen</h3>
+								{ Object.entries( ORG_FIELDS ).filter( ( [ k ] ) => `org.${ k }` in picks ).map( ( [ k, label ] ) => (
+									<div className="lsec-pick" key={ k }>
+										{ pick( `org.${ k }` ) }
+										<span>
+											<strong>{ label }:</strong> { proposal.organization[ k ] }
+											{ profile.organization[ k ] && <span className="lsec-muted"> (bisher: { profile.organization[ k ] })</span> }
+										</span>
+									</div>
+								) ) }
+							</>
+						) }
+						{ LISTS.map( ( list ) => {
+							const items = ( proposal[ list.key ] || [] ).map( ( item, i ) => ( { item, i } ) );
+							if ( ! items.length ) {
+								return null;
+							}
+							return (
+								<Fragment key={ list.key }>
+									<h3>{ list.title }</h3>
+									{ items.map( ( { item, i } ) => (
+										<div className="lsec-pick" key={ i }>
+											{ `${ list.key }.${ i }` in picks ? pick( `${ list.key }.${ i }` ) : <span className="lsec-pick__done">✓</span> }
+											<span>
+												{ item.name }
+												{ list.key === 'locations' && <span className="lsec-muted"> · { [ item.street, `${ item.postal_code } ${ item.city }`.trim(), item.phone, item.opening_hours ].filter( Boolean ).join( ' · ' ) }</span> }
+												{ item.description && <span className="lsec-muted"> · { item.description }</span> }
+												{ ! ( `${ list.key }.${ i }` in picks ) && <span className="lsec-muted"> (schon vorhanden)</span> }
+											</span>
+										</div>
+									) ) }
+								</Fragment>
+							);
+						} ) }
+						{ proposal.service_area && (
+							<p>
+								<strong>Servicegebiet laut Seiten:</strong> { proposal.service_area }{ ' ' }
+								<Button variant="link" onClick={ () => onArea( proposal.service_area ) }>bei Wikidata suchen</Button>
+							</p>
+						) }
+						{ result.dropped.length > 0 && (
+							<details className="lsec-muted">
+								<summary>Verworfen, weil es so nicht auf den Seiten steht ({ result.dropped.length })</summary>
+								<ul>
+									{ result.dropped.map( ( d, i ) => <li key={ i }>{ d }</li> ) }
+								</ul>
+							</details>
+						) }
+						<div className="lsec-savebar lsec-savebar--inline">
+							<Button variant="primary" onClick={ apply } disabled={ ! Object.values( picks ).some( Boolean ) }>
+								Ausgewählte übernehmen
+							</Button>
+							<Button variant="tertiary" onClick={ () => setResult( null ) }>Verwerfen</Button>
+						</div>
+					</div>
+				) }
+			</CardBody>
+		</Card>
+	);
+}
+
 export default function Profile() {
 	const [ profile, setProfile ] = useState( null );
 	const [ saved, setSaved ] = useState( null );
 	const [ notice, setNotice ] = useState( null );
 	const [ saving, setSaving ] = useState( false );
+	const [ areaQuery, setAreaQuery ] = useState( '' );
 
 	const apply = ( p ) => {
 		setProfile( p );
@@ -277,6 +455,14 @@ export default function Profile() {
 			<p className="lsec-muted">
 				Alle Angaben werden als bestätigte Entitäten gespeichert. Die Entity-Erkennung ordnet Schreibweisen aus Ihren Beiträgen diesen Einträgen zu.
 			</p>
+			<SourcesCard
+				profile={ profile }
+				onApply={ ( next ) => {
+					setProfile( next );
+					setNotice( { status: 'info', text: 'Vorschlag übernommen. Bitte prüfen und mit „Profil speichern“ sichern.' } );
+				} }
+				onArea={ ( q ) => setAreaQuery( q ) }
+			/>
 			<Card className="lsec-profile__group">
 				<CardHeader>
 					<h2>Unternehmen</h2>
@@ -296,6 +482,7 @@ export default function Profile() {
 				</CardBody>
 			</Card>
 			<ServiceAreaCard
+				suggestion={ areaQuery }
 				area={ profile.service_area }
 				onSaved={ ( area ) => {
 					const next = { ...profile, service_area: area };

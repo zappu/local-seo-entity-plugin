@@ -81,6 +81,7 @@ final class BusinessProfile {
 				'email'       => (string) ( $org['properties']['email'] ?? '' ),
 			),
 			'service_area' => Settings::get( 'service_area' ),
+			'source_urls'  => array_values( array_map( 'strval', (array) Settings::get( 'profile_source_urls' ) ) ),
 		);
 		foreach ( self::LISTS as $key => $list ) {
 			$items = array();

@@ -67,3 +67,5 @@ export const getMergeSuggestions = () => apiFetch( { path: `${ base }/entities/m
 export const getIndex = () => apiFetch( { path: `${ base }/index` } );
 export const runIndex = ( all = false ) =>
 	apiFetch( { path: `${ base }/index/run`, method: 'POST', data: { all } } );
+export const analyzeProfile = ( urls ) =>
+	apiFetch( { path: `${ base }/profile/analyze`, method: 'POST', data: { urls } } );

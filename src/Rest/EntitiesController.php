@@ -13,6 +13,8 @@ use Lsec\Core\Plugin;
 use Lsec\Core\Settings;
 use Lsec\Entities\BusinessProfile;
 use Lsec\Entities\EntityRepository;
+use Lsec\Entities\ProfileAssistant;
+use Lsec\Integrations\AI\AiException;
 use Lsec\Entities\ServiceArea;
 use Lsec\Integrations\Wikidata\WikidataClient;
 use Lsec\Workflow\RetryableException;
@@ -53,6 +55,7 @@ final class EntitiesController {
 		$route( '/entities/merge-suggestions', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new EntityRepository() )->merge_suggestions() ) );
 		$route( '/profile', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new BusinessProfile() )->get() ) );
 		$route( '/profile', 'POST', array( $this, 'save_profile' ) );
+		$route( '/profile/analyze', 'POST', array( $this, 'analyze_profile' ) );
 		$route( '/wikidata/search', 'GET', array( $this, 'search_wikidata' ) );
 		$route( '/service-area', 'POST', array( $this, 'service_area' ) );
 		$route( '/index', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ContentIndex::stats() + array( 'auto_extract' => (bool) Settings::get( 'entity_auto_extract' ) ) ) );
@@ -116,6 +119,38 @@ final class EntitiesController {
 		}
 		$this->plugin->logger->audit( 'Unternehmensprofil gespeichert', $out + array( 'user_id' => get_current_user_id() ) );
 		return new \WP_REST_Response( array( 'result' => $out ) + array( 'profile' => ( new BusinessProfile() )->get() ) );
+	}
+
+	/**
+	 * Liest die angegebenen Seiten und schlägt Profilangaben vor (ein KI-Aufruf). Gespeichert wird nur die
+	 * Liste der Adressen; den Vorschlag übernimmt der Administrator im Formular.
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit urls (Text, eine Adresse pro Zeile).
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function analyze_profile( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$urls = ProfileAssistant::parse_urls( (string) $request->get_param( 'urls' ), home_url( '/' ) );
+		Settings::set( 'profile_source_urls', $urls );
+		$assistant = new ProfileAssistant( $this->plugin->http );
+		$read      = $assistant->read( $urls );
+		if ( '' === $read['text'] ) {
+			return new \WP_Error( 'lsec_no_text', 'Keine der Seiten ließ sich lesen: ' . implode( ', ', $read['failed'] ), array( 'status' => 422 ) );
+		}
+		try {
+			$site   = html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) . ' (' . home_url( '/' ) . ')';
+			$result = ProfileAssistant::analyze( $this->plugin->ai->service(), $read['text'], $site );
+		} catch ( AiException $e ) {
+			return new \WP_Error( 'lsec_ai', $this->plugin->logger->redact( $e->getMessage() ), array( 'status' => 400 ) );
+		} catch ( RetryableException $e ) {
+			return new \WP_Error( 'lsec_ai', 'Vorübergehender Fehler, bitte gleich noch einmal: ' . $this->plugin->logger->redact( $e->getMessage() ), array( 'status' => 502 ) );
+		}
+		return new \WP_REST_Response(
+			$result + array(
+				'pages'  => $read['pages'],
+				'failed' => $read['failed'],
+				'urls'   => $urls,
+			)
+		);
 	}
 
 	/**

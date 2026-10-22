@@ -63,6 +63,7 @@ wp lsec runs resume <id>       # wartenden Ablauf fortsetzen
 wp lsec check secrets          # Schlüssel im Klartext in Datenbank oder Protokoll?
 wp lsec settings set ai_research_model <modell>
 wp lsec profile show --format=json > profil.json   # Unternehmensprofil sichern / bearbeiten
+wp lsec profile suggest / /impressum /kontakt      # Vorschlag aus Webseiten (ein KI-Aufruf)
 wp lsec index run --now        # Inhaltsindex; startet bei entity_auto_extract die Erkennung (KI-Kosten)
 wp lsec entities suggest-merges
 wp lsec entities merge <ziel> <quelle>…
