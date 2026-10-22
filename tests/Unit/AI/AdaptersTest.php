@@ -423,4 +423,12 @@ final class AdaptersTest extends TestCase {
 		$response = ( new OpenRouterClient( $http, 'sk-or-v1-test', 'x/model', '' ) )->send( new AiRequest( 'search', 'S', 'Q', null, 'result', true ) );
 		$this->assertSame( array( 'https://www.uetze.de/' ), array_column( $response->sources, 'url' ) );
 	}
+
+	public function test_search_leaves_room_for_reasoning(): void {
+		$http    = new FakeTransport( array( self::reply( 'openrouter', 'Recherche' ) ) );
+		$service = new AiService( new OpenRouterClient( $http, 'sk-or-v1-test', 'x/model', '' ), new MemoryAiCallLog() );
+		$service->search( 'topic_research_search', 'S', 'Q', null, 3, 'exa' );
+		$this->assertSame( AiService::SEARCH_TOKENS, $http->requests[0]['body']['max_tokens'] );
+		$this->assertSame( 'exa', $http->requests[0]['body']['plugins'][0]['engine'] );
+	}
 }

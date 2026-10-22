@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.6.3 – 22.10.2026
+
+- **Websuche nicht mehr abgeschnitten:** Die Antwort der Websuche darf 8000 statt 3000 Token lang sein. Bei Modellen mit Denkschritten brach sie vorher nach wenigen Absätzen ab. Ein Abbruch steht jetzt im Bericht.
+- **Fehlersuche bei Tatsachen:** `wp lsec topics report <ablauf> --facts` zeigt jede Tatsache mit Prüfergebnis, Quelle, Zitat der KI und Beleg aus der Quelle. `wp lsec topics show` nennt den Prüfhinweis.
+
 ## 0.6.2 – 22.10.2026
 
 - **Suchmaschine der Websuche wählbar** (nur OpenRouter): Einstellung „Suchmaschine“ (`ai_web_engine`: standard, native, exa, parallel, perplexity) und `wp lsec topics research --web-engine=…`. Hintergrund: Die Websuche des Modells lieferte in drei von vier echten Recherchen keine Quellen und damit keine Tatsachen.

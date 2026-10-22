@@ -259,11 +259,12 @@ final class TopicResearchWorkflow {
 				$state['sources']  = (array) ( $stub['sources'] ?? array() );
 				$state['cost']     = 0.0;
 			} else {
-				$response          = self::ai( $plugin, $context->input )->search( 'topic_research_search', TopicResearcher::system(), TopicResearcher::question( $collected ), $context->run_id, $context->input['web_max_results'] ?? null, $context->input['web_engine'] ?? null );
-				$state['research'] = $response->text;
-				$state['sources']  = array() !== $response->sources ? $response->sources : TopicResearcher::sources_from_text( $response->text );
-				$state['cost']     = $response->cost;
-				$state['model']    = $response->model;
+				$response           = self::ai( $plugin, $context->input )->search( 'topic_research_search', TopicResearcher::system(), TopicResearcher::question( $collected ), $context->run_id, $context->input['web_max_results'] ?? null, $context->input['web_engine'] ?? null );
+				$state['research']  = $response->text;
+				$state['sources']   = array() !== $response->sources ? $response->sources : TopicResearcher::sources_from_text( $response->text );
+				$state['cost']      = $response->cost;
+				$state['model']     = $response->model;
+				$state['truncated'] = 'length' === $response->finish;
 				// Nachtrag 22.10.: Ohne Annotationen stammen die Quellen aus dem Text der Recherche.
 				$state['sources_from'] = array() !== $response->sources ? 'annotations' : 'text';
 			}
@@ -289,6 +290,7 @@ final class TopicResearchWorkflow {
 				'source_ids'   => (array) ( $state['source_ids'] ?? array() ),
 				'model'        => (string) ( $state['model'] ?? '' ),
 				'sources_from' => (string) ( $state['sources_from'] ?? '' ),
+				'truncated'    => ! empty( $state['truncated'] ),
 				'engine'       => (string) ( $context->input['web_engine'] ?? Settings::get( 'ai_web_engine' ) ),
 			) + $valid
 		);
@@ -368,7 +370,7 @@ final class TopicResearchWorkflow {
 		foreach ( $checked as $index => $fact ) {
 			$checked[ $index ]['claim_id'] = $claims->save( (int) $fact['entity_id'], (string) $fact['property'], (string) $fact['value'], (string) $fact['status'], (string) $fact['note'], (int) $fact['source_id'], (string) $fact['excerpt'], $fact['quality'] );
 			++$counts[ $fact['status'] ];
-			unset( $checked[ $index ]['quote'] );
+			$checked[ $index ]['quote'] = mb_substr( (string) $fact['quote'], 0, 300 );
 		}
 		return StepResult::done(
 			array(

@@ -150,6 +150,9 @@ final class TopicsCommand {
 	 * [--research]
 	 * : Zeigt zusätzlich den Text der Websuche (zur Fehlersuche, wenn Quellen oder Tatsachen fehlen).
 	 *
+	 * [--facts]
+	 * : Zeigt jede Tatsache mit Prüfergebnis, Quelle, Zitat der KI und Beleg aus der Quelle.
+	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
@@ -177,6 +180,8 @@ final class TopicsCommand {
 			'engine'       => (string) ( $research['engine'] ?? $input['web_engine'] ?? '' ),
 			'sources_from' => (string) ( $research['sources_from'] ?? '' ),
 			'research_len' => mb_strlen( (string) ( $research['research'] ?? '' ) ),
+			'truncated'    => ! empty( $research['truncated'] ),
+			'fact_details' => (array) ( $verify['facts'] ?? array() ),
 			'model'        => (string) ( $research['model'] ?? '' ),
 			'cost_usd'     => round( ( new AiCallRepository() )->cost_of_run( $id ), 4 ),
 			'sources'      => count( (array) ( $research['sources'] ?? array() ) ),
@@ -200,10 +205,24 @@ final class TopicsCommand {
 		foreach ( $report['dropped'] as $line ) {
 			WP_CLI::log( '  verworfen: ' . $line );
 		}
+		if ( $report['truncated'] ) {
+			WP_CLI::warning( 'Die Antwort der Websuche wurde wegen der Längenbegrenzung abgeschnitten.' );
+		}
 		if ( 'succeeded' === $report['status'] && 0 === $report['sources'] ) {
 			WP_CLI::warning( sprintf( 'Die Websuche lieferte keine Quellen (Recherchetext %d Zeichen, ohne Adressen). Ohne Quellen gibt es keine Tatsachen. Text ansehen: wp lsec topics report %d --research; anderer Versuch: --web-engine=exa', $report['research_len'], $id ) );
 		} elseif ( 'text' === $report['sources_from'] ) {
 			WP_CLI::log( '  Quellen aus dem Recherchetext gelesen (das Modell lieferte keine Quellenangaben).' );
+		}
+		if ( ! empty( $assoc_args['facts'] ) ) {
+			foreach ( $report['fact_details'] as $fact ) {
+				WP_CLI::log( sprintf( '[%s%s] %s: %s = %s', (string) $fact['status'], empty( $fact['quality'] ) ? '' : '/' . $fact['quality'], (string) $fact['subject'], (string) $fact['property'], (string) $fact['value'] ) );
+				WP_CLI::log( '    Prüfung: ' . (string) ( $fact['note'] ?? '' ) );
+				WP_CLI::log( '    Quelle:  ' . (string) ( $fact['source_url'] ?? '' ) );
+				WP_CLI::log( '    Zitat KI: ' . mb_substr( (string) ( $fact['quote'] ?? '' ), 0, 200 ) );
+				if ( (string) ( $fact['excerpt'] ?? '' ) !== (string) ( $fact['quote'] ?? '' ) ) {
+					WP_CLI::log( '    Beleg:   ' . mb_substr( (string) ( $fact['excerpt'] ?? '' ), 0, 200 ) );
+				}
+			}
 		}
 		if ( ! empty( $assoc_args['research'] ) ) {
 			WP_CLI::log( "--- Recherchetext ---\n" . $this->plugin->logger->redact( (string) ( $research['research'] ?? '' ) ) . "\n---" );
@@ -287,6 +306,9 @@ final class TopicsCommand {
 		WP_CLI::log( 'Entitäten: ' . implode( ', ', array_map( static fn( array $e ): string => $e['name'], $topic['entities'] ) ) );
 		foreach ( $topic['facts'] as $fact ) {
 			WP_CLI::log( sprintf( '  [%s] #%d %s: %s = %s – %s', $fact['status'], $fact['id'], (string) $fact['entity'], $fact['property'], $fact['value'], (string) $fact['source_url'] ) );
+			if ( '' !== (string) ( $fact['note'] ?? '' ) ) {
+				WP_CLI::log( '      ' . $fact['note'] );
+			}
 		}
 		foreach ( (array) ( $topic['overlap']['items'] ?? array() ) as $item ) {
 			WP_CLI::log( '  Überschneidung: ' . $item['reason'] . ' – ' . $item['url'] );

@@ -547,6 +547,9 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
     - `wp lsec topics research --web-engine=<engine>` für den Vergleich, gespeichert im Ablauf.
     - `wp lsec topics report` nennt die Suchmaschine, warnt bei 0 Quellen und zeigt mit `--research` den Text der Websuche.
     - Kosten laut OpenRouter (Oktober 2026): Exa 7 USD je 1000 Anfragen, Parallel (basic) 5 USD je 1000, also unter einem Cent je Recherche zusätzlich zu den Token.
+    - **Ergebnis auf der Testwebsite:** Mit `exa` lieferten beide Läufe Quellen (116: 3, 117: 5) und waren billiger als mit `standard` (0,111 und 0,106 USD statt 0,129 bis 0,149 USD). **Empfehlung:** `ai_web_engine = exa` für OpenAI-Modelle über OpenRouter. Der Standard des Plugins bleibt `standard`, weil er für Anthropic-Modelle die eigene Websuche nutzt.
+  - **Nachtrag 22.10. (0.6.3), abgeschnittene Websuche:** Der Recherchetext von Lauf 114 brach nach 843 Zeichen mitten im Satz ab. Bei Modellen mit Denkschritten zählen diese zur Obergrenze der Antwort; 3000 Token reichten nicht. Die Websuche erhält jetzt 8000 Token (`AiService::SEARCH_TOKENS`) und 180 s. Bricht die Antwort trotzdem ab (`finish_reason = length`), steht `truncated` im Ergebnis des Schritts und der Bericht warnt.
+  - **Bericht mit `--facts`:** jede Tatsache mit Status, Prüfhinweis, Quelle, Zitat der KI und Beleg aus der Quelle. `wp lsec topics show` nennt den Prüfhinweis je Tatsache.
 - **`verify_facts`:** 8.4a, vier Quellen je Durchgang.
 - **`propose_topics`:** setzt `off_topic`, berechnet Überschneidung und Priorität und speichert die Themen.
 - **Freigabe:**

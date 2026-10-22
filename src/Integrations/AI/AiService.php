@@ -20,6 +20,12 @@ use Lsec\Workflow\RetryableException;
 final class AiService {
 
 	/**
+	 * Obergrenze der Antwort der Websuche. Nachtrag 22.10. (0.6.3): Mit 3000 Token brach die Antwort eines
+	 * Modells mit Denkschritten nach 843 Zeichen ab, weil die Denkschritte mitzählen.
+	 */
+	public const SEARCH_TOKENS = 8000;
+
+	/**
 	 * Konstruktor.
 	 *
 	 * @param AiClient      $client          Anbieter mit Hauptmodell.
@@ -122,7 +128,7 @@ final class AiService {
 	 */
 	public function search( string $task, string $system, string $question, ?int $run_id = null, ?int $web_max_results = null, ?string $web_engine = null ): AiResponse {
 		return $this->call(
-			new AiRequest( $task, $system, $question, null, 'result', true, 3000, 120, max( 1, min( 10, $web_max_results ?? $this->web_max_results ) ), self::engine( $web_engine ?? $this->web_engine ) ),
+			new AiRequest( $task, $system, $question, null, 'result', true, self::SEARCH_TOKENS, 180, max( 1, min( 10, $web_max_results ?? $this->web_max_results ) ), self::engine( $web_engine ?? $this->web_engine ) ),
 			$run_id,
 			null,
 			$this->research_client()
