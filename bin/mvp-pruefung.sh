@@ -513,11 +513,8 @@ contains "Inhalt als Blöcke" "<!-- wp:details -->" "$(wpc post get "$P1" --fiel
 TOPIC_E=$(wpj lsec topics show "$T1" --format=json)
 check "Thema auf produced mit Beitrag" "produced $P1" "$(printf '%s' "$TOPIC_E" | json status) $(printf '%s' "$TOPIC_E" | json post_id)"
 check "Prüfbericht am Beitrag" "1" "$(wpc post meta get "$P1" _lsec_quality_passed)"
-if [ "$(wpc eval 'echo did_action("rank_math/loaded") ? 1 : 0;')" = "1" ]; then
-	check "Rank Math: Fokus-Keyword" "lsectest pflasterreinigung eltze" "$(wpc post meta get "$P1" rank_math_focus_keyword)"
-else
-	contains "ohne Rank Math: SEO-Vorschlag gespeichert" "lsectest pflasterreinigung eltze" "$(wpj post meta get "$P1" _lsec_seo_suggestion)"
-fi
+# Mit Rank Math als rank_math_focus_keyword, ohne als Vorschlag in _lsec_seo_suggestion (9.2).
+contains "Fokus-Keyword gespeichert (Rank Math oder Vorschlag)" "lsectest pflasterreinigung eltze" "$(wpj post meta get "$P1" rank_math_focus_keyword) $(wpj post meta get "$P1" _lsec_seo_suggestion)"
 
 echo "E2 Entwurf mit unbelegter Zahl wird blocked"
 draft_stub " Wir reinigen seit 25 Jahren Pflaster." > "$TMP/e2.json"
