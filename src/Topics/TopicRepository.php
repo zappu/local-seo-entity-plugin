@@ -177,6 +177,84 @@ final class TopicRepository {
 	}
 
 	/**
+	 * Ergänzt ein Thema um Tatsachen, Quellen und Keywords einer späteren Recherche (Dublette, 0.7.1).
+	 *
+	 * @param int   $id          Thema.
+	 * @param int[] $claim_ids   Aussagen.
+	 * @param int[] $source_ids  Quellen.
+	 * @param int[] $primary     Haupt-Keywords.
+	 * @param int[] $secondary   Weitere Keywords.
+	 */
+	public function merge_basis( int $id, array $claim_ids, array $source_ids, array $primary, array $secondary ): void {
+		global $wpdb;
+		$t     = static fn( string $name ): string => Schema::table( $wpdb->prefix, $name );
+		$row   = $wpdb->get_var( $wpdb->prepare( "SELECT research_basis FROM {$t( 'topics' )} WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$basis = json_decode( (string) $row, true );
+		$basis = is_array( $basis ) ? $basis : array();
+		foreach ( array(
+			'claim_ids'   => $claim_ids,
+			'source_ids'  => $source_ids,
+			'keyword_ids' => array_merge( $primary, $secondary ),
+		) as $key => $ids ) {
+			$basis[ $key ] = array_values( array_unique( array_map( 'intval', array_merge( (array) ( $basis[ $key ] ?? array() ), $ids ) ) ) );
+		}
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->update(
+			$t( 'topics' ),
+			array(
+				'research_basis' => wp_json_encode( $basis, JSON_UNESCAPED_UNICODE ),
+				'updated_at'     => gmdate( 'Y-m-d H:i:s' ),
+			),
+			array( 'id' => $id )
+		);
+		foreach ( array(
+			'primary'   => $primary,
+			'secondary' => $secondary,
+		) as $role => $ids ) {
+			foreach ( $ids as $keyword_id ) {
+				$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$t( 'topic_keywords' )} (topic_id, keyword_id, role) VALUES (%d, %d, %s)", $id, (int) $keyword_id, $role ) );
+			}
+		}
+		// phpcs:enable
+	}
+
+	/**
+	 * Gruppen doppelter Themen unter den offenen, freigegebenen und geschriebenen Themen. Je Gruppe steht das
+	 * Thema vorn, das bleiben soll: geschrieben vor in Arbeit vor freigegeben vor Vorschlag, dann nach Priorität.
+	 *
+	 * @param string[] $services Leistungen aus dem Profil.
+	 * @return array<int, array<int, array<string, mixed>>>
+	 */
+	public function duplicate_groups( array $services ): array {
+		$rank   = array(
+			'produced'      => 0,
+			'in_production' => 1,
+			'approved'      => 2,
+			'proposed'      => 3,
+		);
+		$topics = array_values( array_filter( $this->list( '', 500 ), static fn( array $t ): bool => isset( $rank[ $t['status'] ] ) ) );
+		usort( $topics, static fn( array $a, array $b ): int => array( $rank[ $a['status'] ], - (float) $a['priority_score'], $a['id'] ) <=> array( $rank[ $b['status'] ], - (float) $b['priority_score'], $b['id'] ) );
+		$groups = array();
+		$taken  = array();
+		foreach ( $topics as $i => $topic ) {
+			if ( isset( $taken[ $topic['id'] ] ) ) {
+				continue;
+			}
+			$group = array( $topic );
+			foreach ( array_slice( $topics, $i + 1 ) as $other ) {
+				if ( ! isset( $taken[ $other['id'] ] ) && TopicSimilarity::same( $topic, $other, $services ) ) {
+					$group[]               = $other;
+					$taken[ $other['id'] ] = true;
+				}
+			}
+			if ( count( $group ) > 1 ) {
+				$groups[] = $group;
+			}
+		}
+		return $groups;
+	}
+
+	/**
 	 * Freigegebene Themen ohne Beitrag, nach Priorität.
 	 *
 	 * @param int $limit Höchstzahl.

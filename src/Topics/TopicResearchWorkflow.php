@@ -228,16 +228,17 @@ final class TopicResearchWorkflow {
 
 		return StepResult::done(
 			array(
-				'focus'    => array(
+				'focus'           => array(
 					'service' => (string) ( $focus['service'] ?? '' ),
 					'region'  => (string) ( $focus['region'] ?? '' ),
 				),
-				'company'  => (string) ( $profile['organization']['name'] ?? get_bloginfo( 'name' ) ),
-				'services' => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
-				'area'     => null === $area ? '' : $area->label . ( $area->radius_km > 0 ? ' und ' . $area->radius_km . ' km Umkreis' : '' ),
-				'keywords' => array_values( $keywords ),
-				'entities' => $entities,
-				'content'  => array_slice( $content, 0, 150 ),
+				'company'         => (string) ( $profile['organization']['name'] ?? get_bloginfo( 'name' ) ),
+				'services'        => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
+				'area'            => null === $area ? '' : $area->label . ( $area->radius_km > 0 ? ' und ' . $area->radius_km . ' km Umkreis' : '' ),
+				'keywords'        => array_values( $keywords ),
+				'entities'        => $entities,
+				'content'         => array_slice( $content, 0, 150 ),
+				'existing_topics' => self::existing_titles(),
 			)
 		);
 	}
@@ -447,13 +448,40 @@ final class TopicResearchWorkflow {
 		$max_volume      = max( array_merge( array( 0 ), array_map( static fn( array $s ): int => (int) $s['volume'], $sums ) ) );
 		$max_impressions = max( array_merge( array( 0 ), array_map( static fn( array $s ): int => (int) $s['impressions'], $sums ) ) );
 
-		$saved = array();
+		$saved    = array();
+		$topic_db = new TopicRepository();
+		$existing = $topic_db->list( '', 500 );
+		$names    = self::profile_services();
 		foreach ( $topics as $index => $topic ) {
 			$facts   = array_values( array_filter( (array) ( $verified['facts'] ?? array() ), static fn( array $f ): bool => (int) $f['topic'] === (int) $index ) );
-			$overlap = self::overlap( $topic, $keywords, $content );
-			$demand  = null !== $sums[ $index ]['volume'] ? PriorityScorer::demand( $sums[ $index ]['volume'], $max_volume ) : PriorityScorer::demand( $sums[ $index ]['impressions'], $max_impressions );
-			$local   = self::local( $topic, $keywords, $facts, $exclusions );
-			$score   = $scorer->score(
+			$claims  = array_values( array_filter( array_map( static fn( array $f ): int => (int) ( $f['claim_id'] ?? 0 ), $facts ) ) );
+			$sources = array_values( array_unique( array_filter( array_map( static fn( array $f ): int => (int) ( $f['source_id'] ?? 0 ), $facts ) ) ) );
+			// Nachtrag 22.10. (0.7.1): Dubletten vorhandener Themen werden nicht neu angelegt. Ist das vorhandene
+			// Thema noch offen oder freigegeben, bekommt es die neuen Tatsachen und Keywords.
+			$probe = array(
+				'title'            => (string) $topic['title'],
+				'region'           => (string) $topic['region'],
+				'format'           => (string) $topic['format'],
+				'primary_keywords' => array_values( array_map( static fn( int $id ): string => (string) ( $keywords[ $id ]['keyword'] ?? '' ), array_map( 'intval', (array) $topic['primary_keyword_ids'] ) ) ),
+			);
+			$twin  = TopicSimilarity::find( $probe, $existing, $names );
+			if ( null !== $twin ) {
+				$merge = in_array( (string) $twin['status'], array( 'proposed', 'approved' ), true );
+				if ( $merge ) {
+					$topic_db->merge_basis( (int) $twin['id'], $claims, $sources, array_map( 'intval', (array) $topic['primary_keyword_ids'] ), array_map( 'intval', (array) $topic['secondary_keyword_ids'] ) );
+				}
+				$saved[] = array(
+					'id'     => (int) $twin['id'],
+					'title'  => $topic['title'],
+					'score'  => null,
+					'status' => ( $merge ? 'zusammengeführt mit #' : 'Dublette von #' ) . (int) $twin['id'] . ' (' . $twin['status'] . ')',
+				);
+				continue;
+			}
+			$overlap    = self::overlap( $topic, $keywords, $content );
+			$demand     = null !== $sums[ $index ]['volume'] ? PriorityScorer::demand( $sums[ $index ]['volume'], $max_volume ) : PriorityScorer::demand( $sums[ $index ]['impressions'], $max_impressions );
+			$local      = self::local( $topic, $keywords, $facts, $exclusions );
+			$score      = $scorer->score(
 				array(
 					'relevance' => self::relevance( $topic, $keywords, $services ),
 					'demand'    => $demand,
@@ -462,8 +490,8 @@ final class TopicResearchWorkflow {
 					'season'    => null,
 				)
 			);
-			$status  = 'high' === $overlap['level'] ? 'discarded' : 'proposed';
-			$id      = ( new TopicRepository() )->save(
+			$status     = 'high' === $overlap['level'] ? 'discarded' : 'proposed';
+			$id         = ( new TopicRepository() )->save(
 				$topic + array(
 					'score'           => $score['score'],
 					'score_breakdown' => $score + array(
@@ -472,8 +500,8 @@ final class TopicResearchWorkflow {
 					),
 					'research_basis'  => array(
 						'keyword_ids' => array_merge( $topic['primary_keyword_ids'], $topic['secondary_keyword_ids'] ),
-						'claim_ids'   => array_values( array_filter( array_map( static fn( array $f ): int => (int) ( $f['claim_id'] ?? 0 ), $facts ) ) ),
-						'source_ids'  => array_values( array_unique( array_filter( array_map( static fn( array $f ): int => (int) ( $f['source_id'] ?? 0 ), $facts ) ) ) ),
+						'claim_ids'   => $claims,
+						'source_ids'  => $sources,
 						'focus'       => $collected['focus'],
 					),
 					'overlap'         => $overlap,
@@ -481,10 +509,14 @@ final class TopicResearchWorkflow {
 				),
 				$context->run_id
 			);
-			$saved[] = array(
+			$saved[]    = array(
 				'id'     => $id,
 				'title'  => $topic['title'],
 				'score'  => $score['score'],
+				'status' => $status,
+			);
+			$existing[] = $probe + array(
+				'id'     => $id,
 				'status' => $status,
 			);
 		}
@@ -494,6 +526,29 @@ final class TopicResearchWorkflow {
 				'off_topic' => count( (array) ( $research['excluded'] ?? array() ) ),
 			)
 		);
+	}
+
+	/**
+	 * Titel vorhandener Themen für die KI (nicht erneut vorschlagen), ohne „bestehende Seite verbessern“.
+	 *
+	 * @return string[]
+	 */
+	private static function existing_titles(): array {
+		$out = array();
+		foreach ( ( new TopicRepository() )->list( '', 200 ) as $topic ) {
+			$out[] = sprintf( '%s (%s%s)', $topic['title'], $topic['status'], '' !== (string) $topic['region'] ? ', ' . $topic['region'] : '' );
+		}
+		return $out;
+	}
+
+	/**
+	 * Leistungen aus dem Unternehmensprofil (für den Dublettenvergleich).
+	 *
+	 * @return string[]
+	 */
+	public static function profile_services(): array {
+		$profile = ( new BusinessProfile() )->get();
+		return array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) );
 	}
 
 	/**

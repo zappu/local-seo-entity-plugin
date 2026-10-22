@@ -13,7 +13,7 @@
 #            D2 Freigabe, Ausschluss off_topic, REST-Routen
 #   Stufe E: E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe): Blöcke, SEO-Angaben, Prüfbericht bestanden
 #            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
-#            E4 Style Mimic von Hand, REST-Routen
+#            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -548,6 +548,17 @@ OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "alle Routen 403" "Routen geschützt" "$OUT"
 contains "Route Entwurf starten" "/lsec/v1/topics/1/produce" "$OUT"
 contains "Route Style Mimic" "/lsec/v1/style" "$OUT"
+echo "E5 Doppelte Themen werden zusammengeführt (0.7.1)"
+cat > "$TMP/dublette.json" <<JSON
+{"research":"LSECTEST","sources":[],"result":{"topics":[
+{"title":"LSECTEST Pflasterreinigung in LSECTEST Eltze: Firma in der Nähe","intent":"local","format":"local_landing","region":"LSECTEST Eltze","primary_keyword_ids":[$K_NEW],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[],"insufficient_data":false}],
+"excluded_keywords":[]}}
+JSON
+OUT=$(wpc lsec topics research --service=lsectest2 --stub="$TMP/dublette.json" --offline --now 2>&1)
+contains "Dublette mit dem freigegebenen Thema zusammengeführt" "zusammengeführt mit #$T1" "$OUT"
+check "kein neues Thema angelegt" "0" "$(wpj lsec topics list --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); $n=0; foreach((array)$d as $r){ if(str_contains($r["thema"],"Firma in der Nähe") && str_starts_with($r["thema"],"LSECTEST")) $n++; } echo $n;')"
+check "keine Dubletten unter den Testthemen" "0" "$(wpc lsec topics duplicates | grep -c LSECTEST)"
+
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
 [ -n "$STYLE_V" ] && wpc db query "UPDATE ${PREFIX}lsec_style_profiles SET is_active = 1 WHERE version = (SELECT v FROM (SELECT MAX(version) AS v FROM ${PREFIX}lsec_style_profiles) x)" >/dev/null

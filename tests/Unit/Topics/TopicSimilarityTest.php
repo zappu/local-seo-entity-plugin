@@ -1,0 +1,58 @@
+<?php
+/**
+ * Tests der Dublettenerkennung (Nachtrag 22.10., 0.7.1).
+ *
+ * @package Lsec
+ */
+
+namespace Lsec\Tests\Unit\Topics;
+
+use Lsec\Topics\TopicSimilarity;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Fall aus der Testwebsite: Themen 39 und 43 aus zwei Recherchen.
+ */
+final class TopicSimilarityTest extends TestCase {
+
+	private const SERVICES = array( 'Terrassenreinigung', 'Pflasterreinigung', 'Parkplatzreinigung', 'Industriebodenreinigung', 'Fassadenreinigung' );
+
+	/**
+	 * Thema.
+	 *
+	 * @param string $title  Titel.
+	 * @param string $region Ort.
+	 * @param string $format Format.
+	 * @return array<string, mixed>
+	 */
+	private static function topic( string $title, string $region, string $format = 'local_landing' ): array {
+		return array(
+			'title'            => $title,
+			'region'           => $region,
+			'format'           => $format,
+			'primary_keywords' => '',
+		);
+	}
+
+	public function test_same_service_and_place_is_duplicate(): void {
+		$this->assertTrue(
+			TopicSimilarity::same(
+				self::topic( 'Pflasterreinigung in Uetze: Gehwege und Pflasterflächen vom Profi reinigen lassen', 'Uetze' ),
+				self::topic( 'Pflasterreinigung in Uetze: Firma in der Nähe für Einfahrt, Hof und Wege', 'Uetze' ),
+				self::SERVICES
+			)
+		);
+		$this->assertTrue( TopicSimilarity::same( self::topic( 'Terrassenreinigung in Uetze', 'Gemeinde Uetze' ), self::topic( 'Terrasse reinigen lassen: Terrassenreinigung vor Ort', 'Uetze' ), self::SERVICES ) );
+	}
+
+	public function test_other_place_service_or_kind_is_not_duplicate(): void {
+		$this->assertFalse( TopicSimilarity::same( self::topic( 'Pflasterreinigung in Uetze', 'Uetze' ), self::topic( 'Pflasterreinigung in Lehrte', 'Lehrte' ), self::SERVICES ) );
+		$this->assertFalse( TopicSimilarity::same( self::topic( 'Pflasterreinigung in Uetze', 'Uetze' ), self::topic( 'Terrassenreinigung in Uetze', 'Uetze' ), self::SERVICES ) );
+		$this->assertFalse( TopicSimilarity::same( self::topic( 'Pflasterreinigung in Uetze', 'Uetze' ), self::topic( 'Pflasterreinigung in Uetze: was kostet sie?', 'Uetze', 'guide' ), self::SERVICES ) );
+	}
+
+	public function test_guides_without_place_need_similar_titles(): void {
+		$this->assertFalse( TopicSimilarity::same( self::topic( 'Lackfarbe von Pflastersteinen entfernen', '', 'guide' ), self::topic( 'Moos aus Pflasterfugen entfernen', '', 'guide' ), self::SERVICES ) );
+		$this->assertTrue( TopicSimilarity::same( self::topic( 'Lackfarbe von Pflastersteinen entfernen', '', 'guide' ), self::topic( 'Lackfarbe auf Pflastersteinen entfernen: so geht es', '', 'guide' ), self::SERVICES ) );
+	}
+}

@@ -40,6 +40,9 @@ final class ProductionCommand {
 	 * [--again]
 	 * : Neuen Entwurf schreiben, auch wenn das Thema schon einen hat.
 	 *
+	 * [--allow-duplicate]
+	 * : Auch schreiben, wenn ein sehr ähnliches Thema schon einen Entwurf hat.
+	 *
 	 * [--now]
 	 * : Hier abarbeiten statt über den Cronjob.
 	 *
@@ -56,8 +59,9 @@ final class ProductionCommand {
 	 */
 	public function start( array $args, array $assoc_args ): void {
 		$options = array(
-			'again'  => ! empty( $assoc_args['again'] ),
-			'reason' => 'cli',
+			'again'           => ! empty( $assoc_args['again'] ),
+			'allow_duplicate' => ! empty( $assoc_args['allow-duplicate'] ),
+			'reason'          => 'cli',
 		);
 		if ( isset( $assoc_args['model'] ) ) {
 			$options['model'] = (string) $assoc_args['model'];

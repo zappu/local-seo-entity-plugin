@@ -46,6 +46,7 @@ final class TopicResearcher {
 			'1. Was suchen Menschen im Servicegebiet zu diesen Leistungen (Fragen, Anlässe, Probleme, Jahreszeit)?',
 			'2. Regionale Besonderheiten der Orte, die zu den Leistungen passen (z. B. Altstadt mit Natursteinpflaster, Sportanlagen, Gewerbegebiete, Vorschriften).',
 			'3. Belegbare Tatsachen zu den Orten oder Themen (z. B. Ersterwähnung, Einwohnerzahl, Wahrzeichen, Regeln), jeweils mit der Quelle und einem wörtlichen Satz aus der Quelle.',
+			array() !== (array) ( $context['existing_topics'] ?? array() ) ? 'Diese Themen gibt es schon, suche andere Blickwinkel: ' . implode( '; ', array_slice( (array) $context['existing_topics'], 0, 30 ) ) . '.' : '',
 			'Nenne zu jeder Tatsache die vollständige Adresse der Seite (https://…) und zitiere den Satz genau so, wie er dort steht. Verwechsle keine Orte oder Ortsteile.',
 			'Keine Tatsachen über das Unternehmen selbst und keine Angaben von seiner Website; die stehen schon im Profil.',
 		);
@@ -86,6 +87,7 @@ final class TopicResearcher {
 			. "- Jedes Thema passt zu einer Leistung des Unternehmens und, wenn möglich, zu einem Ort im Servicegebiet (format local_landing mit region).\n"
 			. "- Keywords und Entitäten nur über ihre Nummer aus den Listen unten (primary_keyword_ids, secondary_keyword_ids, primary_entity_ids, secondary_entity_ids). Erfinde keine Nummern.\n"
 			. "- Kein Thema, das eine bestehende Seite schon abdeckt (Liste „Bestehende Inhalte“ und „rankt mit“); nenne solche Seiten nicht neu.\n"
+			. "- Kein Thema, das es als Vorschlag schon gibt (Liste „Vorhandene Themen“): nicht dieselbe Leistung am selben Ort noch einmal. Wähle stattdessen einen anderen Ort, eine andere Leistung oder einen klar anderen Blickwinkel (z. B. Ratgeber statt Ortsseite).\n"
 			. "- facts: nur Tatsachen aus dem Rechercheergebnis, mit source_url aus der Quellenliste und quote als wörtlichem Satz aus der Quelle. subject ist der genaue Name des Ortes oder Gegenstands, um den es geht. property kurz auf Englisch (z. B. first_mentioned, population, landmark, regulation). value ist nur die Angabe selbst, so kurz wie möglich und in den Worten der Quelle (z. B. „20.723“, „1021“, „mindestens einmal wöchentlich“), kein ganzer Satz. Keine Tatsachen über das Unternehmen selbst oder von dessen Website.\n"
 			. "- excluded_keywords: Keywords aus der Liste ohne Bezug zu den Leistungen des Unternehmens, reason off_topic, mit kurzer Begründung in note.\n"
 			. "- insufficient_data = true, wenn ein Thema kaum durch Keywords oder Recherche gestützt ist.\n\n"
@@ -95,6 +97,7 @@ final class TopicResearcher {
 			. "Keywords:\n" . implode( "\n", array_slice( $keywords, 0, 80 ) ) . "\n\n"
 			. "Entitäten:\n" . implode( "\n", array_slice( $entities, 0, 80 ) ) . "\n\n"
 			. "Bestehende Inhalte:\n" . implode( "\n", array_slice( (array) $context['content'], 0, 80 ) ) . "\n\n"
+			. "Vorhandene Themen:\n" . ( array() !== (array) ( $context['existing_topics'] ?? array() ) ? implode( "\n", array_slice( (array) $context['existing_topics'], 0, 60 ) ) : '(keine)' ) . "\n\n"
 			. "Rechercheergebnis:\n<<<\n" . $research . "\n>>>\n\nQuellen:\n" . ( '' !== $list ? $list : "(keine)\n" );
 	}
 

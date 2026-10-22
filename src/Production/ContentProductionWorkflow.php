@@ -116,6 +116,15 @@ final class ContentProductionWorkflow {
 		if ( 'approved' !== $topic['status'] && ! ( $again && in_array( $topic['status'], array( 'produced', 'in_production' ), true ) ) ) {
 			throw new \RuntimeException( sprintf( 'Thema %d ist nicht freigegeben (Status %s).', $topic_id, $topic['status'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
+		// Nachtrag 22.10. (0.7.1): Kein zweiter Beitrag zu einer Dublette eines schon geschriebenen Themas.
+		if ( empty( $options['allow_duplicate'] ) ) {
+			$written = array_values( array_filter( ( new TopicRepository() )->list( '', 500 ), static fn( array $t ): bool => in_array( $t['status'], array( 'in_production', 'produced' ), true ) && (int) $t['id'] !== $topic_id ) );
+			$probe   = $topic + array( 'primary_keywords' => array_column( array_filter( (array) $topic['keywords'], static fn( array $k ): bool => 'primary' === $k['role'] ), 'keyword' ) );
+			$twin    = \Lsec\Topics\TopicSimilarity::find( $probe, $written, \Lsec\Topics\TopicResearchWorkflow::profile_services() );
+			if ( null !== $twin ) {
+				throw new \RuntimeException( sprintf( 'Thema %d ähnelt Thema %d („%s“), zu dem es schon einen Entwurf gibt. Trotzdem schreiben: --allow-duplicate.', $topic_id, $twin['id'], $twin['title'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+		}
 		if ( $again ) {
 			( new TopicRepository() )->set_production( $topic_id, 'approved' );
 		}

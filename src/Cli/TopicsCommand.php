@@ -393,4 +393,57 @@ final class TopicsCommand {
 		);
 		WP_CLI::success( 'Aussage ' . (int) $args[0] . ': ' . $args[1] );
 	}
+
+	/**
+	 * Zeigt doppelte Themen; mit --apply bleibt je Gruppe das erste Thema, die übrigen werden abgelehnt und
+	 * geben ihre Tatsachen und Keywords an das erste ab.
+	 *
+	 * Reihenfolge je Gruppe: geschrieben, in Arbeit, freigegeben, Vorschlag, dann nach Priorität.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--apply]
+	 * : Dubletten ablehnen und zusammenführen.
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function duplicates( array $args, array $assoc_args ): void {
+		$repo   = new TopicRepository();
+		$groups = $repo->duplicate_groups( TopicResearchWorkflow::profile_services() );
+		if ( array() === $groups ) {
+			WP_CLI::success( 'Keine doppelten Themen.' );
+			return;
+		}
+		foreach ( $groups as $group ) {
+			$keep = array_shift( $group );
+			WP_CLI::log( sprintf( 'bleibt   #%d %s (%s)', $keep['id'], $keep['title'], $keep['status'] ) );
+			foreach ( $group as $twin ) {
+				WP_CLI::log( sprintf( '  doppelt #%d %s (%s)', $twin['id'], $twin['title'], $twin['status'] ) );
+				if ( empty( $assoc_args['apply'] ) || in_array( $twin['status'], array( 'in_production', 'produced' ), true ) ) {
+					continue;
+				}
+				$detail = $repo->detail( (int) $twin['id'] );
+				$basis  = (array) ( $detail['research_basis'] ?? array() );
+				$roles  = array(
+					'primary'   => array(),
+					'secondary' => array(),
+				);
+				foreach ( (array) ( $detail['keywords'] ?? array() ) as $k ) {
+					$roles[ 'primary' === $k['role'] ? 'primary' : 'secondary' ][] = (int) $k['id'];
+				}
+				$repo->merge_basis( (int) $keep['id'], (array) ( $basis['claim_ids'] ?? array() ), (array) ( $basis['source_ids'] ?? array() ), $roles['primary'], $roles['secondary'] );
+				$repo->decide( (int) $twin['id'], 'rejected', get_current_user_id() );
+				$this->plugin->logger->audit(
+					'Dublette abgelehnt',
+					array(
+						'topic_id' => (int) $twin['id'],
+						'keep'     => (int) $keep['id'],
+						'via'      => 'cli',
+					)
+				);
+			}
+		}
+		WP_CLI::log( empty( $assoc_args['apply'] ) ? 'Zusammenführen: wp lsec topics duplicates --apply' : 'Dubletten abgelehnt, Tatsachen und Keywords übernommen.' );
+	}
 }

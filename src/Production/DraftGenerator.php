@@ -43,6 +43,11 @@ final class DraftGenerator {
 			. "- used_claim_ids: alle Tatsachen, die im Text vorkommen. used_entity_ids: Entitäten, die im Text vorkommen.\n"
 			. "- Zahlen nur aus Tatsachen oder Profil (Telefon, Adresse). Keine Preise, Dauern, Garantien oder Mengen, die nicht belegt sind. Aufzählungen ohne Ziffern formulieren.\n"
 			. "- unsupported_statements: Aussagen im Text, die wie Tatsachen klingen, aber nicht belegt sind (sollte leer sein).\n"
+			. "- Der erste Absatz wiederholt nicht den Titel, sondern steigt mit einem konkreten Anlass ein.\n"
+			. "- Kontaktdaten (Telefon, E-Mail, Adresse) nur einmal, in der Handlungsaufforderung am Schluss; keine Kontaktdaten in FAQ oder Fließtext.\n"
+			. "- Tatsachen nur dort, wo sie dem Leser nützen; keine bloßen Ortslisten.\n"
+			. "- Die Beispiele im Schreibstil zeigen den Ton; nicht wörtlich übernehmen.\n"
+			. "- Abläufe und Verfahren allgemein beschreiben, ohne Versprechen zu Dauer, Ergebnis oder Garantie.\n"
 			. "- excerpt: ein bis zwei Sätze.\n"
 			. "- seo: title 30 bis 60 Zeichen, description 120 bis 160 Zeichen, focus_keyword = Haupt-Keyword, secondary_keywords, slug (Kleinbuchstaben, Bindestriche).\n"
 			. "- taxonomy: category_ids nur aus der Liste der Kategorien; new_category_suggestions nur, wenn keine passt; tags bis fünf.\n";
@@ -257,6 +262,47 @@ final class DraftGenerator {
 					'text' => (string) ( $node['text'] ?? '' ),
 				);
 		}
+	}
+
+	/**
+	 * Entwurf als gegliederter Text für die KI-Bewertung: Überschriften mit ##, Listen mit -, Tabellen mit |,
+	 * Fragen mit F:/A:, Links als [Text](Adresse). So erkennt die Bewertung Aufbau und Links (Lauf 121).
+	 *
+	 * @param array<int, array<string, mixed>> $nodes Knoten.
+	 */
+	public static function outline_text( array $nodes ): string {
+		$inline = static fn( string $t ): string => trim( html_entity_decode( (string) preg_replace( '/<[^>]+>/', '', (string) preg_replace( '#<a\s[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is', '[$3]($2)', $t ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$out    = array();
+		foreach ( $nodes as $node ) {
+			switch ( (string) ( $node['type'] ?? '' ) ) {
+				case 'heading':
+					$out[] = str_repeat( '#', 3 === (int) ( $node['level'] ?? 2 ) ? 3 : 2 ) . ' ' . $inline( (string) $node['text'] );
+					break;
+				case 'list':
+					foreach ( (array) ( $node['items'] ?? array() ) as $i => $item ) {
+						$out[] = ( empty( $node['ordered'] ) ? '- ' : ( $i + 1 ) . '. ' ) . $inline( (string) $item );
+					}
+					break;
+				case 'table':
+					$out[] = '| ' . implode( ' | ', array_map( $inline, array_map( 'strval', (array) ( $node['head'] ?? array() ) ) ) ) . ' |';
+					foreach ( (array) ( $node['rows'] ?? array() ) as $row ) {
+						$out[] = '| ' . implode( ' | ', array_map( $inline, array_map( 'strval', (array) $row ) ) ) . ' |';
+					}
+					break;
+				case 'details':
+					$out[] = 'F: ' . $inline( (string) $node['summary'] ) . "\nA: " . $inline( (string) $node['text'] );
+					break;
+				case 'quote':
+					$out[] = '> ' . $inline( (string) $node['text'] ) . ( '' !== (string) ( $node['cite'] ?? '' ) ? ' — ' . $inline( (string) $node['cite'] ) : '' );
+					break;
+				case 'separator':
+					$out[] = '---';
+					break;
+				default:
+					$out[] = $inline( (string) ( $node['text'] ?? '' ) );
+			}
+		}
+		return implode( "\n\n", array_filter( $out, static fn( string $l ): bool => '' !== trim( $l ) ) );
 	}
 
 	/**

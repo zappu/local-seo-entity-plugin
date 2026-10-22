@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.7.1 – 22.10.2026
+
+- **Doppelte Themen:** Die Recherche kennt die vorhandenen Themen und schlägt dieselbe Leistung am selben Ort nicht noch einmal vor. Tut die KI es trotzdem, wird kein neues Thema angelegt; die neuen Tatsachen und Keywords gehen an das vorhandene. Die Themen-Seite markiert Dubletten, `wp lsec topics duplicates --apply` räumt vorhandene auf, und zu einer Dublette eines schon geschriebenen Themas entsteht kein zweiter Entwurf.
+- **Zahlenprüfung:** Der Umkreis des Servicegebiets und anders gruppierte Telefonnummern aus dem Profil gelten als belegt (im ersten echten Entwurf fälschlich blockiert).
+- **KI-Bewertung:** sieht den Entwurf mit Überschriften, Listen, Tabellen und Links und weiß, welche internen Links geprüft sind.
+- **Entwurf:** Kontaktdaten nur einmal am Schluss, kein Einstieg mit dem Titel, keine bloßen Ortslisten, Stilbeispiele nicht wörtlich.
+
 ## 0.7.0 – 22.10.2026
 
 MVP 1, Stufe E (Spezifikation v1.0, Abschnitt 14): Aus freigegebenen Themen entstehen Beitragsentwürfe.

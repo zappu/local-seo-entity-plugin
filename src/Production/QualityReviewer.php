@@ -46,8 +46,10 @@ final class QualityReviewer {
 	 * @param array<string, mixed> $draft   Entwurf.
 	 */
 	public static function prompt( array $context, array $draft ): string {
-		return Context::text( $context, false )
-			. "\nBeitrag:\n<<<\n# " . $draft['title'] . "\n" . DraftGenerator::plain_text( (array) $draft['content'] ) . "\n>>>\n\n"
+		return Context::text( $context, true )
+			. "\nInterne Links auf Adressen aus der Liste „Linkziele“ sind geprüft und kein Mangel. Externe Links sind nur auf Quellen der geprüften Tatsachen erlaubt.\n"
+			. "Kontaktdaten aus dem Profil und Angaben zum Servicegebiet sind belegt.\n"
+			. "\nBeitrag (Titel als #, Überschriften als ##, Listen mit -, Tabellen mit |, FAQ als F:/A:):\n<<<\n# " . $draft['title'] . "\n\n" . DraftGenerator::outline_text( (array) $draft['content'] ) . "\n>>>\n\n"
 			. "Bewerte von 0 bis 1: intent (passt zur Suchintention und zum Thema), local_relevance (konkreter Bezug zum Ort), entity_integration (Leistungen, Orte und Begriffe sinnvoll eingebunden), value (Nutzen für Leser statt Fülltext), readability, style_match (passt zum Schreibstil).\n"
 			. "blocking_issues: nur echte Mängel, die eine Veröffentlichung verhindern, mit code (UNSUPPORTED_FACT für Zahlen, Daten, Preise, Garantien oder konkrete Tatsachen ohne Beleg; WRONG_PLACE für falsche Ortsangaben; MISLEADING; OFF_TOPIC; COMPETITOR für Werbung für andere Firmen; OTHER), detail und location (Überschrift oder Satzanfang).\n"
 			. "warnings: kleinere Mängel mit code (z. B. THIN_SECTION, REPETITION, WEAK_CTA) und detail.\n";

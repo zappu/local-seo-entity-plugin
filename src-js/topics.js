@@ -308,6 +308,11 @@ function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice } ) {
 						{ ` · ${ TOPIC_STATUS[ topic.status ] || topic.status }` }
 						{ topic.quality && ` · ${ topic.quality.passed ? 'Prüfung bestanden' : 'blockiert' }${ topic.quality.score !== null ? ` (${ Math.round( topic.quality.score ) }/100)` : '' }` }
 					</p>
+					{ topic.duplicate_of && (
+						<p className="lsec-duplicate">
+							Doppelt zu #{ topic.duplicate_of.id } „{ topic.duplicate_of.title }“ ({ TOPIC_STATUS[ topic.duplicate_of.status ] || topic.duplicate_of.status }). Zwei Seiten zum selben Thema würden gegeneinander ranken; dieses Thema besser ablehnen.
+						</p>
+					) }
 					{ topic.rationale && <p>{ topic.rationale }</p> }
 				</div>
 				<div className="lsec-actions">

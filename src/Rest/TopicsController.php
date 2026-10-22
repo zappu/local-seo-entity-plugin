@@ -77,10 +77,24 @@ final class TopicsController {
 				'cost'          => round( ( new AiCallRepository() )->cost_of_run( (int) $run['id'] ), 4 ),
 			);
 		}
-		$area = ServiceArea::from_settings();
+		$area  = ServiceArea::from_settings();
+		$twins = array();
+		foreach ( $repo->duplicate_groups( TopicResearchWorkflow::profile_services() ) as $group ) {
+			$keep = array_shift( $group );
+			foreach ( $group as $twin ) {
+				$twins[ (int) $twin['id'] ] = array(
+					'id'     => (int) $keep['id'],
+					'title'  => (string) $keep['title'],
+					'status' => (string) $keep['status'],
+				);
+			}
+		}
 		return new \WP_REST_Response(
 			array(
-				'topics'     => array_map( array( self::class, 'with_quality' ), $repo->list( (string) $request->get_param( 'status' ), 200 ) ),
+				'topics'     => array_map(
+					static fn( array $t ): array => self::with_quality( $t ) + array( 'duplicate_of' => $twins[ (int) $t['id'] ] ?? null ),
+					$repo->list( (string) $request->get_param( 'status' ), 200 )
+				),
 				'counts'     => $repo->counts(),
 				'latest'     => $latest,
 				'services'   => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),

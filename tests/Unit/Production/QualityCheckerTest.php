@@ -301,4 +301,12 @@ final class QualityCheckerTest extends TestCase {
 		);
 		$this->assertSame( array( 'AI_UNSUPPORTED_FACT' ), array_column( $ok['blocking'], 'code' ) );
 	}
+
+	public function test_regrouped_phone_and_area_are_supported(): void {
+		$context                                     = self::context();
+		$context['company']['locations'][0]['phone'] = '0151 89221017 2';
+		$result                                      = QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Wir sind im Umkreis von 60 km für Sie da, mobil unter +49 151 89 22 101 72.' ), $context, self::site() );
+		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
+		$this->assertSame( '0151892210172', QualityChecker::phone_digits( '+49 151 89 22 101 72' ) );
+	}
 }

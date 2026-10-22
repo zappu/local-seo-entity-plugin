@@ -68,7 +68,7 @@ final class QualityChecker {
 		$add( 'UNSUPPORTED_STATEMENT', 'Keine unbelegten Aussagen laut Entwurf', array() === $unsupported, true, implode( ' | ', array_map( 'strval', $unsupported ) ) );
 
 		// Zahlen im Text müssen aus einer verwendeten Aussage oder dem Profil stammen.
-		$numbers = self::numbers_check( $all, $used, $claims, (array) $context['company'] );
+		$numbers = self::numbers_check( $all, $used, $claims, (array) $context['company'] + array( 'area' => (string) ( $context['area'] ?? '' ) ) );
 		$used    = $numbers['used'];
 		$add( 'UNSUPPORTED_NUMBER', 'Zahlen stammen aus Tatsachen oder Profil', array() === $numbers['missing'], true, array() === $numbers['missing'] ? ( array() === $numbers['added'] ? '' : 'Tatsachen ergänzt: #' . implode( ', #', $numbers['added'] ) ) : 'ohne Beleg: ' . implode( ', ', $numbers['missing'] ) );
 
@@ -163,7 +163,22 @@ final class QualityChecker {
 	 */
 	public static function numbers_check( string $text, array $used, array $claims, array $company ): array {
 		$allowed = array();
-		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ) );
+		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ) );
+		$phones  = array_filter( array_map( array( self::class, 'phone_digits' ), array_merge( array( (string) ( $company['phone'] ?? '' ) ), array_map( static fn( $l ): string => (string) ( $l['phone'] ?? '' ), (array) ( $company['locations'] ?? array() ) ) ) ) );
+		// Telefonnummern aus dem Profil, auch anders gruppiert oder mit +49 (Lauf 121: „89 22 101 72“).
+		$text = (string) preg_replace_callback(
+			'/(?<![\d.,])(?:\+|00)?\d[\d \/\-().]{4,}\d(?![\d])/u',
+			static function ( array $m ) use ( $phones ): string {
+				$digits = self::phone_digits( $m[0] );
+				foreach ( $phones as $phone ) {
+					if ( strlen( $digits ) >= 6 && ( $digits === $phone || str_ends_with( $phone, ltrim( $digits, '0' ) ) ) ) {
+						return ' ';
+					}
+				}
+				return $m[0];
+			},
+			$text
+		);
 		foreach ( (array) ( $company['locations'] ?? array() ) as $location ) {
 			$profile[] = implode( ' ', array_map( 'strval', (array) $location ) );
 		}
@@ -208,6 +223,21 @@ final class QualityChecker {
 			'used'    => array_values( array_unique( $used ) ),
 			'added'   => array_values( array_unique( $added ) ),
 		);
+	}
+
+	/**
+	 * Ziffern einer Telefonnummer, +49 bzw. 0049 als führende 0.
+	 *
+	 * @param string $phone Telefonnummer.
+	 */
+	public static function phone_digits( string $phone ): string {
+		$phone  = trim( $phone );
+		$digits = (string) preg_replace( '/\D+/', '', $phone );
+		if ( str_starts_with( $phone, '+49' ) || str_starts_with( $digits, '0049' ) ) {
+			$digits = '0' . substr( $digits, str_starts_with( $digits, '0049' ) ? 4 : 2 );
+			$digits = (string) preg_replace( '/^00/', '0', $digits );
+		}
+		return strlen( $digits ) >= 6 ? $digits : '';
 	}
 
 	/**
