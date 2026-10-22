@@ -139,6 +139,15 @@ final class OpenRouterClient implements AiClient {
 				);
 			}
 		}
+		// Manche Anbieter (z. B. Perplexity) liefern die Quellen als Liste von Adressen neben der Antwort.
+		foreach ( (array) ( $data['citations'] ?? array() ) as $citation ) {
+			if ( is_string( $citation ) && preg_match( '#^https?://#i', $citation ) ) {
+				$sources[] = array(
+					'url'   => $citation,
+					'title' => '',
+				);
+			}
+		}
 
 		return new AiResponse(
 			$this->provider(),

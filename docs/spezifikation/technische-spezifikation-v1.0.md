@@ -430,6 +430,12 @@ Fehlt ein Faktor, zählt er nicht als 0; die übrigen Gewichte werden hochgerech
   - Gezählt werden eigene Seiten, die laut Search Console für ein Keyword des Themas ranken. Eigen sind Seiten auf dem Host der Website oder der Property; so funktioniert das auch auf einer Staging-Kopie.
   - Ebenso zählen Inhalte, deren Titel alle Wörter eines Haupt-Keywords enthält.
   - Trifft das auf ein Haupt-Keyword zu, gilt die Überschneidung als hoch: Das Thema erhält den Status `discarded` und erscheint unter „bestehende Seite verbessern“ mit der Seite und dem Grund.
+  - **Nachtrag 22.10. (0.6.1), nach den ersten echten Recherchen auf der Testwebsite:** Fast alle Themen wurden verworfen, weil eine allgemeine Seite (z. B. `/pflasterreinigung/`) für ein allgemeines Haupt-Keyword rankt und damit auch „Pflasterreinigung in Lehrte“ als abgedeckt galt. Das widerspricht Regel 1 unten („wenn die Seite zum Thema passt“). Deshalb zählt eine Seite nur noch als hohe Überschneidung, wenn sie **zum Thema passt** (`TopicResearchWorkflow::fits`):
+    - Titel oder Pfad der Seite nennen die Leistung des Keywords (ein Wort ab fünf Buchstaben, verglichen über die ersten acht Buchstaben, Bindestriche im Pfad als Leerzeichen).
+    - Hat das Thema einen Ort, nennen Titel oder Pfad auch diesen Ort. Allgemeine Wörter wie „Region“, „Stadt“, „Landkreis“ zählen nicht.
+    - Den Titel einer rankenden Seite liefert der Inhaltsindex über den Pfad.
+  - Rankt nur eine allgemeinere Seite, ist die Überschneidung teilweise (`partial`, Inhaltslücke 0,5); das Thema bleibt ein Vorschlag, und die Seite steht als „Allgemeinere Seite rankt für …“ dabei (Kandidat für einen internen Link).
+  - Die Titel-Regel verlangt bei einem Thema mit Ort ebenfalls den Ort im Titel.
 
 **Search Console als Signal.** Im Test hatte die Website keine Klicks, aber Impressionen auf Positionen 20–90, und lokale Seiten wie Wolfsburg rankten für eng passende Anfragen auf Position 7. Daraus folgen zwei Regeln:
 
@@ -535,6 +541,7 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
   - Erster Durchgang: Websuche mit dem Recherchemodell (`AiService::search`, neu). Die Quellen landen in `lsec_sources`.
   - Zweiter Durchgang: Strukturierung ohne Werkzeuge, mit Kontext und dem Ergebnis der Websuche (bis 8000 Token).
   - Ein Fehler in der Strukturierung wiederholt die bezahlte Websuche nicht (`StepResult::more`).
+  - **Nachtrag 22.10. (0.6.1):** Auf der Testwebsite lieferte das Recherchemodell (`openai/gpt-6-luna` über OpenRouter) trotz bezahlter Websuche keine Quellenangaben (Annotationen); die Recherche endete mit 0 Quellen. Fehlen die Annotationen, liest das Plugin die Adressen aus dem Text der Recherche (Markdown-Links mit ihrem Text als Titel, sonst nackte Adressen; doppelte einmal, höchstens 10). Im Zustand des Schritts steht `sources_from` (`annotations` oder `text`). OpenRouter-Antworten mit einer Liste `citations` (z. B. Perplexity) werden ebenfalls als Quellen gelesen. Der Auftrag an das Recherchemodell verlangt die vollständige Adresse je Tatsache.
 - **`verify_facts`:** 8.4a, vier Quellen je Durchgang.
 - **`propose_topics`:** setzt `off_topic`, berechnet Überschneidung und Priorität und speichert die Themen.
 - **Freigabe:**
@@ -782,6 +789,15 @@ Seiten, die keinen Abruf erlauben (z. B. Anmeldung, Skript-Inhalte), führen zu 
   - Absatz ist die Zeile des Textes. Bei sehr langen Blöcken gilt ein Fenster von 400 Zeichen um das Zitat.
   - Zahlen müssen als ganze Zahl vorkommen.
   - Fehlt der Wert im Zitat und im Absatz, wird die Aussage `rejected`.
+  - **Nachtrag 22.10. (0.6.1), sinngemäße Zitate:** In der ersten echten Recherche wurden alle sechs Tatsachen verworfen („Zitat nicht in der Quelle gefunden“). Die Strukturierung sieht nur die Zusammenfassung der Websuche und gibt Zitate deshalb oft sinngemäß wieder. Steht das Zitat nicht wörtlich in der Quelle, sucht die Prüfung Absätze mit dem Wert:
+
+    | Befund | Status | Beleg |
+    |---|---|---|
+    | Absatz mit Wert und Entität | `verified`, Hinweis „Zitat sinngemäß, Beleg im Text gefunden“ | `medium`, Auszug = Satz der Quelle mit dem Wert |
+    | nur Absätze mit Wert, ohne Entität | `disputed`, „Bezug unklar“ | `weak` |
+    | Wert nicht in der Quelle | `rejected`, „Zitat und Wert nicht in der Quelle gefunden“ | – |
+
+    Der Eltze/Dollbergen-Fall bleibt abgedeckt: Dollbergen 1226 wird `disputed`, weil im Absatz mit 1226 nur Eltze steht (Unit-Test und Prüfskript D1).
 - **Speicherung:** Aussagen landen in `lsec_claims` (`value` = JSON aus Wert und Hinweis), Belege mit Zitat und Qualität in `lsec_evidence`. Eine bessere Prüfung ersetzt eine schwächere; eine bestätigte Aussage bleibt.
 - **Entscheidung von Hand:** auf der Themen-Seite, über `POST lsec/v1/claims/<id>/decision` oder `wp lsec topics fact <id> confirmed|rejected`.
 - **`fact_check_ai`** ist nicht umgesetzt; der Vorschlag lautete „in MVP 1 ausgeschaltet“.

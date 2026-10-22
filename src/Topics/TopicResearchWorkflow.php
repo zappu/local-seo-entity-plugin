@@ -260,9 +260,11 @@ final class TopicResearchWorkflow {
 			} else {
 				$response          = self::ai( $plugin, $context->input )->search( 'topic_research_search', TopicResearcher::system(), TopicResearcher::question( $collected ), $context->run_id, $context->input['web_max_results'] ?? null );
 				$state['research'] = $response->text;
-				$state['sources']  = $response->sources;
+				$state['sources']  = array() !== $response->sources ? $response->sources : TopicResearcher::sources_from_text( $response->text );
 				$state['cost']     = $response->cost;
 				$state['model']    = $response->model;
+				// Nachtrag 22.10.: Ohne Annotationen stammen die Quellen aus dem Text der Recherche.
+				$state['sources_from'] = array() !== $response->sources ? 'annotations' : 'text';
 			}
 			$state['source_ids'] = ( new SourceRepository() )->save_all( (array) $state['sources'], 'ai_search' );
 			return StepResult::more( $state );
@@ -462,8 +464,12 @@ final class TopicResearchWorkflow {
 	}
 
 	/**
-	 * Überschneidung mit bestehenden Seiten (6.4): eigene Seiten, die für ein Keyword des Themas ranken, und
-	 * Inhalte, deren Titel ein Haupt-Keyword vollständig enthält. „high“, wenn ein Haupt-Keyword so abgedeckt ist.
+	 * Überschneidung mit bestehenden Seiten (6.4). Eine eigene Seite überschneidet sich, wenn sie zum Thema
+	 * passt: Ihr Titel oder Pfad nennt die Leistung des Keywords und, bei einem Thema mit Ort, auch den Ort
+	 * (Nachtrag 22.10.: Eine allgemeine Seite „Pflasterreinigung“ deckt „Pflasterreinigung in Lehrte“ nicht ab).
+	 * Gezählt werden Seiten, die laut Search Console für ein Keyword des Themas ranken, und Inhalte, deren Titel
+	 * alle Wörter eines Haupt-Keywords enthält. Passt eine solche Seite zu einem Haupt-Keyword, ist die
+	 * Überschneidung hoch; rankt nur eine allgemeine Seite, wird sie als teilweise Überschneidung genannt.
 	 *
 	 * @param array<string, mixed>             $topic    Thema.
 	 * @param array<int, array<string, mixed>> $keywords Keywords aus dem Kontext.
@@ -471,8 +477,20 @@ final class TopicResearchWorkflow {
 	 * @return array{level: string, items: array<int, array<string, mixed>>}
 	 */
 	public static function overlap( array $topic, array $keywords, array $content ): array {
-		$items = array();
-		$level = 'none';
+		$items  = array();
+		$level  = 'none';
+		$titles = array();
+		foreach ( $content as $entry ) {
+			$titles[ rtrim( (string) wp_parse_url( (string) $entry['url'], PHP_URL_PATH ), '/' ) ] = (string) $entry['title'];
+		}
+		$raise = static function ( string $current, string $to ): string {
+			$rank = array(
+				'none'    => 0,
+				'partial' => 1,
+				'high'    => 2,
+			);
+			return $rank[ $to ] > $rank[ $current ] ? $to : $current;
+		};
 		foreach ( array( 'primary', 'secondary' ) as $role ) {
 			foreach ( (array) $topic[ $role . '_keyword_ids' ] as $id ) {
 				$k = $keywords[ (int) $id ] ?? null;
@@ -481,14 +499,18 @@ final class TopicResearchWorkflow {
 				}
 				$local = '' === (string) $k['page'] ? null : self::own_url( (string) $k['page'] );
 				if ( null !== $local ) {
+					$path    = rtrim( (string) wp_parse_url( $local, PHP_URL_PATH ), '/' );
+					$title   = $titles[ $path ] ?? '';
+					$fits    = self::fits( $title . ' ' . $path, (string) $topic['region'], (string) $k['keyword'] );
 					$items[] = array(
 						'url'     => $local,
 						'post_id' => url_to_postid( $local ),
 						'keyword' => (string) $k['keyword'],
-						'reason'  => sprintf( 'rankt für „%s“ (Position %s)', $k['keyword'], null === $k['position'] ? '–' : number_format( (float) $k['position'], 1, ',', '' ) ),
+						'reason'  => sprintf( '%s rankt für „%s“ (Position %s)', $fits ? 'Passende Seite' : 'Allgemeinere Seite', $k['keyword'], null === $k['position'] ? '–' : number_format( (float) $k['position'], 1, ',', '' ) ),
 						'primary' => 'primary' === $role,
+						'fits'    => $fits,
 					);
-					$level   = 'primary' === $role ? 'high' : ( 'none' === $level ? 'partial' : $level );
+					$level   = $raise( $level, $fits && 'primary' === $role ? 'high' : 'partial' );
 				}
 				if ( 'primary' !== $role ) {
 					continue;
@@ -500,13 +522,14 @@ final class TopicResearchWorkflow {
 				foreach ( $content as $entry ) {
 					$title = ' ' . KeywordFilter::fold( (string) $entry['title'] ) . ' ';
 					$all   = array() === array_filter( $words, static fn( string $w ): bool => ! str_contains( $title, ' ' . $w ) );
-					if ( $all ) {
+					if ( $all && self::fits( (string) $entry['title'], (string) $topic['region'], (string) $k['keyword'] ) ) {
 						$items[] = array(
 							'url'     => (string) $entry['url'],
 							'post_id' => (int) $entry['post_id'],
 							'keyword' => (string) $k['keyword'],
 							'reason'  => sprintf( 'Titel „%s“ enthält „%s“', $entry['title'], $k['keyword'] ),
 							'primary' => true,
+							'fits'    => true,
 						);
 						$level   = 'high';
 					}
@@ -521,6 +544,35 @@ final class TopicResearchWorkflow {
 			'level' => $level,
 			'items' => array_values( $unique ),
 		);
+	}
+
+	/**
+	 * Passt eine Seite (Titel und Pfad) zum Thema? Sie muss die Leistung des Keywords nennen (ein Wort ab
+	 * fünf Buchstaben, verglichen über die ersten acht) und, wenn das Thema einen Ort hat, auch den Ort.
+	 *
+	 * @param string $page    Titel und Pfad der Seite.
+	 * @param string $region  Ort des Themas oder leer.
+	 * @param string $keyword Keyword.
+	 */
+	public static function fits( string $page, string $region, string $keyword ): bool {
+		$hay     = ' ' . KeywordFilter::fold( str_replace( array( '-', '_', '/' ), ' ', urldecode( $page ) ) ) . ' ';
+		$generic = array( 'region', 'gemeinde', 'stadt', 'landkreis', 'kreis', 'umgebung', 'raum' );
+		$places  = array_values( array_filter( explode( ' ', KeywordFilter::fold( $region ) ), static fn( string $w ): bool => mb_strlen( $w ) >= 3 && ! in_array( $w, $generic, true ) ) );
+		foreach ( $places as $place ) {
+			if ( ! str_contains( $hay, ' ' . $place ) ) {
+				return false;
+			}
+		}
+		$service = array_values( array_filter( explode( ' ', KeywordFilter::fold( $keyword ) ), static fn( string $w ): bool => mb_strlen( $w ) >= 5 && ! in_array( $w, $places, true ) ) );
+		if ( array() === $service ) {
+			return true;
+		}
+		foreach ( $service as $word ) {
+			if ( str_contains( $hay, ' ' . mb_substr( $word, 0, 8 ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

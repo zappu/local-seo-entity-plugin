@@ -44,10 +44,37 @@ final class FactCheckerTest extends TestCase {
 		$this->assertStringContainsString( 'Bezug unklar', $result['note'] );
 	}
 
-	public function test_quote_not_on_page_or_page_missing_is_rejected(): void {
+	public function test_paraphrased_quote_is_checked_by_value_and_entity(): void {
+		$eltze = FactChecker::check(
+			array(
+				'quote' => 'Eltze wurde 1226 zum ersten Mal genannt',
+				'value' => '1226',
+			),
+			array( 'Eltze' ),
+			self::PAGE
+		);
+		$this->assertSame( 'verified', $eltze['status'] );
+		$this->assertSame( 'medium', $eltze['quality'] );
+		$this->assertStringContainsString( 'sinngemäß', $eltze['note'] );
+		$this->assertSame( 'Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt.', $eltze['excerpt'] );
+
+		// Dollbergen bleibt trotz derselben Jahreszahl unklar.
+		$dollbergen = FactChecker::check(
+			array(
+				'quote' => 'Dollbergen wurde 1226 erstmals erwähnt',
+				'value' => '1226',
+			),
+			array( 'Dollbergen' ),
+			self::PAGE
+		);
+		$this->assertSame( 'disputed', $dollbergen['status'] );
+		$this->assertSame( 'weak', $dollbergen['quality'] );
+	}
+
+	public function test_value_not_on_page_or_page_missing_is_rejected(): void {
 		$fact = array(
-			'quote' => 'Dollbergen wurde 1226 erstmals erwähnt',
-			'value' => '1226',
+			'quote' => 'Dollbergen wurde 1312 erstmals erwähnt',
+			'value' => '1312',
 		);
 		$this->assertSame( 'rejected', FactChecker::check( $fact, array( 'Dollbergen' ), self::PAGE )['status'] );
 		$this->assertSame( 'rejected', FactChecker::check( $fact, array( 'Dollbergen' ), null, 'HTTP 403' )['status'] );

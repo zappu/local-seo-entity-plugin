@@ -17,7 +17,12 @@ use Lsec\Research\Keywords\KeywordFilter;
  * 2. Der Wert muss im Zitat oder im selben Absatz stehen.
  * 3. Der Name oder eine Schreibweise der Entität muss im Zitat oder im selben Absatz stehen.
  *
- * Ergebnis: verified/strong, disputed/weak („Bezug unklar“) oder rejected. Die Klasse kennt WordPress nicht.
+ * Ergebnis: verified/strong, disputed/weak („Bezug unklar“) oder rejected.
+ *
+ * Nachtrag 22.10.: Im Echtbetrieb gab das Strukturmodell die Zitate oft sinngemäß wieder, weil es nur die
+ * Zusammenfassung der Recherche sieht. Steht das Zitat nicht in der Quelle, sucht die Prüfung einen Absatz,
+ * der den Wert enthält: mit der Entität im selben Absatz verified/medium (Beleg ist dann der Satz der
+ * Quelle), ohne Entität disputed/weak, sonst rejected. Die Klasse kennt WordPress nicht.
  */
 final class FactChecker {
 
@@ -50,19 +55,94 @@ final class FactChecker {
 		}
 		$paragraph = self::paragraph( $page, $quote );
 		if ( null === $paragraph ) {
-			return self::result( 'rejected', null, 'Zitat nicht in der Quelle gefunden', $quote );
+			return self::by_value( $fact, $names, $page, $quote );
 		}
 		$context = self::fold( $quote ) . ' ' . self::fold( $paragraph );
 		if ( ! self::contains_value( $context, (string) $fact['value'] ) ) {
 			return self::result( 'rejected', null, 'Wert steht nicht im Zitat oder Absatz', $quote );
 		}
-		foreach ( $names as $name ) {
-			$key = KeywordFilter::fold( (string) $name );
-			if ( '' !== $key && str_contains( ' ' . KeywordFilter::fold( $context ) . ' ', ' ' . $key . ' ' ) ) {
-				return self::result( 'verified', 'strong', 'Zitat, Wert und Bezug in der Quelle gefunden', $quote );
-			}
+		if ( self::names_in( $context, $names ) ) {
+			return self::result( 'verified', 'strong', 'Zitat, Wert und Bezug in der Quelle gefunden', $quote );
 		}
 		return self::result( 'disputed', 'weak', 'Bezug unklar: Zitat und Wert gefunden, die Entität aber nicht', $quote );
+	}
+
+	/**
+	 * Zitat nicht wörtlich gefunden: Absätze der Quelle mit dem Wert. Ein Absatz mit Wert und Entität belegt
+	 * die Aussage (medium); gibt es nur Absätze ohne Entität, bleibt der Bezug unklar.
+	 *
+	 * @param array{quote: string, value: string} $fact  Tatsache.
+	 * @param string[]                            $names Name und Schreibweisen der Entität.
+	 * @param string                              $page  Text der Quelle.
+	 * @param string                              $quote Zitat der Recherche.
+	 * @return array{status: string, quality: string|null, note: string, excerpt: string}
+	 */
+	private static function by_value( array $fact, array $names, string $page, string $quote ): array {
+		$value  = (string) $fact['value'];
+		$found  = null;
+		$blocks = preg_split( '/\n+/u', $page );
+		foreach ( false === $blocks ? array() : $blocks as $block ) {
+			$folded = self::fold( (string) $block );
+			if ( '' === $folded || ! self::contains_value( $folded, $value ) ) {
+				continue;
+			}
+			$window = self::around_value( $folded, $value );
+			if ( self::names_in( $window, $names ) ) {
+				return self::result( 'verified', 'medium', 'Zitat sinngemäß, Beleg im Text gefunden', self::sentence( (string) $block, $value ) );
+			}
+			$found ??= self::sentence( (string) $block, $value );
+		}
+		if ( null !== $found ) {
+			return self::result( 'disputed', 'weak', 'Bezug unklar: Zitat sinngemäß, Wert gefunden, die Entität aber nicht', $found );
+		}
+		return self::result( 'rejected', null, 'Zitat und Wert nicht in der Quelle gefunden', $quote );
+	}
+
+	/**
+	 * Fenster um den Wert in einem langen Block.
+	 *
+	 * @param string $folded Vereinheitlichter Block.
+	 * @param string $value  Wert.
+	 */
+	private static function around_value( string $folded, string $value ): string {
+		if ( mb_strlen( $folded ) <= self::PARAGRAPH ) {
+			return $folded;
+		}
+		$pos = mb_strpos( $folded, self::fold( $value ) );
+		return false === $pos ? $folded : mb_substr( $folded, max( 0, $pos - self::WINDOW ), 2 * self::WINDOW );
+	}
+
+	/**
+	 * Steht ein Name im Text (ganzes Wort)?
+	 *
+	 * @param string   $text  Text.
+	 * @param string[] $names Namen.
+	 */
+	private static function names_in( string $text, array $names ): bool {
+		$hay = ' ' . KeywordFilter::fold( $text ) . ' ';
+		foreach ( $names as $name ) {
+			$key = KeywordFilter::fold( (string) $name );
+			if ( '' !== $key && str_contains( $hay, ' ' . $key . ' ' ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Satz des Blocks mit dem Wert (als Beleg), höchstens 400 Zeichen.
+	 *
+	 * @param string $block Block der Quelle.
+	 * @param string $value Wert.
+	 */
+	private static function sentence( string $block, string $value ): string {
+		$parts = preg_split( '/(?<=[.!?])\s+/u', trim( $block ) );
+		foreach ( false === $parts ? array() : $parts as $part ) {
+			if ( self::contains_value( self::fold( (string) $part ), $value ) ) {
+				return mb_substr( trim( (string) $part ), 0, 400 );
+			}
+		}
+		return mb_substr( trim( $block ), 0, 400 );
 	}
 
 	/**

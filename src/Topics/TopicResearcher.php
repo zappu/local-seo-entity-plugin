@@ -46,7 +46,7 @@ final class TopicResearcher {
 			'1. Was suchen Menschen im Servicegebiet zu diesen Leistungen (Fragen, Anlässe, Probleme, Jahreszeit)?',
 			'2. Regionale Besonderheiten der Orte, die zu den Leistungen passen (z. B. Altstadt mit Natursteinpflaster, Sportanlagen, Gewerbegebiete, Vorschriften).',
 			'3. Belegbare Tatsachen zu den Orten oder Themen (z. B. Ersterwähnung, Einwohnerzahl, Wahrzeichen, Regeln), jeweils mit der Quelle und einem wörtlichen Satz aus der Quelle.',
-			'Nenne zu jeder Tatsache die Adresse der Seite und zitiere den Satz genau so, wie er dort steht. Verwechsle keine Orte oder Ortsteile.',
+			'Nenne zu jeder Tatsache die vollständige Adresse der Seite (https://…) und zitiere den Satz genau so, wie er dort steht. Verwechsle keine Orte oder Ortsteile.',
 		);
 		return implode( "\n", $lines );
 	}
@@ -277,6 +277,42 @@ final class TopicResearcher {
 	public static function focus_text( array $context ): string {
 		$parts = array_filter( array( (string) ( $context['focus']['service'] ?? '' ), (string) ( $context['focus']['region'] ?? '' ) ) );
 		return implode( ' in ', $parts );
+	}
+
+	/**
+	 * Quellen aus dem Text der Recherche, wenn das Modell keine Quellenangaben (Annotationen) liefert
+	 * (Nachtrag 22.10.). Markdown-Links behalten ihren Text als Titel; doppelte Adressen zählen einmal.
+	 *
+	 * @param string $text Rechercheergebnis.
+	 * @param int    $max  Höchstzahl.
+	 * @return array<int, array{url: string, title: string}>
+	 */
+	public static function sources_from_text( string $text, int $max = 10 ): array {
+		$found = array();
+		if ( preg_match_all( '#\[([^\]\n]{1,200})\]\((https?://[^\s)]+)\)#u', $text, $links, PREG_SET_ORDER ) ) {
+			foreach ( $links as $link ) {
+				$found[] = array( $link[2], trim( $link[1] ) );
+			}
+		}
+		if ( preg_match_all( '#https?://[^\s<>"\'\])]+#u', $text, $bare ) ) {
+			foreach ( $bare[0] as $url ) {
+				$found[] = array( $url, '' );
+			}
+		}
+		$out = array();
+		foreach ( $found as $pair ) {
+			$url = rtrim( $pair[0], '.,;:!?»“”' );
+			$key = self::url_key( $url );
+			if ( isset( $out[ $key ] ) || count( $out ) >= $max ) {
+				continue;
+			}
+			$title       = preg_match( '#^https?://#i', $pair[1] ) ? '' : $pair[1];
+			$out[ $key ] = array(
+				'url'   => $url,
+				'title' => $title,
+			);
+		}
+		return array_values( $out );
 	}
 
 	/**

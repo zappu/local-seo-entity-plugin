@@ -9,7 +9,7 @@
 #            B8 Entitäten bearbeiten und löschen, weitere Vorschläge zum Zusammenführen (0.4.3)
 #   Stufe C: C1 Ausschlüsse (KI-Attrappe, ohne Wikidata) · C2 Entscheidungen von Hand · C3 REST-Routen
 #            C4 täglicher Abgleich (nur mit --online, liest den letzten Ablauf)
-#   Stufe D: D1 Faktenprüfung Eltze/Dollbergen und Überschneidung (KI-Attrappe, Quelle aus dem Zwischenspeicher)
+#   Stufe D: D1 Faktenprüfung Eltze/Dollbergen, sinngemäße Zitate und Überschneidung (KI-Attrappe, Quelle aus dem Zwischenspeicher)
 #            D2 Freigabe, Ausschluss off_topic, REST-Routen
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
@@ -417,6 +417,8 @@ K_OFF=$(did 'lsectest kochrezepte')
 HOME_URL=$(wpc option get home | tail -1)
 # Eigene Seite rankt für „lsectest terrassenreinigung“ (Search Console).
 wpc db query "INSERT INTO ${PREFIX}lsec_keyword_metrics (keyword_id, source, period_start, period_end, impressions, clicks, ctr, position, page_url, created_at) VALUES ($K_RANK, 'gsc', DATE_SUB(CURDATE(), INTERVAL 31 DAY), DATE_SUB(CURDATE(), INTERVAL 3 DAY), 40, 1, 0.025, 6.5, '$HOME_URL/lsectest-terrassen/', UTC_TIMESTAMP())" >/dev/null
+# Eine allgemeine Seite rankt für das Keyword des Ortsthemas: nur teilweise Überschneidung (Nachtrag 22.10.).
+wpc db query "INSERT INTO ${PREFIX}lsec_keyword_metrics (keyword_id, source, period_start, period_end, impressions, clicks, ctr, position, page_url, created_at) VALUES ($K_NEW, 'gsc', DATE_SUB(CURDATE(), INTERVAL 31 DAY), DATE_SUB(CURDATE(), INTERVAL 3 DAY), 20, 0, 0, 12.0, '$HOME_URL/lsectest-pflasterreinigung/', UTC_TIMESTAMP())" >/dev/null
 # Quelle liegt schon im Zwischenspeicher (kein Abruf im Prüfskript).
 SRC="https://lsectest.invalid/eltze"
 TXT="Ortsteile der Gemeinde Uetze
@@ -429,21 +431,24 @@ cat > "$TMP/recherche.json" <<JSON
 {"title":"LSECTEST Pflasterreinigung in Eltze","intent":"local","format":"local_landing","region":"LSECTEST Eltze","primary_keyword_ids":[$K_NEW],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[
 {"subject":"LSECTEST Eltze","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
 {"subject":"LSECTEST Dollbergen","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
+{"subject":"LSECTEST Eltze","subject_type":"place","property":"river","value":"Fuhse","source_url":"$SRC","quote":"LSECTEST Eltze liegt an dem Fluss Fuhse"},
 {"subject":"LSECTEST Eltze","subject_type":"place","property":"population","value":"999","source_url":"$SRC","quote":"LSECTEST Eltze hat 999 Einwohner"}],"insufficient_data":false},
 {"title":"LSECTEST Terrassenreinigung","intent":"commercial","format":"article","region":"","primary_keyword_ids":[$K_RANK],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[],"insufficient_data":false}],
 "excluded_keywords":[{"keyword_id":$K_OFF,"reason":"off_topic","note":"LSECTEST kein Bezug"}]}}
 JSON
 OUT=$(wpc lsec topics research --service=lsectest --stub="$TMP/recherche.json" --offline --now 2>&1)
 contains "Recherche abgeschlossen" "succeeded" "$OUT"
-contains "Tatsachen geprüft" "3 Tatsachen: 1 geprüft, 1 unklar, 1 verworfen" "$OUT"
+contains "Tatsachen geprüft" "4 Tatsachen: 2 geprüft, 1 unklar, 1 verworfen" "$OUT"
 TOPICS=$(wpj lsec topics list --status=proposed --format=json | json .)
 T1=$(echo "$TOPICS" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Pflasterreinigung in Eltze"){ echo $r["id"]; break; } }')
 FACTS=$(wpj lsec topics show "$T1" --format=json | json facts)
 fact() { echo "$FACTS" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["entity"]===$argv[1] && $r["property"]===$argv[2]){ echo $r["status"]; break; } }' "$1" "$2"; }
 check "Eltze 1226 geprüft" "verified" "$(fact 'LSECTEST Eltze' first_mentioned)"
 check "Dollbergen 1226 nicht geprüft (Bezug unklar)" "disputed" "$(fact 'LSECTEST Dollbergen' first_mentioned)"
-check "Zitat nicht in der Quelle verworfen" "rejected" "$(fact 'LSECTEST Eltze' population)"
-check "neues Thema vorgeschlagen" "1" "$( [ -n "$T1" ] && echo 1 || echo 0 )"
+check "Zitat sinngemäß, Wert und Ort im Absatz: geprüft" "verified" "$(fact 'LSECTEST Eltze' river)"
+check "Zitat und Wert nicht in der Quelle: verworfen" "rejected" "$(fact 'LSECTEST Eltze' population)"
+check "neues Thema trotz allgemeiner Seite vorgeschlagen" "1" "$( [ -n "$T1" ] && echo 1 || echo 0 )"
+check "allgemeine Seite nur teilweise Überschneidung" "partial" "$(wpj lsec topics show "$T1" --format=json | json overlap.level)"
 D=$(wpj lsec topics list --status=discarded --format=json | json .)
 contains "rankende Seite als Überschneidung (bestehende Seite verbessern)" "LSECTEST Terrassenreinigung" "$D"
 T2=$(echo "$D" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Terrassenreinigung"){ echo $r["id"]; break; } }')

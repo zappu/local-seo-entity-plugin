@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 0.6.1 – 22.10.2026
+
+Korrekturen nach den ersten echten Themenrecherchen auf der Testwebsite.
+
+- **Überschneidung:** Eine allgemeine Seite (z. B. „Pflasterreinigung“) verdrängt kein Ortsthema mehr („Pflasterreinigung in Lehrte“). Hoch ist die Überschneidung nur, wenn Titel oder Pfad der Seite die Leistung und den Ort des Themas nennen. Sonst bleibt das Thema ein Vorschlag, und die allgemeinere Seite steht als teilweise Überschneidung dabei.
+- **Faktenprüfung:** Sinngemäß wiedergegebene Zitate werden nicht mehr pauschal verworfen. Steht der Wert mit dem Ort oder Gegenstand im selben Absatz der Quelle, gilt die Tatsache als geprüft (Beleg „mittel“, Auszug ist der Satz der Quelle). Der Eltze/Dollbergen-Fall bleibt „unklar“.
+- **Quellen:** Liefert das Recherchemodell keine Quellenangaben, liest das Plugin die Adressen aus dem Recherchetext. OpenRouter-Antworten mit `citations` (z. B. Perplexity) werden ebenfalls gelesen.
+- **Prüfskript:** D1 prüft zusätzlich ein sinngemäßes Zitat und die allgemeine Seite (92 Prüfungen).
+
 ## 0.6.0 – 22.10.2026
 
 MVP 1, Stufe D (Spezifikation v1.0, Abschnitt 14).
