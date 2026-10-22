@@ -15,7 +15,7 @@
 | Rahmen | PHP 8.1 und WordPress 6.4 festgelegt (geprüft mit PHP 8.1, 8.3, 8.4 und WordPress 6.4.5, 7.1.3); Rank-Math-Funktionen nur ab der WordPress-Version, die Rank Math verlangt | 1 |
 | MVP-Zuschnitt | Ortsabgleich über Wikidata und Import der Textfocus-Entitäten gehören zu MVP 1; vollständige externe Verifizierung bleibt in Ausbau 2 | 2 |
 | Verzeichnisstruktur | an den tatsächlichen Stand angepasst, neue Module für Themen, Qualität und Style Mimic | 3 |
-| Datenbank | Schemaversion 3 für MVP 1: Wettbewerbswert, Ausschlussgrund bei Keywords, Zusammenführen von Entitäten; Schemaversion 4 (Stufe C): Ausschlussdetail, Entscheidung von Hand und Analyse je Keyword | 4 |
+| Datenbank | Schemaversion 3 für MVP 1: Wettbewerbswert, Ausschlussgrund bei Keywords, Zusammenführen von Entitäten; Schemaversion 4 (Stufe C): Ausschlussdetail, Entscheidung von Hand und Analyse je Keyword; Schemaversion 5 (Stufe D): Text abgerufener Quellen, Ablauf und Entscheidung je Thema | 4 |
 | Keyword-Quellen | Nachträge aus dem Test in den Haupttext übernommen; Filter für Wettbewerber und fremde Orte; Search Console als Signal für Sichtbarkeit ohne Klicks | 6 |
 | KI | Kostensteuerung (Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell), Faktenprüfung gegen den Quelltext, Mindest-Sicherheit und Zusammenführen bei der Entity-Erkennung | 8 |
 | Qualitätsprüfung | `UNSUPPORTED_FACT` stützt sich auf die Faktenprüfung | 10 |
@@ -409,6 +409,28 @@ Ausgeschlossene Keywords bleiben gespeichert und sichtbar, gehen aber nicht in T
 
 Fehlt ein Faktor, zählt er nicht als 0; die übrigen Gewichte werden hochgerechnet, und das Thema erhält den Hinweis „eingeschränkte Datenbasis“. Gewichte sind einstellbar. Wettbewerb (`competition`) fließt nicht in die Priorität ein, sondern wird angezeigt.
 
+**Umsetzung (Nachtrag 22.10., Stufe D, `PriorityScorer`):** Jeder Faktor liegt zwischen 0 und 1.
+- **Geschäftsrelevanz:**
+  - 1, wenn eine Haupt-Entität eine Leistung aus dem Profil ist;
+  - 0,8, wenn Titel oder Haupt-Keyword eine Profil-Leistung nennen;
+  - 0,6 bei einer Profil-Leistung unter den weiteren Entitäten;
+  - sonst 0,3.
+- **Nachfrage:** Summe der Suchvolumina der Keywords des Themas, logarithmisch auf das größte Thema derselben Recherche bezogen. Ohne Volumen zählen stattdessen die Impressionen.
+- **Inhaltslücke:**
+  - 1 ohne Überschneidung;
+  - 0,5, wenn nur ein weiteres Keyword mit eigener Seite rankt;
+  - 0 bei Überschneidung mit dem Haupt-Keyword.
+- **Lokaler Bezug:**
+  - Ort im Servicegebiet: 1. Ort ungeklärt: 0,5. Ort außerhalb: 0.
+  - Ohne Ort: „in der Nähe“-Anfragen 0,7, geprüfte Tatsachen zu Orten 0,4, sonst 0.
+- **Saisonalität:** fehlt, bis eine Quelle Monatswerte liefert.
+- **Gewichte:** Einstellung `topic_weights` (JSON). Leer gilt der Vorschlag oben.
+- **Hinweis „eingeschränkte Datenbasis“:** erscheint nur, wenn neben der Saisonalität ein weiterer Faktor fehlt. Die Saisonalität fehlt fast immer, der Hinweis stünde sonst bei jedem Thema.
+- **Überschneidung** (`TopicResearchWorkflow::overlap`):
+  - Gezählt werden eigene Seiten, die laut Search Console für ein Keyword des Themas ranken. Eigen sind Seiten auf dem Host der Website oder der Property; so funktioniert das auch auf einer Staging-Kopie.
+  - Ebenso zählen Inhalte, deren Titel alle Wörter eines Haupt-Keywords enthält.
+  - Trifft das auf ein Haupt-Keyword zu, gilt die Überschneidung als hoch: Das Thema erhält den Status `discarded` und erscheint unter „bestehende Seite verbessern“ mit der Seite und dem Grund.
+
 **Search Console als Signal.** Im Test hatte die Website keine Klicks, aber Impressionen auf Positionen 20–90, und lokale Seiten wie Wolfsburg rankten für eng passende Anfragen auf Position 7. Daraus folgen zwei Regeln:
 
 1. Eine Anfrage, für die schon eine eigene Seite erscheint, ist **kein neues Thema**, wenn die Seite zum Thema passt (gleiche Haupt-Entität). Sie wird als Überschneidung mit dieser Seite angezeigt und in MVP 1 als Hinweis „bestehende Seite verbessern“ im Bericht geführt. Die Überarbeitung selbst folgt in Ausbau 2.
@@ -506,6 +528,23 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.
 
+**Umsetzung (Nachtrag 22.10., Stufe D, `TopicResearchWorkflow`):**
+- **`collect_keywords`:** sammelt Profil, Servicegebiet und bis zu 80 Keywords ohne Ausschluss. Mit Schwerpunkt kommen zuerst die Keywords mit dessen Wörtern dran, sonst die nach Volumen und Impressionen.
+  - Dazu kommen Entitäten, also Profil, Orte und bestätigte Begriffe, sowie bis zu 150 bestehende Inhalte aus dem Inhaltsindex.
+- **`research`:**
+  - Erster Durchgang: Websuche mit dem Recherchemodell (`AiService::search`, neu). Die Quellen landen in `lsec_sources`.
+  - Zweiter Durchgang: Strukturierung ohne Werkzeuge, mit Kontext und dem Ergebnis der Websuche (bis 8000 Token).
+  - Ein Fehler in der Strukturierung wiederholt die bezahlte Websuche nicht (`StepResult::more`).
+- **`verify_facts`:** 8.4a, vier Quellen je Durchgang.
+- **`propose_topics`:** setzt `off_topic`, berechnet Überschneidung und Priorität und speichert die Themen.
+- **Freigabe:**
+  - Der Ablauf endet mit `succeeded`; die Freigabe geschieht je Thema (Status `approved`). Das Warten auf die Freigabe übernimmt `content_production` in Stufe E.
+  - Freigabe und Ablehnung gehen über die Seite „Themen“, `POST lsec/v1/topics/<id>/decision` oder `wp lsec topics decide <id> approved|rejected|proposed`.
+- **Start:** über „Recherche starten“ (Leistung, Ort, Anzahl), `POST lsec/v1/topics/research` oder `wp lsec topics research [--service] [--region] [--count] [--web-results] [--research-model] [--force] [--now]`.
+- **Zwischenspeicher (8.1b):** Ein gleicher Schwerpunkt aus Leistung und Ort wird innerhalb von 14 Tagen nur mit „trotzdem“ bzw. `--force` neu recherchiert.
+- **Vergleich der Trefferzahl und der Recherchemodelle:** `wp lsec topics report <ablauf>` zeigt Kosten, Modell, Treffer, Quellen und den Anteil geprüfter Tatsachen. Vergleichen lassen sich so z. B. zwei Recherchen mit `--web-results=3` und `--web-results=5` oder mit `--research-model=…` und `--force`. Das Ergebnis wird hier nachgetragen, wenn es auf der Testwebsite vorliegt.
+- **`off_topic`:** Der Keyword-Abgleich hebt diesen Grund nicht wieder auf. Er setzt nur einen anderen Grund davor, z. B. `competitor`.
+
 **`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.
 
 **`keyword_sync`**: Search Console abrufen, Textfocus-Volumina für neue Keywords ohne Volumen nachholen (innerhalb des Budgets, Tippfehlerprüfung vorher).
@@ -581,7 +620,7 @@ Der Test hat die Websuche als Kostentreiber gezeigt: Die Suchergebnisse werden a
 | KI-Budget im Plugin | zusätzliche Bremse: Monatsbudget `ai_monthly_budget` und Höchstbetrag je Ablauf `ai_run_budget` in USD, berechnet aus `lsec_ai_calls.cost_estimate`. Bei Erreichen gehen Abläufe auf `waiting`; manuelle Prüfbefehle laufen mit Warnung weiter. **Festgelegt:** 20 USD im Monat, 1 USD je Ablauf (Standardwerte, einstellbar). Der Monat richtet sich nach der Zeitzone der Website |
 | Treffer der Websuche | einstellbar `ai_web_max_results`; **festgelegt:** Standard 3 statt bisher 5. Bei OpenAI zusätzlich `search_context_size: low`. In Stufe D werden 3 und 5 Treffer verglichen (Kosten, Anteil geprüfter Tatsachen); bei klarem Ergebnis wird der Standard angepasst |
 | Websuche nur wo nötig | nur im Schritt `research` der Themenrecherche; Briefing, Entwurf, Prüfung und Entity-Erkennung ohne Websuche |
-| Zwischenspeicher | keine neue Recherche, wenn für dieselbe Entität und Region in den letzten 14 Tagen (**Vorschlag**) schon geprüfte Aussagen vorliegen; die Ergebnisse stehen in `lsec_sources`, `lsec_claims` und `lsec_evidence` |
+| Zwischenspeicher | keine neue Recherche, wenn für dieselbe Entität und Region in den letzten 14 Tagen (**Vorschlag**) schon geprüfte Aussagen vorliegen; die Ergebnisse stehen in `lsec_sources`, `lsec_claims` und `lsec_evidence`. Umgesetzt (Stufe D): gleicher Schwerpunkt aus Leistung und Ort innerhalb von 14 Tagen nur mit „trotzdem“; abgerufene Seiten 30 Tage im Zwischenspeicher |
 | Anzeige | Kosten je Ablauf, je Beitrag und je Monat im Dashboard; Schätzung vor dem Start eines Sammelauftrags |
 | Umsetzung (Nachtrag 18.10., Stufe A) | Einstellungen `ai_monthly_budget` (20), `ai_run_budget` (1), `ai_web_max_results` (3, erlaubt 1–10), `ai_research_model` (leer). Geprüft wird vor jedem KI-Aufruf eines Ablaufs, auch vor dem Korrekturversuch. Der Monat beginnt am Ersten um 0 Uhr in der Zeitzone der Website. Aufrufe ohne Preis zählen nicht und werden als Hinweis gemeldet. Weitergabe der Trefferzahl: OpenRouter `max_results`, Anthropic `max_uses`, OpenAI `search_context_size` (bis 3 `low`, bis 6 `medium`, sonst `high`). Ein mit `--model` angegebenes Modell gilt auch für die Recherche. `wp lsec ai budget [--run=<id>]` |
 | Eigenes Modell für die Recherche | **festgelegt:** Einstellung `ai_research_model` (8.1a), umgesetzt in Stufe A; Auswahl des Modells in Stufe D. Die Anforderungsspezifikation ist um einen Nachtrag zu Abschnitt 14 ergänzt |
@@ -711,6 +750,11 @@ Ergebnisvertrag der Strukturierung:
 
 Jede Tatsache braucht eine Quelle und ein wörtliches Zitat. Tatsachen ohne Zitat werden nicht gespeichert.
 
+**Umsetzung (Nachtrag 22.10., Stufe D, `TopicResearcher`):**
+- **Kontext für die KI:** Keywords und Entitäten erhält die KI mit Nummern (#301). Unbekannte Nummern werden verworfen und im Bericht genannt.
+- **Gegenstand einer Tatsache:** Statt `subject_entity_id` steht der Name mit Typ (`subject`, `subject_type`). Das Plugin ordnet ihn einer vorhandenen Entität zu oder legt einen Kandidaten mit Herkunft `ai_research` an. Begründung: Ortsteile wie Eltze sind oft noch keine Entität.
+- **Ausschlüsse:** `excluded_keywords` nennt nur `off_topic` mit Begründung. Die anderen Gründe setzt der Keyword-Filter (Stufe C).
+
 ### 8.4a Faktenprüfung (`verify_facts`, neu)
 
 Im Test nannten zwei Modelle mit Quellenangabe dieselbe Jahreszahl für zwei verschiedene Ortsteile (1226 für Eltze bzw. Dollbergen). Eine URL allein belegt also nichts. Jede Tatsache aus der Recherche wird deshalb geprüft, bevor sie als Aussage gilt:
@@ -730,6 +774,17 @@ Im Test nannten zwei Modelle mit Quellenangabe dieselbe Jahreszahl für zwei ver
 5. **Optional, je Fall:** Bleibt ein Bezug unklar, prüft ein kurzer KI-Aufruf ohne Websuche nur das Zitat gegen die Aussage. **Vorschlag:** in MVP 1 ausgeschaltet, Einstellung `fact_check_ai`.
 
 Seiten, die keinen Abruf erlauben (z. B. Anmeldung, Skript-Inhalte), führen zu `rejected`, nicht zu einem Fehler des Ablaufs. Der Administrator kann eine Aussage im Backend bestätigen (`confirmed`); dann gilt sie auch ohne automatische Prüfung.
+
+**Umsetzung (Nachtrag 22.10., Stufe D):**
+- **Abruf** (`SourceFetcher`): Text oder Fehler stehen in `lsec_sources` (Schemaversion 5: `content`, `fetch_error`), Zwischenspeicher 30 Tage ab `fetched_at`. Ein erneuter Fund derselben Adresse ändert nur den Titel.
+- **Prüfung** (`FactChecker`, mit Unit-Test zum Eltze/Dollbergen-Fall):
+  - Gesucht wird nach Vereinheitlichung von Anführungszeichen, Strichen, Leerraum und Groß- und Kleinschreibung.
+  - Absatz ist die Zeile des Textes. Bei sehr langen Blöcken gilt ein Fenster von 400 Zeichen um das Zitat.
+  - Zahlen müssen als ganze Zahl vorkommen.
+  - Fehlt der Wert im Zitat und im Absatz, wird die Aussage `rejected`.
+- **Speicherung:** Aussagen landen in `lsec_claims` (`value` = JSON aus Wert und Hinweis), Belege mit Zitat und Qualität in `lsec_evidence`. Eine bessere Prüfung ersetzt eine schwächere; eine bestätigte Aussage bleibt.
+- **Entscheidung von Hand:** auf der Themen-Seite, über `POST lsec/v1/claims/<id>/decision` oder `wp lsec topics fact <id> confirmed|rejected`.
+- **`fact_check_ai`** ist nicht umgesetzt; der Vorschlag lautete „in MVP 1 ausgeschaltet“.
 
 ### 8.5 Briefing (`create_brief`)
 
@@ -832,7 +887,7 @@ Eingaben: ausgewählte eigene Beiträge (Text aus dem Inhaltsindex), Beispieltex
 | Unternehmensprofil | Unternehmen, Standorte, Leistungen, Marken, Wettbewerber, Servicegebiet mit Ortssuche | neu |
 | Entitäten | Filter nach Typ, Status und Mindest-Sicherheit; Bestätigen, Ablehnen, Zusammenführen; Fundstellen; einfache Graphansicht | Bestätigen/Ablehnen vorhanden (PHP-Seite) |
 | Keywords | Search Console, Import mit Spaltenzuordnung, Textfocus mit Credit-Anzeige, Quelle je Kennzahl, Ausschlüsse | umgesetzt in Stufe C (0.5.0): Karten „Täglicher Abgleich“, „Verwandte Keywords“, „Import“; Tabelle mit Volumen und Quelle, Wettbewerb, CPC, Search-Console-Werten, rankender Seite und Ausschluss; Filter nach Suche, Quelle, Status und Grund; Sortierung |
-| Themen | Vorschläge mit Priorität, Begründung, geprüften Tatsachen; Freigabe; Einzel- und Sammelauftrag | neu |
+| Themen | Vorschläge mit Priorität, Begründung, geprüften Tatsachen; Freigabe; Einzel- und Sammelauftrag | umgesetzt in Stufe D (0.6.0): Recherche starten (Leistung, Ort, Anzahl), Vorschläge mit Prioritätskreis, Aufschlüsselung, Keywords, Entitäten, Tatsachen mit Status, Quelle und Zitat, Überschneidung; Freigeben, Ablehnen, Zurücksetzen; Tatsachen bestätigen oder verwerfen. Einzel- und Sammelauftrag folgen mit der Produktion (Stufe E) |
 | Abläufe | Status, Schritte, Kosten, Fehler, Fortsetzen/Abbrechen | neu |
 | Style Mimic | Eingaben, Profil, Versionen | neu |
 | Einstellungen | KI, Budget, Search Console, Textfocus, Grenzen, Längen je Beitragstyp, Gewichte | neu (WP-CLI vorhanden) |

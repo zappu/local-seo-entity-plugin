@@ -12,6 +12,7 @@ import Entities from './entities';
 import Keywords from './keywords';
 import Profile from './profile';
 import Settings from './settings';
+import Topics from './topics';
 import './admin.scss';
 
 const VIEWS = {
@@ -19,6 +20,7 @@ const VIEWS = {
 	profile: Profile,
 	entities: Entities,
 	keywords: Keywords,
+	topics: Topics,
 	settings: Settings,
 };
 

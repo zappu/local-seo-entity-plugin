@@ -30,7 +30,7 @@ final class ProfileAssistant {
 	/**
 	 * Browser-Kennung für fremde Seiten; manche Server antworten Bots mit Fehlern.
 	 */
-	private const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
+	public const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
 
 	/**
 	 * Konstruktor.

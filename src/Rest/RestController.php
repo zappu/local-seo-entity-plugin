@@ -160,6 +160,7 @@ final class RestController {
 		$this->register_admin_routes( $permission );
 		( new EntitiesController( $this->plugin ) )->register( $permission );
 		( new KeywordsController( $this->plugin ) )->register( $permission );
+		( new TopicsController( $this->plugin ) )->register( $permission );
 	}
 
 	/**

@@ -18,7 +18,7 @@ final class Schema {
 	/**
 	 * Aktuelle Schemaversion. Bei jeder Änderung erhöhen.
 	 */
-	public const VERSION = 4;
+	public const VERSION = 5;
 
 	/**
 	 * Option, in der die installierte Schemaversion steht.
@@ -134,6 +134,8 @@ title varchar(255) NULL,
 source_type varchar(30) NOT NULL,
 fetched_at datetime NULL,
 content_hash char(64) NULL,
+content longtext NULL,
+fetch_error varchar(100) NULL,
 reliability varchar(10) NOT NULL DEFAULT 'unknown',
 created_at datetime NOT NULL,
 PRIMARY KEY  (id),
@@ -254,10 +256,14 @@ research_basis longtext NULL,
 overlap longtext NULL,
 status varchar(20) NOT NULL DEFAULT 'proposed',
 post_id bigint(20) unsigned NULL,
+run_id bigint(20) unsigned NULL,
+decided_by bigint(20) unsigned NULL,
+decided_at datetime NULL,
 created_at datetime NOT NULL,
 updated_at datetime NOT NULL,
 PRIMARY KEY  (id),
-KEY status (status)
+KEY status (status),
+KEY run_id (run_id)
 ) $collate;";
 
 		$sql['topic_entities'] = "CREATE TABLE {$t('topic_entities')} (

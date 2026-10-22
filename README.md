@@ -74,6 +74,9 @@ wp lsec keywords sync --now    # Keyword-Abgleich: Search Console, Orte/Namen, A
 wp lsec keywords table --status=excluded
 wp lsec keywords related flächenreinigung   # verwandte Keywords (1 Textfocus-Credit)
 wp lsec keywords decide include <id>        # Ausschluss von Hand aufheben
+wp lsec topics research --service=Pflasterreinigung --region=Lehrte --now   # Themenrecherche (KI mit Websuche)
+wp lsec topics report <ablauf>              # Kosten, Quellen, Anteil geprüfter Tatsachen
+wp lsec topics list && wp lsec topics decide <id> approved
 ```
 
 Stufe B (gleiches Skript): Inhaltsindex mit den eigenen Testbeiträgen, Entity-Erkennung als Ablauf über eine KI-Attrappe, Zusammenführen mit Vorschlägen, Profil unverändert speichern, REST-Schutz; mit `--online` zusätzlich der Ortsabgleich für Hemmingen. Testdaten heißen `LSECTEST …` und werden danach entfernt.

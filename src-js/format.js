@@ -150,3 +150,28 @@ const SOURCES = {
 export function sourceLabel( source ) {
 	return SOURCES[ source ] || source;
 }
+
+export const TOPIC_STATUS = {
+	proposed: 'Vorschlag',
+	approved: 'freigegeben',
+	rejected: 'abgelehnt',
+	discarded: 'bestehende Seite verbessern',
+	in_production: 'in Arbeit',
+	produced: 'erstellt',
+};
+
+export const TOPIC_FORMATS = {
+	local_landing: 'lokale Seite',
+	article: 'Beitrag',
+	guide: 'Ratgeber',
+	seasonal: 'saisonal',
+	other: 'sonstiges',
+};
+
+export const CLAIM_STATUS = {
+	verified: 'geprüft',
+	confirmed: 'bestätigt',
+	disputed: 'unklar',
+	rejected: 'verworfen',
+	candidate: 'ungeprüft',
+};

@@ -114,6 +114,22 @@ final class SettingsSchema {
 				),
 			),
 		),
+		'topics'    => array(
+			'label'  => 'Themen',
+			'fields' => array(
+				'topic_count'   => array(
+					'label' => 'Themen je Recherche',
+					'type'  => 'number',
+					'step'  => 1,
+					'help'  => 'Wie viele Vorschläge eine Recherche liefert (1 bis 10). Eine Recherche mit Websuche kostet etwa 0,05 bis 0,20 USD.',
+				),
+				'topic_weights' => array(
+					'label' => 'Gewichte der Priorität (Prozent)',
+					'type'  => 'json',
+					'help'  => 'Leer = Standard: {"relevance":30,"demand":25,"gap":20,"local":15,"season":10} – Geschäftsrelevanz, Nachfrage, Inhaltslücke, lokaler Bezug, Saisonalität.',
+				),
+			),
+		),
 		'gsc'       => array(
 			'label'  => 'Search Console',
 			'fields' => array(

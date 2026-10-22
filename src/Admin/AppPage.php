@@ -21,6 +21,7 @@ final class AppPage {
 	public const PROFILE_SLUG  = 'lsec-profile';
 	public const ENTITIES_SLUG = 'lsec-entities';
 	public const KEYWORDS_SLUG = 'lsec-keywords';
+	public const TOPICS_SLUG   = 'lsec-topics';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
@@ -30,6 +31,7 @@ final class AppPage {
 		self::PROFILE_SLUG  => 'profile',
 		self::ENTITIES_SLUG => 'entities',
 		self::KEYWORDS_SLUG => 'keywords',
+		self::TOPICS_SLUG   => 'topics',
 		self::SETTINGS_SLUG => 'settings',
 	);
 
@@ -39,7 +41,7 @@ final class AppPage {
 	public function register(): void {
 		// Vor den übrigen Seiten, damit das Hauptmenü steht, wenn sie sich als Unterseiten eintragen.
 		add_action( 'admin_menu', array( $this, 'add_menu' ), 9 );
-		// Reihenfolge im Menü: Dashboard, Unternehmen, Entitäten, Einstellungen (30), Technik (40).
+		// Reihenfolge im Menü: Dashboard, Unternehmen, Entitäten, Keywords, Themen, Einstellungen (30), Technik (40).
 		add_action( 'admin_menu', array( $this, 'add_settings_menu' ), 30 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
@@ -89,6 +91,14 @@ final class AppPage {
 			self::KEYWORDS_SLUG,
 			array( $this, 'render' )
 		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Themen', 'local-seo-entity-plugin' ),
+			__( 'Themen', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::TOPICS_SLUG,
+			array( $this, 'render' )
+		);
 	}
 
 	/**
@@ -127,6 +137,7 @@ final class AppPage {
 						'profile'  => admin_url( 'admin.php?page=' . self::PROFILE_SLUG ),
 						'entities' => admin_url( 'admin.php?page=' . self::ENTITIES_SLUG ),
 						'keywords' => admin_url( 'admin.php?page=' . self::KEYWORDS_SLUG ),
+						'topics'   => admin_url( 'admin.php?page=' . self::TOPICS_SLUG ),
 						'settings' => admin_url( 'admin.php?page=' . self::SETTINGS_SLUG ),
 					),
 				)
@@ -151,6 +162,7 @@ final class AppPage {
 			'profile'   => __( 'Local SEO – Unternehmen', 'local-seo-entity-plugin' ),
 			'entities'  => __( 'Local SEO – Entitäten', 'local-seo-entity-plugin' ),
 			'keywords'  => __( 'Local SEO – Keywords', 'local-seo-entity-plugin' ),
+			'topics'    => __( 'Local SEO – Themen', 'local-seo-entity-plugin' ),
 			'settings'  => __( 'Local SEO – Einstellungen', 'local-seo-entity-plugin' ),
 		);
 		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ) . '</h1>';

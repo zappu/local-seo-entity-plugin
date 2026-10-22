@@ -424,4 +424,61 @@ final class ContentIndex {
 		}
 		return $out;
 	}
+
+	/**
+	 * Indizierte Inhalte mit Titel und Adresse, z. B. für die Überschneidungsprüfung der Themen.
+	 *
+	 * @param int $limit Höchstzahl je Objektart.
+	 * @return array<int, array{ref: string, post_id: int, title: string, url: string, kind: string}>
+	 */
+	public static function entries( int $limit = 500 ): array {
+		$out   = array();
+		$posts = array() === self::post_types() ? array() : get_posts(
+			array(
+				'post_type'        => self::post_types(),
+				'post_status'      => 'publish',
+				'posts_per_page'   => $limit,
+				'meta_key'         => self::META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_key
+				'post__not_in'     => self::excluded_posts(),
+				'no_found_rows'    => true,
+				'suppress_filters' => true,
+			)
+		);
+		foreach ( $posts as $post ) {
+			if ( $post instanceof \WP_Post ) {
+				$item  = IndexItem::from_post( $post );
+				$out[] = array(
+					'ref'     => $item->ref(),
+					'post_id' => (int) $post->ID,
+					'title'   => $item->title(),
+					'url'     => $item->url(),
+					'kind'    => $item->kind,
+				);
+			}
+		}
+		if ( array() !== self::taxonomies() ) {
+			$terms = get_terms(
+				array(
+					'taxonomy'   => self::taxonomies(),
+					'hide_empty' => false,
+					'number'     => $limit,
+					'meta_key'   => self::META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_key
+					'exclude'    => self::excluded_terms(),
+				)
+			);
+			foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+				if ( $term instanceof \WP_Term ) {
+					$item  = IndexItem::from_term( $term );
+					$out[] = array(
+						'ref'     => $item->ref(),
+						'post_id' => 0,
+						'title'   => $item->title(),
+						'url'     => $item->url(),
+						'kind'    => $item->kind,
+					);
+				}
+			}
+		}
+		return $out;
+	}
 }

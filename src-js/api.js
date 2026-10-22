@@ -113,3 +113,11 @@ export function previewImport( file ) {
 
 export const runImport = ( token, mapping, source ) =>
 	apiFetch( { path: `${ base }/keywords/import`, method: 'POST', data: { token, mapping, source } } );
+
+export const getTopics = ( status ) => getWith( '/topics', { status } );
+export const getTopic = ( id ) => apiFetch( { path: `${ base }/topics/${ id }` } );
+export const decideTopic = ( id, decision ) =>
+	apiFetch( { path: `${ base }/topics/${ id }/decision`, method: 'POST', data: { decision } } );
+export const startResearch = ( data ) => apiFetch( { path: `${ base }/topics/research`, method: 'POST', data } );
+export const decideClaim = ( id, decision ) =>
+	apiFetch( { path: `${ base }/claims/${ id }/decision`, method: 'POST', data: { decision } } );

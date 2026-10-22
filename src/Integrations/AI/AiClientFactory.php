@@ -63,14 +63,15 @@ final class AiClientFactory {
 	 *
 	 * Wird ein Modell ausdrücklich angegeben (Prüfbefehl mit --model), gilt es auch für die Recherche.
 	 *
-	 * @param string|null $provider Anbieter.
-	 * @param string|null $model    Modell.
+	 * @param string|null $provider       Anbieter.
+	 * @param string|null $model          Modell.
+	 * @param string|null $research_model Recherchemodell statt der Einstellung (Vergleich in Stufe D).
 	 */
-	public function service( ?string $provider = null, ?string $model = null ): AiService {
+	public function service( ?string $provider = null, ?string $model = null, ?string $research_model = null ): AiService {
 		$prices   = Settings::get( 'ai_prices' );
 		$client   = $this->create( $provider, $model );
 		$research = null;
-		$name     = (string) Settings::get( 'ai_research_model' );
+		$name     = $research_model ?? (string) Settings::get( 'ai_research_model' );
 		if ( null === $model && '' !== $name && $name !== $client->model() ) {
 			$research = $this->create( $client->provider(), $name );
 		}

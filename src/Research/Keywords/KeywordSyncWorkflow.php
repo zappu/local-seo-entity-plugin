@@ -303,6 +303,12 @@ final class KeywordSyncWorkflow {
 		$filter = self::exclusions( $plugin, $context->input )->filter();
 		foreach ( $rows as $row ) {
 			$verdict = $filter->evaluate( $row['keyword'], $row['analysis'] );
+			// off_topic setzt die Themenrecherche (Stufe D); der Filter hebt ihn nicht auf, nur einen anderen Grund setzt er davor.
+			if ( 'off_topic' === $row['exclusion'] && null === $verdict['exclusion'] ) {
+				++$state['checked'];
+				$state['after'] = $row['id'];
+				continue;
+			}
 			if ( $verdict['exclusion'] !== $row['exclusion'] || $verdict['detail'] !== $row['detail'] ) {
 				$repo->set_auto_exclusion( $row['id'], $verdict['exclusion'], $verdict['detail'] );
 				++$state['changed'];

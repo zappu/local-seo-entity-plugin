@@ -9,6 +9,8 @@
 #            B8 Entitäten bearbeiten und löschen, weitere Vorschläge zum Zusammenführen (0.4.3)
 #   Stufe C: C1 Ausschlüsse (KI-Attrappe, ohne Wikidata) · C2 Entscheidungen von Hand · C3 REST-Routen
 #            C4 täglicher Abgleich (nur mit --online, liest den letzten Ablauf)
+#   Stufe D: D1 Faktenprüfung Eltze/Dollbergen und Überschneidung (KI-Attrappe, Quelle aus dem Zwischenspeicher)
+#            D2 Freigabe, Ausschluss off_topic, REST-Routen
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -46,6 +48,8 @@ cleanup() {
 cleanup_b() {
 	[ -z "${PREFIX:-}" ] && return 0
 	local e="${PREFIX}lsec_entities"
+	wpc db query "DELETE v FROM ${PREFIX}lsec_evidence v JOIN ${PREFIX}lsec_claims c ON c.id = v.target_id AND v.target_type = 'claim' JOIN $e e ON e.id = c.subject_id WHERE e.canonical_name LIKE 'LSECTEST%'"
+	wpc db query "DELETE c FROM ${PREFIX}lsec_claims c JOIN $e e ON e.id = c.subject_id WHERE c.subject_type = 'entity' AND e.canonical_name LIKE 'LSECTEST%'"
 	wpc db query "DELETE a FROM ${PREFIX}lsec_entity_aliases a JOIN $e e ON e.id = a.entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
 	wpc db query "DELETE m FROM ${PREFIX}lsec_mentions m JOIN $e e ON e.id = m.entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
 	wpc db query "DELETE r FROM ${PREFIX}lsec_relations r JOIN $e e ON e.id = r.source_entity_id OR e.id = r.target_entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
@@ -55,6 +59,10 @@ cleanup_b() {
 	wpc db query "DELETE m FROM ${PREFIX}lsec_keyword_metrics m JOIN ${PREFIX}lsec_keywords k ON k.id = m.keyword_id WHERE k.normalized LIKE '%lsectest%'"
 	wpc db query "DELETE FROM ${PREFIX}lsec_keywords WHERE normalized LIKE '%lsectest%'"
 	wpc db query "DELETE FROM ${PREFIX}lsec_imports WHERE source = 'csv:lsec_c'"
+	wpc db query "DELETE tk FROM ${PREFIX}lsec_topic_keywords tk JOIN ${PREFIX}lsec_topics t ON t.id = tk.topic_id WHERE t.title LIKE 'LSECTEST%'"
+	wpc db query "DELETE te FROM ${PREFIX}lsec_topic_entities te JOIN ${PREFIX}lsec_topics t ON t.id = te.topic_id WHERE t.title LIKE 'LSECTEST%'"
+	wpc db query "DELETE FROM ${PREFIX}lsec_topics WHERE title LIKE 'LSECTEST%'"
+	wpc db query "DELETE FROM ${PREFIX}lsec_sources WHERE url LIKE 'https://lsectest.invalid/%'"
 }
 trap cleanup EXIT
 
@@ -122,9 +130,9 @@ SAVED=$(wpc option get lsec_settings --format=json)
 wpc lsec selftest cleanup >/dev/null 2>&1
 
 # ---------------------------------------------------------------------------
-echo "A1 Schemaversion (3 seit Stufe A, 4 seit Stufe C)"
+echo "A1 Schemaversion (3 seit Stufe A, 4 seit Stufe C, 5 seit Stufe D)"
 STATUS=$(wpj lsec status --format=json)
-check "Schemaversion installiert" "4" "$(echo "$STATUS" | json schema_version_installed)"
+check "Schemaversion installiert" "5" "$(echo "$STATUS" | json schema_version_installed)"
 for col in "keyword_metrics competition" "keywords exclusion" "entities merged_into" "keywords exclusion_detail" "keywords exclusion_by" "keywords analyzed_at"; do
 	set -- $col
 	check "Spalte $1.$2" "1" "$(wpc db query "SHOW COLUMNS FROM ${PREFIX}lsec_$1 LIKE '$2'" --skip-column-names | grep -c "^$2")"
@@ -395,6 +403,66 @@ else
 		contains "Search Console abgerufen" "fetched" "$(wpj lsec runs show "$LAST" 2>&1)"
 	fi
 fi
+cleanup_b >/dev/null 2>&1
+
+# ===========================================================================
+echo "D1 Faktenprüfung (Eltze/Dollbergen) und Überschneidung, KI-Attrappe"
+printf 'Keyword;Volume\nlsectest pflasterreinigung eltze;30\nlsectest terrassenreinigung;50\nlsectest kochrezepte;10\n' > "$TMP/d.csv"
+wpc lsec keywords import "$TMP/d.csv" --source=csv:lsec_c >/dev/null
+DKW=$(wpj lsec keywords table --status=all --search=lsectest --limit=50 --format=json | json .)
+did() { echo "$DKW" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["keyword"]===$argv[1]){ echo $r["id"]; break; } }' "$1"; }
+K_NEW=$(did 'lsectest pflasterreinigung eltze')
+K_RANK=$(did 'lsectest terrassenreinigung')
+K_OFF=$(did 'lsectest kochrezepte')
+HOME_URL=$(wpc option get home | tail -1)
+# Eigene Seite rankt für „lsectest terrassenreinigung“ (Search Console).
+wpc db query "INSERT INTO ${PREFIX}lsec_keyword_metrics (keyword_id, source, period_start, period_end, impressions, clicks, ctr, position, page_url, created_at) VALUES ($K_RANK, 'gsc', DATE_SUB(CURDATE(), INTERVAL 31 DAY), DATE_SUB(CURDATE(), INTERVAL 3 DAY), 40, 1, 0.025, 6.5, '$HOME_URL/lsectest-terrassen/', UTC_TIMESTAMP())" >/dev/null
+# Quelle liegt schon im Zwischenspeicher (kein Abruf im Prüfskript).
+SRC="https://lsectest.invalid/eltze"
+TXT="Ortsteile der Gemeinde Uetze
+LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt. Der Ort liegt an der Fuhse.
+LSECTEST Dollbergen ist für seine Raffinerie bekannt."
+wpc db query "INSERT INTO ${PREFIX}lsec_sources (url, url_hash, title, source_type, fetched_at, content_hash, content, reliability, created_at) VALUES ('$SRC', SHA2('$SRC', 256), 'Eltze', 'ai_search', UTC_TIMESTAMP(), SHA2('$TXT', 256), '$TXT', 'unknown', UTC_TIMESTAMP())" >/dev/null
+cat > "$TMP/recherche.json" <<JSON
+{"research":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt.","sources":[{"url":"$SRC","title":"Eltze"}],
+"result":{"topics":[
+{"title":"LSECTEST Pflasterreinigung in Eltze","intent":"local","format":"local_landing","region":"LSECTEST Eltze","primary_keyword_ids":[$K_NEW],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[
+{"subject":"LSECTEST Eltze","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
+{"subject":"LSECTEST Dollbergen","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
+{"subject":"LSECTEST Eltze","subject_type":"place","property":"population","value":"999","source_url":"$SRC","quote":"LSECTEST Eltze hat 999 Einwohner"}],"insufficient_data":false},
+{"title":"LSECTEST Terrassenreinigung","intent":"commercial","format":"article","region":"","primary_keyword_ids":[$K_RANK],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[],"insufficient_data":false}],
+"excluded_keywords":[{"keyword_id":$K_OFF,"reason":"off_topic","note":"LSECTEST kein Bezug"}]}}
+JSON
+OUT=$(wpc lsec topics research --service=lsectest --stub="$TMP/recherche.json" --offline --now 2>&1)
+contains "Recherche abgeschlossen" "succeeded" "$OUT"
+contains "Tatsachen geprüft" "3 Tatsachen: 1 geprüft, 1 unklar, 1 verworfen" "$OUT"
+TOPICS=$(wpj lsec topics list --status=proposed --format=json | json .)
+T1=$(echo "$TOPICS" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Pflasterreinigung in Eltze"){ echo $r["id"]; break; } }')
+FACTS=$(wpj lsec topics show "$T1" --format=json | json facts)
+fact() { echo "$FACTS" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["entity"]===$argv[1] && $r["property"]===$argv[2]){ echo $r["status"]; break; } }' "$1" "$2"; }
+check "Eltze 1226 geprüft" "verified" "$(fact 'LSECTEST Eltze' first_mentioned)"
+check "Dollbergen 1226 nicht geprüft (Bezug unklar)" "disputed" "$(fact 'LSECTEST Dollbergen' first_mentioned)"
+check "Zitat nicht in der Quelle verworfen" "rejected" "$(fact 'LSECTEST Eltze' population)"
+check "neues Thema vorgeschlagen" "1" "$( [ -n "$T1" ] && echo 1 || echo 0 )"
+D=$(wpj lsec topics list --status=discarded --format=json | json .)
+contains "rankende Seite als Überschneidung (bestehende Seite verbessern)" "LSECTEST Terrassenreinigung" "$D"
+T2=$(echo "$D" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Terrassenreinigung"){ echo $r["id"]; break; } }')
+contains "Überschneidung nennt die Seite" "lsectest-terrassen" "$(wpj lsec topics show "$T2" 2>&1)"
+
+# ---------------------------------------------------------------------------
+echo "D2 Freigabe, off_topic, REST-Routen"
+wpc lsec topics decide "$T1" approved >/dev/null
+check "Thema freigegeben" "approved" "$(wpj lsec topics show "$T1" --format=json | json status)"
+check "Keyword ohne Bezug ausgeschlossen" "off_topic: LSECTEST kein Bezug" "$(kw 'lsectest kochrezepte' ausschluss)"
+IDS=$(wpj lsec keywords table --status=all --search=lsectest --limit=50 --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo implode(",", array_column((array)$d,"id"));')
+cat > "$TMP/leer.json" <<'JSON'
+{"keywords":[]}
+JSON
+wpc lsec keywords sync --now --no-gsc --no-volumes --offline --ids="$IDS" --stub-analysis="$TMP/leer.json" >/dev/null 2>&1
+check "off_topic bleibt nach dem Keyword-Abgleich" "off_topic: LSECTEST kein Bezug" "$(kw 'lsectest kochrezepte' ausschluss)"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "alle Routen 403" "Routen geschützt" "$OUT"
+contains "Route Themen" "/lsec/v1/topics" "$OUT"
 cleanup_b >/dev/null 2>&1
 
 echo

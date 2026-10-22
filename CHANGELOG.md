@@ -1,5 +1,27 @@
 # Änderungsprotokoll
 
+## 0.6.0 – 22.10.2026
+
+MVP 1, Stufe D (Spezifikation v1.0, Abschnitt 14).
+
+- **Neue Seite „Local SEO → Themen“:**
+  - Recherche starten mit optionalem Schwerpunkt Leistung und Ort.
+  - Vorschläge mit Priorität (0–100) und Aufschlüsselung, Begründung, Keywords, Entitäten und geprüften Tatsachen mit Quelle und Zitat.
+  - Freigeben, Ablehnen, Zurücksetzen; einzelne Tatsachen bestätigen oder verwerfen.
+- **Ablauf `topic_research`:** Websuche mit dem Recherchemodell, danach Strukturierung mit Profil, Keywords, Entitäten und bestehenden Inhalten.
+- **Faktenprüfung:**
+  - Jede Quelle wird abgerufen, das Zitat gesucht und der Bezug geprüft.
+  - Eine Jahreszahl, die zu einem anderen Ortsteil gehört, gilt als „unklar“ statt als geprüft (Eltze/Dollbergen).
+  - Widersprüche werden markiert.
+  - Abgerufene Seiten bleiben 30 Tage im Zwischenspeicher.
+- **Überschneidung:** Rankt für das Haupt-Keyword schon eine eigene Seite, oder trägt eine Seite es im Titel, erscheint das Thema unter „bestehende Seite verbessern“ statt als neuer Vorschlag. Das funktioniert auch auf Staging mit der Search Console der Live-Website.
+- **Keywords ohne Bezug** zu den Leistungen schließt die Recherche als `off_topic` aus.
+- **WP-CLI:** `wp lsec topics research|report|list|show|decide|fact`.
+- **Vergleich von Trefferzahl und Recherchemodell:** `--web-results` und `--research-model` mit `topics report`.
+- **Einstellungen:** neue Gruppe „Themen“ (`topic_count`, `topic_weights`).
+- **Datenbank** auf Schemaversion 5.
+- **Prüfskript:** D1 und D2.
+
 ## 0.5.0 – 22.10.2026
 
 MVP 1, Stufe C (Spezifikation v1.0, Abschnitt 14).

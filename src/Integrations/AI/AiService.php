@@ -108,6 +108,25 @@ final class AiService {
 	}
 
 	/**
+	 * Nur der Rechercheschritt: Websuche mit dem Recherchemodell, Antwort als Text mit Quellen.
+	 * Die Strukturierung folgt getrennt, wenn sie zusätzlichen Kontext braucht (Themenrecherche).
+	 *
+	 * @param string   $task            Aufgabe.
+	 * @param string   $system          Systemanweisung.
+	 * @param string   $question        Rechercheauftrag.
+	 * @param int|null $run_id          Ablauf.
+	 * @param int|null $web_max_results Treffer der Websuche; null = Einstellung.
+	 */
+	public function search( string $task, string $system, string $question, ?int $run_id = null, ?int $web_max_results = null ): AiResponse {
+		return $this->call(
+			new AiRequest( $task, $system, $question, null, 'result', true, 3000, 120, max( 1, min( 10, $web_max_results ?? $this->web_max_results ) ) ),
+			$run_id,
+			null,
+			$this->research_client()
+		);
+	}
+
+	/**
 	 * Zweistufige Recherche: Websuche mit Quellen, danach Strukturierung ohne Werkzeuge.
 	 *
 	 * @param string               $task        Aufgabe.

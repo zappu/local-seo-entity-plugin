@@ -40,6 +40,8 @@ final class Settings {
 		'textfocus_batch_size'     => 10,
 		'keyword_analysis'         => true,
 		'keyword_auto_volumes'     => true,
+		'topic_count'              => 5,
+		'topic_weights'            => array(),
 		'service_area'             => array(),
 		'profile_source_urls'      => array(),
 		'gsc_credentials_file'     => '',
@@ -64,6 +66,7 @@ final class Settings {
 	public const RANGES = array(
 		'ai_web_max_results'    => array( 1, 10 ),
 		'entity_min_confidence' => array( 0.0, 1.0 ),
+		'topic_count'           => array( 1, 10 ),
 	);
 
 	/**
