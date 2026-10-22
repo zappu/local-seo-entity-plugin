@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 0.7.2 – 22.10.2026
+
+- **Leistungsbeschreibungen aus dem Unternehmensprofil** gelten als Angaben des Unternehmens: Der Entwurf darf Abläufe und Verfahren daraus übernehmen, die Prüfung akzeptiert sie. Ohne Beschreibung schreibt die KI Verfahren nur allgemein, nicht als Zusage des Betriebs.
+- **KI-Bewertung** blockiert nur noch konkrete unbelegte Angaben (Zahlen, Preise, Dauern, Garantien, Zertifikate, Geräte, Ablaufzusagen, Tatsachen über Orte), nicht allgemeines Fachwissen.
+- **Doppelte Themen:** Ortsseite und Beitrag zur selben Leistung am selben Ort gelten als Dublette (39 und 43).
+- **Zahlenprüfung:** Telefonnummern auch mit geschützten Leerzeichen; der Bericht zeigt die Textstelle jeder unbelegten Zahl.
+- **Entwurf:** einheitliche Wir-Form, jeder interne Link nur einmal, keine Zusagen zu Dauer oder Ergebnis.
+- **Cronjob:** übersprungene Themen blockieren das Tageslimit nicht mehr; `wp lsec production schedule` nennt den Grund.
+
 ## 0.7.1 – 22.10.2026
 
 - **Doppelte Themen:** Die Recherche kennt die vorhandenen Themen und schlägt dieselbe Leistung am selben Ort nicht noch einmal vor. Tut die KI es trotzdem, wird kein neues Thema angelegt; die neuen Tatsachen und Keywords gehen an das vorhandene. Die Themen-Seite markiert Dubletten, `wp lsec topics duplicates --apply` räumt vorhandene auf, und zu einer Dublette eines schon geschriebenen Themas entsteht kein zweiter Entwurf.

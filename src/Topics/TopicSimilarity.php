@@ -14,7 +14,8 @@ use Lsec\Research\Keywords\KeywordFilter;
  * vom Profi reinigen lassen“ und „Pflasterreinigung in Uetze: Firma in der Nähe für Einfahrt, Hof und Wege“
  * vor; beide wurden freigegeben und hätten als zwei Seiten gegeneinander gerankt.
  *
- * Zwei Themen sind Dubletten, wenn sie dieselbe Art haben (lokale Seite oder Inhalt) und
+ * Zwei Themen sind Dubletten, wenn sie dieselbe Art haben (Seite – lokale Seite, Beitrag, sonstiges –,
+ * Ratgeber oder saisonal; Thema 39 war ein Beitrag, 43 eine lokale Seite) und
  * - mit Ort: derselbe Ort und dieselbe Hauptleistung (die erste Leistung aus dem Profil, die im Titel oder
  *   Haupt-Keyword steht), oder
  * - die Titel zu mindestens 50 % dieselben Wörter haben (ohne Ort und Füllwörter), bei gleichem Ort.
@@ -58,7 +59,7 @@ final class TopicSimilarity {
 		}
 		return array(
 			'region'  => $region,
-			'kind'    => 'local_landing' === (string) ( $topic['format'] ?? '' ) ? 'local' : 'content',
+			'kind'    => in_array( (string) ( $topic['format'] ?? '' ), array( 'guide', 'seasonal' ), true ) ? (string) $topic['format'] : 'page',
 			'service' => $service,
 			'words'   => array_keys( $words ),
 		);

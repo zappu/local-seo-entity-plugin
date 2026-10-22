@@ -55,4 +55,14 @@ final class TopicSimilarityTest extends TestCase {
 		$this->assertFalse( TopicSimilarity::same( self::topic( 'Lackfarbe von Pflastersteinen entfernen', '', 'guide' ), self::topic( 'Moos aus Pflasterfugen entfernen', '', 'guide' ), self::SERVICES ) );
 		$this->assertTrue( TopicSimilarity::same( self::topic( 'Lackfarbe von Pflastersteinen entfernen', '', 'guide' ), self::topic( 'Lackfarbe auf Pflastersteinen entfernen: so geht es', '', 'guide' ), self::SERVICES ) );
 	}
+
+	public function test_article_and_local_page_are_the_same_kind(): void {
+		$this->assertTrue(
+			TopicSimilarity::same(
+				self::topic( 'Pflasterreinigung in Uetze: Firma in der Nähe für Einfahrt, Hof und Wege', 'Uetze', 'article' ),
+				self::topic( 'Pflasterreinigung in Uetze: Gehwege und Pflasterflächen vom Profi reinigen lassen', 'Uetze' ),
+				self::SERVICES
+			)
+		);
+	}
 }

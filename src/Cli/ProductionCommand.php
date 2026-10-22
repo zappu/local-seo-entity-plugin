@@ -164,8 +164,11 @@ final class ProductionCommand {
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function schedule( array $args, array $assoc_args ): void {
-		$runs = ContentProductionWorkflow::maybe_start_scheduled( $this->plugin );
+		$runs = ContentProductionWorkflow::maybe_start_scheduled( $this->plugin, $skipped );
 		WP_CLI::log( array() === $runs ? 'Kein Entwurf gestartet.' : 'Gestartet: Abläufe ' . implode( ', ', $runs ) );
+		foreach ( (array) $skipped as $reason ) {
+			WP_CLI::log( '  übersprungen: ' . $reason );
+		}
 		WP_CLI::log( sprintf( 'Heute gestartet: %d von %d.', ContentProductionWorkflow::started_today(), (int) \Lsec\Core\Settings::get( 'drafts_per_day' ) ) );
 	}
 

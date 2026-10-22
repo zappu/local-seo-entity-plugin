@@ -309,4 +309,17 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
 		$this->assertSame( '0151892210172', QualityChecker::phone_digits( '+49 151 89 22 101 72' ) );
 	}
+
+	public function test_phone_with_protected_spaces_and_service_numbers(): void {
+		$context                                     = self::context();
+		$context['company']['locations'][0]['phone'] = '05147 892210172';
+		$context['company']['service_details']       = array(
+			array(
+				'name'        => 'Pflasterreinigung',
+				'description' => 'Heißwasser mit bis zu 150 Grad',
+			),
+		);
+		$result                                      = QualityChecker::check( self::draft( "Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Wir reinigen mit Heißwasser bis 150 Grad. Mobil: 05147\u{00A0}89\u{00A0}22\u{00A0}101\u{00A0}72." ), $context, self::site() );
+		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
+	}
 }

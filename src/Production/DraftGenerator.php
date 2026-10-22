@@ -47,7 +47,10 @@ final class DraftGenerator {
 			. "- Kontaktdaten (Telefon, E-Mail, Adresse) nur einmal, in der Handlungsaufforderung am Schluss; keine Kontaktdaten in FAQ oder Fließtext.\n"
 			. "- Tatsachen nur dort, wo sie dem Leser nützen; keine bloßen Ortslisten.\n"
 			. "- Die Beispiele im Schreibstil zeigen den Ton; nicht wörtlich übernehmen.\n"
-			. "- Abläufe und Verfahren allgemein beschreiben, ohne Versprechen zu Dauer, Ergebnis oder Garantie.\n"
+			. "- Perspektive einheitlich: Das Unternehmen spricht von sich als „wir“, die Leser mit der Anrede aus dem Schreibstil.\n"
+			. "- Was das Unternehmen selbst tut (Ablauf, Verfahren, Geräte, Zusagen), nur aus den Angaben des Unternehmens zu seinen Leistungen. Fehlen sie, beschreibe Verfahren allgemein als Fachwissen („Bei der Pflasterreinigung wird …“), nicht als feste Schritte oder Zusage des Unternehmens.\n"
+			. "- Keine Versprechen zu Dauer, Ergebnis, Schonung oder Garantie.\n"
+			. "- Jeden internen Link höchstens einmal setzen.\n"
 			. "- excerpt: ein bis zwei Sätze.\n"
 			. "- seo: title 30 bis 60 Zeichen, description 120 bis 160 Zeichen, focus_keyword = Haupt-Keyword, secondary_keywords, slug (Kleinbuchstaben, Bindestriche).\n"
 			. "- taxonomy: category_ids nur aus der Liste der Kategorien; new_category_suggestions nur, wenn keine passt; tags bis fünf.\n";
@@ -271,7 +274,7 @@ final class DraftGenerator {
 	 * @param array<int, array<string, mixed>> $nodes Knoten.
 	 */
 	public static function outline_text( array $nodes ): string {
-		$inline = static fn( string $t ): string => trim( html_entity_decode( (string) preg_replace( '/<[^>]+>/', '', (string) preg_replace( '#<a\s[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is', '[$3]($2)', $t ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$inline = static fn( string $t ): string => trim( html_entity_decode( (string) preg_replace( '/<[^>]+>/', '', (string) preg_replace( array( '#<br\s*/?>#i', '#<a\s[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is' ), array( "\n", '[$3]($2)' ), $t ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 		$out    = array();
 		foreach ( $nodes as $node ) {
 			switch ( (string) ( $node['type'] ?? '' ) ) {

@@ -144,10 +144,12 @@ final class ContentProductionWorkflow {
 	/**
 	 * Cronjob: freigegebene Themen schreiben, höchstens drafts_per_day je Tag (Spezifikation 7.4).
 	 *
-	 * @param Plugin $plugin Plugin.
+	 * @param Plugin        $plugin  Plugin.
+	 * @param string[]|null $skipped Ausgabe: übersprungene Themen mit Grund.
 	 * @return int[] Gestartete Abläufe.
 	 */
-	public static function maybe_start_scheduled( Plugin $plugin ): array {
+	public static function maybe_start_scheduled( Plugin $plugin, ?array &$skipped = null ): array {
+		$skipped = array();
 		if ( ! Settings::get( 'production_auto' ) ) {
 			return array();
 		}
@@ -156,14 +158,20 @@ final class ContentProductionWorkflow {
 			return array();
 		}
 		$started = array();
-		foreach ( ( new TopicRepository() )->approved_ids( $left ) as $topic_id ) {
+		foreach ( ( new TopicRepository() )->approved_ids( $left + 20 ) as $topic_id ) {
+			if ( count( $started ) >= $left ) {
+				break;
+			}
 			try {
 				$run = self::start( $plugin, $topic_id, array( 'reason' => 'cron' ) );
-			} catch ( \RuntimeException ) {
+			} catch ( \RuntimeException $e ) {
+				$skipped[] = $e->getMessage();
 				continue;
 			}
 			if ( $run['created'] ) {
 				$started[] = $run['run_id'];
+			} else {
+				$skipped[] = sprintf( 'Thema %d: läuft schon (Ablauf %d).', $topic_id, $run['run_id'] );
 			}
 		}
 		return $started;
@@ -290,12 +298,24 @@ final class ContentProductionWorkflow {
 					'overlap_level' => (string) ( $topic['overlap']['level'] ?? 'none' ),
 				),
 				'company'       => array(
-					'name'      => (string) ( $profile['organization']['name'] ?? get_bloginfo( 'name' ) ),
-					'phone'     => (string) ( $profile['organization']['phone'] ?? '' ),
-					'email'     => (string) ( $profile['organization']['email'] ?? '' ),
-					'website'   => (string) ( $profile['organization']['website'] ?? home_url( '/' ) ),
-					'services'  => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
-					'locations' => array_values(
+					'name'            => (string) ( $profile['organization']['name'] ?? get_bloginfo( 'name' ) ),
+					'phone'           => (string) ( $profile['organization']['phone'] ?? '' ),
+					'email'           => (string) ( $profile['organization']['email'] ?? '' ),
+					'website'         => (string) ( $profile['organization']['website'] ?? home_url( '/' ) ),
+					'services'        => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
+					'service_details' => array_values(
+						array_filter(
+							array_map(
+								static fn( array $s ): array => array(
+									'name'        => (string) $s['name'],
+									'description' => trim( (string) $s['description'] ),
+								),
+								(array) ( $profile['services'] ?? array() )
+							),
+							static fn( array $s ): bool => '' !== $s['description']
+						)
+					),
+					'locations'       => array_values(
 						array_map(
 							static fn( array $l ): array => array(
 								'name'        => (string) $l['name'],

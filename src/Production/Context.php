@@ -35,6 +35,9 @@ final class Context {
 			}
 		}
 		$out .= 'Leistungen: ' . implode( ', ', (array) $company['services'] ) . "\n";
+		foreach ( (array) ( $company['service_details'] ?? array() ) as $detail ) {
+			$out .= sprintf( "Leistung %s (Angabe des Unternehmens, belegt): %s\n", $detail['name'], mb_substr( (string) $detail['description'], 0, 600 ) );
+		}
 		$out .= 'Servicegebiet: ' . ( '' !== (string) $context['area'] ? $context['area'] : 'nicht festgelegt' ) . "\n\n";
 
 		$out .= "Entitäten (#ID Name, Typ, Rolle):\n";

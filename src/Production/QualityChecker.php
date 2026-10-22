@@ -70,7 +70,7 @@ final class QualityChecker {
 		// Zahlen im Text müssen aus einer verwendeten Aussage oder dem Profil stammen.
 		$numbers = self::numbers_check( $all, $used, $claims, (array) $context['company'] + array( 'area' => (string) ( $context['area'] ?? '' ) ) );
 		$used    = $numbers['used'];
-		$add( 'UNSUPPORTED_NUMBER', 'Zahlen stammen aus Tatsachen oder Profil', array() === $numbers['missing'], true, array() === $numbers['missing'] ? ( array() === $numbers['added'] ? '' : 'Tatsachen ergänzt: #' . implode( ', #', $numbers['added'] ) ) : 'ohne Beleg: ' . implode( ', ', $numbers['missing'] ) );
+		$add( 'UNSUPPORTED_NUMBER', 'Zahlen stammen aus Tatsachen oder Profil', array() === $numbers['missing'], true, array() === $numbers['missing'] ? ( array() === $numbers['added'] ? '' : 'Tatsachen ergänzt: #' . implode( ', #', $numbers['added'] ) ) : 'ohne Beleg: ' . implode( ', ', $numbers['missing'] ) . ' – ' . implode( ' | ', self::snippets( $all, $numbers['missing'] ) ) );
 
 		// Haupt-Entität.
 		$primary = array_values( array_filter( (array) $context['entities'], static fn( array $e ): bool => 'primary' === $e['role'] ) );
@@ -163,11 +163,11 @@ final class QualityChecker {
 	 */
 	public static function numbers_check( string $text, array $used, array $claims, array $company ): array {
 		$allowed = array();
-		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ) );
+		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ), implode( ' ', array_map( static fn( $d ): string => (string) ( $d['description'] ?? '' ), (array) ( $company['service_details'] ?? array() ) ) ) );
 		$phones  = array_filter( array_map( array( self::class, 'phone_digits' ), array_merge( array( (string) ( $company['phone'] ?? '' ) ), array_map( static fn( $l ): string => (string) ( $l['phone'] ?? '' ), (array) ( $company['locations'] ?? array() ) ) ) ) );
 		// Telefonnummern aus dem Profil, auch anders gruppiert oder mit +49 (Lauf 121: „89 22 101 72“).
 		$text = (string) preg_replace_callback(
-			'/(?<![\d.,])(?:\+|00)?\d[\d \/\-().]{4,}\d(?![\d])/u',
+			'/(?<![\d.,])(?:\+|00)?\d[\d\s\p{Zs}\/\-–().]{4,}\d(?![\d])/u',
 			static function ( array $m ) use ( $phones ): string {
 				$digits = self::phone_digits( $m[0] );
 				foreach ( $phones as $phone ) {
@@ -223,6 +223,29 @@ final class QualityChecker {
 			'used'    => array_values( array_unique( $used ) ),
 			'added'   => array_values( array_unique( $added ) ),
 		);
+	}
+
+	/**
+	 * Textstellen der Zahlen (je bis 30 Zeichen davor und danach), damit der Bericht zeigt, wo sie stehen.
+	 *
+	 * @param string   $text    Text.
+	 * @param string[] $numbers Zahlen in Vergleichsform.
+	 * @return string[]
+	 */
+	private static function snippets( string $text, array $numbers ): array {
+		$out  = array();
+		$flat = (string) preg_replace( '/\s+/u', ' ', $text );
+		foreach ( $numbers as $number ) {
+			$pattern = '/(?<![\d])' . str_replace( ',', '[,]', preg_quote( $number, '/' ) ) . '(?![\d])/u';
+			if ( strlen( $number ) > 3 && ! str_contains( $number, ',' ) ) {
+				$pattern = '/(?<![\d])' . implode( '\.?', str_split( $number ) ) . '(?![\d])/u';
+			}
+			if ( preg_match( $pattern, $flat, $m, PREG_OFFSET_CAPTURE ) ) {
+				$start = max( 0, (int) $m[0][1] - 30 );
+				$out[] = '„…' . trim( mb_strcut( $flat, $start, 70 ) ) . '…“';
+			}
+		}
+		return array_slice( array_values( array_unique( $out ) ), 0, 5 );
 	}
 
 	/**

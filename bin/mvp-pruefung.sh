@@ -530,15 +530,21 @@ echo "E3 Tageslimit des Cronjobs"
 wpc lsec topics decide "$T1" approved >/dev/null
 contains "ausgeschaltet: nichts gestartet" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
 TODAY=$(wpc lsec production list | sed -n 's/^Heute gestartet: \([0-9]*\).*/\1/p')
-wpc lsec settings set drafts_per_day "$TODAY" >/dev/null
-wpc lsec settings set production_auto true >/dev/null
-contains "Tageslimit erreicht: nichts gestartet" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
-wpc lsec settings set drafts_per_day "$((TODAY + 1))" >/dev/null
-OUT=$(wpc lsec production schedule)
-contains "unter dem Limit: Entwurf gestartet" "Gestartet: Abläufe" "$OUT"
-R3=$(printf '%s' "$OUT" | sed -n 's/^Gestartet: Abläufe \([0-9]*\).*/\1/p')
-[ -n "$R3" ] && wpc lsec runs cancel "$R3" >/dev/null 2>&1
-contains "danach Limit erreicht" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+if [ "${TODAY:-0}" -ge 20 ]; then
+	# drafts_per_day erlaubt höchstens 20; auf Testsystemen mit vielen Läufen am selben Tag nicht prüfbar.
+	skip "Tageslimit (heute schon $TODAY Entwürfe gestartet)"
+else
+	wpc lsec settings set drafts_per_day "$TODAY" >/dev/null
+	wpc lsec settings set production_auto true >/dev/null
+	contains "Tageslimit erreicht: nichts gestartet" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+	wpc lsec settings set drafts_per_day "$((TODAY + 1))" >/dev/null
+	OUT=$(wpc lsec production schedule)
+	contains "unter dem Limit: Entwurf gestartet" "Gestartet: Abläufe" "$OUT"
+	printf '%s\n' "$OUT" | grep -q "Gestartet" || printf '%s\n' "$OUT" | sed 's/^/    | /'
+	R3=$(printf '%s' "$OUT" | sed -n 's/^Gestartet: Abläufe \([0-9]*\).*/\1/p')
+	[ -n "$R3" ] && wpc lsec runs cancel "$R3" >/dev/null 2>&1
+	contains "danach Limit erreicht" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+fi
 
 echo "E4 Style Mimic von Hand, REST-Routen"
 printf '{"profile":{"tone":"LSECTEST sachlich","address":"Sie","rules":["Keine Preise nennen"]}}' > "$TMP/style.json"
