@@ -61,6 +61,9 @@ export function getEntities( params ) {
 export const getEntity = ( id ) => apiFetch( { path: `${ base }/entities/${ id }` } );
 export const decideEntity = ( id, decision ) =>
 	apiFetch( { path: `${ base }/entities/${ id }/decision`, method: 'POST', data: { decision } } );
+export const updateEntity = ( id, fields ) =>
+	apiFetch( { path: `${ base }/entities/${ id }`, method: 'POST', data: fields } );
+export const deleteEntity = ( id ) => apiFetch( { path: `${ base }/entities/${ id }`, method: 'DELETE' } );
 export const mergeEntities = ( target, sources ) =>
 	apiFetch( { path: `${ base }/entities/merge`, method: 'POST', data: { target, sources } } );
 export const getMergeSuggestions = () => apiFetch( { path: `${ base }/entities/merge-suggestions` } );

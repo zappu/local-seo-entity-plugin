@@ -610,6 +610,38 @@ Ergebnisvertrag:
 - Anweisung an die KI geschärft: nur Benanntes, ausdrücklich keine allgemeinen Tätigkeiten, Zielgruppen und Werbeaussagen; Stufen für `confidence`.
 - Oberfläche „Local SEO → Entitäten“ (React, ersetzt die PHP-Seite): Vorschläge zum Zusammenführen, Filter nach Typ, Status und Name, unsichere Vorschläge unter `entity_min_confidence` standardmäßig ausgeblendet, Bestätigen, Ablehnen, Zusammenführen mehrerer ausgewählter Einträge, Details mit Schreibweisen, Ortsabgleich, Beziehungen und Fundstellen je Beitrag. Die Graphansicht folgt in Stufe F.
 
+**Nachtrag 22.10. (0.4.3), nach der Auswertung der ersten Erkennung auf der Testwebsite:**
+
+- **Bearbeiten:**
+  - Name, Typ, Beschreibung, Status und Schreibweisen lassen sich ändern (`EntityRepository::update`). Der Status geht in jede Richtung: Kandidat, wahrscheinlich, ungeklärt, bestätigt, abgelehnt. „Zusammengeführt“ ist nur über das Zusammenführen erreichbar.
+  - Ein geänderter Name bleibt als Schreibweise erhalten.
+  - Gehört ein neuer Name bei gleichem Typ schon einer anderen Entität, wird die Änderung abgelehnt; dafür ist das Zusammenführen da.
+  - Einträge aus dem Unternehmensprofil: hier nur Beschreibung und Schreibweisen. Name, Typ und Status werden im Profil gepflegt.
+  - Zugang: REST `POST lsec/v1/entities/<id>`, `wp lsec entities update <id> [--name] [--type] [--description] [--status] [--add-alias] [--remove-alias]`.
+- **Löschen:**
+  - Entfernt die Entität mit Schreibweisen, Fundstellen, Beziehungen, Aussagen, Belegen, Themenbezügen und allem, was in sie zusammengeführt war (`EntityRepository::delete`).
+  - Anders als „abgelehnt“ merkt sich das Plugin den Namen nicht; eine spätere Erkennung kann ihn wieder vorschlagen. Die Oberfläche sagt das vor dem Löschen.
+  - Einträge aus dem Unternehmensprofil lassen sich hier nicht löschen.
+  - Zugang: REST `DELETE lsec/v1/entities/<id>`, `wp lsec entities delete <id> [--yes]`.
+  - Beides wird im Prüfprotokoll festgehalten.
+- **Oberfläche:**
+  - Die Tabelle zeigt je nach Status „Bestätigen“, „Ablehnen“ und „Bearbeiten“, auch für schon entschiedene Einträge.
+  - Die Details haben „Bearbeiten“ und „Löschen“.
+  - Fundstellen sind nach Beitrag oder Kategorie gruppiert.
+- **Weitere Vorschläge zum Zusammenführen** (`same_key_suggestions`), jeweils mit Grund:
+  - **„gleicher Name, anderer Typ“:** zum Beispiel „Hochdruckreinigung“ als Leistung und als Begriff.
+  - **„Gebietsangabe zum Ort“:** „Region Gehrden“ oder „Raum Gehrden“ zu „Gehrden“. Echte Verwaltungsgebiete werden nie einem gleichnamigen Ort zugeschlagen; das sind Gebiete aus dem Profil oder mit Wikidata-ID, etwa „Region Hannover“.
+  - **Ziel des Zusammenführens:** der Profileintrag, sonst der Ort statt der Gebietsangabe, sonst ein bestätigter Eintrag, sonst der mit den meisten Fundstellen.
+- **Schärfere Anweisung:**
+  - Die Leistungen aus dem Profil gehen mit in die Anfrage. Erwähnte Leistungen werden ihnen zugeordnet, die Formulierung aus dem Text wird zur Schreibweise. Neue Leistungen gibt es nur, wenn keine passt.
+  - Keine allgemeinen Materialien und Oberflächen (Beton, Fliesen, Epoxidharz).
+  - `service_area` nur für echte Verwaltungs- oder Regionsnamen.
+  - „Raum“, „Großraum“, „Umgebung“ und „Umkreis“ vor einem Ortsnamen werden auch nach der Antwort entfernt; die Formulierung bleibt als Schreibweise.
+- **Ortsabgleich:**
+  - Das Servicegebiet selbst zählt als „im Gebiet“.
+  - Passt kein Kandidat, aber genau einer ist dem Servicegebiet übergeordnet, gilt er als `probable` („Übergeordnetes Gebiet“, z. B. Niedersachsen zur Region Hannover). Die übergeordneten Einheiten werden eine Woche zwischengespeichert.
+  - Neu abgleichen: `wp lsec entities resolve-place <name> --save`.
+
 **Textfocus-Entitäten (umgesetzt):** `wp lsec entities import <datei>` legt Kandidaten mit `origin = import` an; Name = Begriff auf der Seite, Wikidata-Vorschlag nur in `properties.textfocus`. „&“ und „und“ gelten beim Abgleich als gleich.
 
 ### 8.4 Themenrecherche (`topic_research`)

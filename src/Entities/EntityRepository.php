@@ -450,10 +450,97 @@ final class EntityRepository {
 						'type' => (string) $target['type'],
 					),
 					'candidates' => $candidates,
+					'reason'     => 'Schreibweisen',
 				);
 			}
 		}
+		return array_merge( $out, $this->same_key_suggestions( $used ) );
+	}
+
+	/**
+	 * Weitere Vorschläge: gleicher Name mit anderem Typ („Hochdruckreinigung“ als Leistung und als Begriff)
+	 * und Gebietsangaben zu einem Ort („Region Gehrden“ zu „Gehrden“). Ziel ist der Eintrag aus dem Profil,
+	 * sonst der Ort selbst statt der Gebietsangabe, sonst ein bestätigter, sonst der mit den meisten Fundstellen. Echte Verwaltungsgebiete (mit Wikidata-ID
+	 * oder aus dem Profil, z. B. „Region Hannover“) werden nie einem gleichnamigen Ort zugeschlagen.
+	 *
+	 * @param array<int, bool> $used Schon vorgeschlagene Entitäten.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function same_key_suggestions( array $used ): array {
+		global $wpdb;
+		$table  = Schema::table( $wpdb->prefix, 'entities' );
+		$mtable = Schema::table( $wpdb->prefix, 'mentions' );
+		$rows   = (array) $wpdb->get_results( "SELECT id, canonical_name, normalized_name, type, status, origin, external_ids, (SELECT COUNT(*) FROM {$mtable} m WHERE m.entity_id = e.id) AS mentions FROM {$table} e WHERE status IN ('candidate', 'probable', 'unresolved', 'confirmed')", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$groups = array();
+		foreach ( $rows as $row ) {
+			if ( isset( $used[ (int) $row['id'] ] ) ) {
+				continue;
+			}
+			$key                     = self::group_key( (string) $row['canonical_name'], (string) $row['type'], BusinessProfile::ORIGIN === $row['origin'] || ! empty( json_decode( (string) $row['external_ids'], true ) ) );
+			$groups[ $key['key'] ][] = $row + array( 'area_phrase' => $key['area'] );
+		}
+		$out = array();
+		foreach ( $groups as $members ) {
+			if ( count( $members ) < 2 ) {
+				continue;
+			}
+			usort(
+				$members,
+				static fn( array $a, array $b ): int => array( BusinessProfile::ORIGIN !== $a['origin'], $a['area_phrase'], 'confirmed' !== $a['status'], - (int) $a['mentions'], (int) $a['id'] )
+					<=> array( BusinessProfile::ORIGIN !== $b['origin'], $b['area_phrase'], 'confirmed' !== $b['status'], - (int) $b['mentions'], (int) $b['id'] )
+			);
+			$target     = array_shift( $members );
+			$candidates = array();
+			foreach ( $members as $member ) {
+				if ( BusinessProfile::ORIGIN === $member['origin'] ) {
+					continue;
+				}
+				$candidates[] = array(
+					'id'       => (int) $member['id'],
+					'name'     => (string) $member['canonical_name'],
+					'type'     => (string) $member['type'],
+					'status'   => (string) $member['status'],
+					'mentions' => (int) $member['mentions'],
+				);
+			}
+			if ( array() === $candidates ) {
+				continue;
+			}
+			$area  = array_filter( $candidates, static fn( array $c ): bool => in_array( $c['type'], array( 'place', 'service_area' ), true ) && $c['name'] !== $target['canonical_name'] );
+			$out[] = array(
+				'target'     => array(
+					'id'   => (int) $target['id'],
+					'name' => (string) $target['canonical_name'],
+					'type' => (string) $target['type'],
+				),
+				'candidates' => $candidates,
+				'reason'     => array() !== $area ? 'Gebietsangabe zum Ort' : 'gleicher Name, anderer Typ',
+			);
+		}
 		return $out;
+	}
+
+	/**
+	 * Schlüssel für die Gruppierung: normalisierter Name; bei Orten und Gebieten ohne „Region“, „Raum“,
+	 * „Großraum“, „Umgebung“ oder „Umkreis“ davor, außer es ist ein echtes Verwaltungsgebiet.
+	 *
+	 * @param string $name  Name.
+	 * @param string $type  Typ.
+	 * @param bool   $fixed Echtes Gebiet (Profil oder Wikidata-ID): nicht kürzen.
+	 * @return array{key: string, area: bool}
+	 */
+	public static function group_key( string $name, string $type, bool $fixed = false ): array {
+		$key = KeywordNormalizer::fold( KeywordNormalizer::normalize( $name ) );
+		if ( ! $fixed && in_array( $type, array( 'place', 'service_area' ), true ) && preg_match( '/^(?:region|raum|grossraum|umgebung|umkreis)\s+(.+)$/u', $key, $m ) ) {
+			return array(
+				'key'  => $m[1],
+				'area' => true,
+			);
+		}
+		return array(
+			'key'  => $key,
+			'area' => false,
+		);
 	}
 
 	/**
@@ -556,6 +643,17 @@ final class EntityRepository {
 	}
 
 	/**
+	 * Namen der Leistungen aus dem Unternehmensprofil, für die Zuordnung in der Entity-Erkennung.
+	 *
+	 * @return string[]
+	 */
+	public function profile_services(): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'entities' );
+		return array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT canonical_name FROM {$table} WHERE type = 'service' AND status = 'confirmed' AND origin = %s ORDER BY canonical_name", BusinessProfile::ORIGIN ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * Namen aller nicht abgelehnten Entitäten, für die Schreibweise in Prompts.
 	 *
 	 * @return string[]
@@ -598,6 +696,190 @@ final class EntityRepository {
 			array( 'id' => $id )
 		);
 		return true;
+	}
+
+	/**
+	 * Status, die der Administrator von Hand setzen kann (nicht merged; dafür gibt es merge()).
+	 */
+	public const EDITABLE_STATUS = array( 'candidate', 'probable', 'unresolved', 'confirmed', 'rejected' );
+
+	/**
+	 * Ändert eine Entität: Name, Typ, Beschreibung, Status und weitere Schreibweisen.
+	 *
+	 * Einträge aus dem Unternehmensprofil werden im Profil gepflegt; hier lassen sich bei ihnen nur
+	 * Beschreibung und Schreibweisen ändern. Ein neuer Name darf nicht schon einer anderen Entität desselben
+	 * Typs gehören; dann ist Zusammenführen der richtige Weg.
+	 *
+	 * @param int                  $id      Entität.
+	 * @param array<string, mixed> $fields  name, type, description, status, aliases (vollständige Liste).
+	 * @param int                  $user_id Benutzer.
+	 * @return array<string, mixed> Geänderte Felder mit altem und neuem Wert.
+	 * @throws \InvalidArgumentException Bei ungültigen Werten.
+	 */
+	public function update( int $id, array $fields, int $user_id ): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'entities' );
+		$atab  = Schema::table( $wpdb->prefix, 'entity_aliases' );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A );
+		if ( ! is_array( $row ) ) {
+			throw new \InvalidArgumentException( 'Entität nicht gefunden.' );
+		}
+		if ( 'merged' === $row['status'] ) {
+			throw new \InvalidArgumentException( 'Diese Entität ist zusammengeführt; bitte das Ziel bearbeiten.' );
+		}
+		$profile = BusinessProfile::ORIGIN === $row['origin'];
+		$now     = gmdate( 'Y-m-d H:i:s' );
+		$data    = array();
+		$changes = array();
+
+		$name = isset( $fields['name'] ) ? trim( (string) $fields['name'] ) : (string) $row['canonical_name'];
+		$type = isset( $fields['type'] ) ? (string) $fields['type'] : (string) $row['type'];
+		if ( $profile && ( $name !== $row['canonical_name'] || $type !== $row['type'] ) ) {
+			throw new \InvalidArgumentException( 'Name und Typ von Einträgen aus dem Unternehmensprofil bitte unter „Unternehmen“ ändern.' );
+		}
+		if ( '' === $name ) {
+			throw new \InvalidArgumentException( 'Der Name darf nicht leer sein.' );
+		}
+		if ( ! in_array( $type, EntityExtractor::TYPES, true ) ) {
+			throw new \InvalidArgumentException( 'Unbekannter Typ. Typen: ' . implode( ', ', EntityExtractor::TYPES ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
+		$normalized = mb_substr( KeywordNormalizer::normalize( $name ), 0, 255 );
+		if ( $name !== $row['canonical_name'] || $type !== $row['type'] ) {
+			$other = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE id <> %d AND type = %s AND normalized_name = %s AND status NOT IN ('merged') LIMIT 1", $id, $type, $normalized ) );
+			if ( $other > 0 ) {
+				throw new \InvalidArgumentException( sprintf( 'Es gibt schon eine Entität „%s“ dieses Typs (ID %d). Bitte zusammenführen.', $name, $other ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+		}
+		if ( $name !== $row['canonical_name'] ) {
+			$data['canonical_name']  = mb_substr( $name, 0, 255 );
+			$data['normalized_name'] = $normalized;
+			$changes['name']         = array( $row['canonical_name'], $name );
+			// Der alte Name bleibt als Schreibweise, damit spätere Erkennungen ihn wiederfinden.
+			$fields['aliases'] = array_merge( isset( $fields['aliases'] ) ? (array) $fields['aliases'] : $this->aliases( $id ), array( (string) $row['canonical_name'] ) );
+		}
+		if ( $type !== $row['type'] ) {
+			$data['type']    = $type;
+			$changes['type'] = array( $row['type'], $type );
+		}
+		if ( array_key_exists( 'description', $fields ) ) {
+			$description = trim( (string) $fields['description'] );
+			if ( $description !== (string) $row['description'] ) {
+				$data['description']    = '' === $description ? null : $description;
+				$changes['description'] = array( (string) $row['description'], $description );
+			}
+		}
+		if ( isset( $fields['status'] ) && (string) $fields['status'] !== $row['status'] ) {
+			$status = (string) $fields['status'];
+			if ( ! in_array( $status, self::EDITABLE_STATUS, true ) ) {
+				throw new \InvalidArgumentException( 'Status erlaubt: ' . implode( ', ', self::EDITABLE_STATUS ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+			if ( $profile && 'confirmed' !== $status ) {
+				throw new \InvalidArgumentException( 'Einträge aus dem Unternehmensprofil bleiben bestätigt; entfernen lassen sie sich unter „Unternehmen“.' );
+			}
+			$decided            = in_array( $status, self::DECIDED, true );
+			$data['status']     = $status;
+			$data['decided_by'] = $decided ? $user_id : null;
+			$data['decided_at'] = $decided ? $now : null;
+			$changes['status']  = array( $row['status'], $status );
+		}
+		if ( array() !== $data ) {
+			$data['updated_at'] = $now;
+			$wpdb->update( $table, $data, array( 'id' => $id ) );
+		}
+
+		if ( isset( $fields['aliases'] ) ) {
+			$wanted = array();
+			foreach ( (array) $fields['aliases'] as $alias ) {
+				$alias = trim( (string) $alias );
+				$key   = mb_substr( KeywordNormalizer::normalize( $alias ), 0, 255 );
+				if ( '' !== $key && $key !== $normalized ) {
+					$wanted[ $key ] = mb_substr( $alias, 0, 255 );
+				}
+			}
+			$current = array();
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT alias, normalized_alias FROM {$atab} WHERE entity_id = %d", $id ), ARRAY_A ) as $a ) {
+				$current[ (string) $a['normalized_alias'] ] = (string) $a['alias'];
+			}
+			foreach ( array_diff_key( $current, $wanted ) as $key => $alias ) {
+				$wpdb->delete(
+					$atab,
+					array(
+						'entity_id'        => $id,
+						'normalized_alias' => $key,
+					)
+				);
+			}
+			foreach ( array_diff_key( $wanted, $current ) as $key => $alias ) {
+				$wpdb->insert(
+					$atab,
+					array(
+						'entity_id'        => $id,
+						'alias'            => $alias,
+						'normalized_alias' => $key,
+						'created_at'       => $now,
+					)
+				);
+			}
+			$removed = array_values( array_diff_key( $current, $wanted ) );
+			$added   = array_values( array_diff_key( $wanted, $current ) );
+			if ( array() !== $removed || array() !== $added ) {
+				$changes['aliases'] = array(
+					'removed' => $removed,
+					'added'   => $added,
+				);
+			}
+		}
+		// phpcs:enable
+		return $changes;
+	}
+
+	/**
+	 * Löscht eine Entität mit Schreibweisen, Fundstellen, Beziehungen, Aussagen und Themenbezügen. Was in
+	 * sie zusammengeführt war, wird mitgelöscht. Anders als „abgelehnt“ merkt sich das Plugin den Namen nicht;
+	 * eine spätere Erkennung kann ihn wieder vorschlagen.
+	 *
+	 * @param int $id Entität.
+	 * @return array{deleted: int, mentions: int} Anzahl gelöschter Entitäten (mit zusammengeführten) und Fundstellen.
+	 * @throws \InvalidArgumentException Wenn die Entität fehlt oder aus dem Unternehmensprofil stammt.
+	 */
+	public function delete( int $id ): array {
+		global $wpdb;
+		$t = static fn( string $name ): string => Schema::table( $wpdb->prefix, $name );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, origin FROM {$t( 'entities' )} WHERE id = %d", $id ), ARRAY_A );
+		if ( ! is_array( $row ) ) {
+			throw new \InvalidArgumentException( 'Entität nicht gefunden.' );
+		}
+		if ( BusinessProfile::ORIGIN === $row['origin'] ) {
+			throw new \InvalidArgumentException( 'Einträge aus dem Unternehmensprofil bitte unter „Unternehmen“ entfernen.' );
+		}
+		$ids      = array_merge( array( $id ), array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t( 'entities' )} WHERE merged_into = %d", $id ) ) ) );
+		$in       = implode( ', ', array_map( 'intval', $ids ) );
+		$mentions = (int) $wpdb->query( "DELETE FROM {$t( 'mentions' )} WHERE entity_id IN ({$in})" );
+		$wpdb->query( "DELETE FROM {$t( 'entity_aliases' )} WHERE entity_id IN ({$in})" );
+		$wpdb->query( "DELETE FROM {$t( 'relations' )} WHERE source_entity_id IN ({$in}) OR target_entity_id IN ({$in})" );
+		$wpdb->query( "DELETE FROM {$t( 'claims' )} WHERE subject_type = 'entity' AND subject_id IN ({$in})" );
+		$wpdb->query( "DELETE FROM {$t( 'evidence' )} WHERE target_type = 'entity' AND target_id IN ({$in})" );
+		$wpdb->query( "DELETE FROM {$t( 'topic_entities' )} WHERE entity_id IN ({$in})" );
+		$deleted = (int) $wpdb->query( "DELETE FROM {$t( 'entities' )} WHERE id IN ({$in})" );
+		// phpcs:enable
+		return array(
+			'deleted'  => $deleted,
+			'mentions' => $mentions,
+		);
+	}
+
+	/**
+	 * Schreibweisen einer Entität.
+	 *
+	 * @param int $id Entität.
+	 * @return string[]
+	 */
+	private function aliases( int $id ): array {
+		global $wpdb;
+		$atab = Schema::table( $wpdb->prefix, 'entity_aliases' );
+		return array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT alias FROM {$atab} WHERE entity_id = %d ORDER BY alias", $id ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**

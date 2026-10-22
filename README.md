@@ -66,6 +66,8 @@ wp lsec profile show --format=json > profil.json   # Unternehmensprofil sichern 
 wp lsec profile suggest / /impressum /kontakt      # Vorschlag aus Webseiten (ein KI-Aufruf)
 wp lsec index run --now        # Inhaltsindex; startet bei entity_auto_extract die Erkennung (KI-Kosten) für entity_extract_types
 wp lsec index stop             # Index und offene Entity-Erkennungen abbrechen
+wp lsec entities update 44 --status=rejected   # Name, Typ, Status, Schreibweisen ändern
+wp lsec entities delete 66     # Entität mit Fundstellen löschen
 wp lsec entities suggest-merges
 wp lsec entities merge <ziel> <quelle>…
 ```

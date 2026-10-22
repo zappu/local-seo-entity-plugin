@@ -2,7 +2,8 @@
 /** @jsx createElement */
 /** @jsxFrag Fragment */
 /**
- * Entitäten: Vorschläge zum Zusammenführen, Filter, Bestätigen, Ablehnen, Zusammenführen, Details mit Fundstellen.
+ * Entitäten: Vorschläge zum Zusammenführen, Filter, Bestätigen, Ablehnen, Zusammenführen, Details mit Fundstellen,
+ * Bearbeiten (Name, Typ, Status, Beschreibung, Schreibweisen) und Löschen.
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import {
@@ -15,15 +16,114 @@ import {
 	Notice,
 	SelectControl,
 	Spinner,
+	TextareaControl,
 	TextControl,
 	ToggleControl,
 } from '@wordpress/components';
-import { decideEntity, getEntities, getEntity, getMergeSuggestions, mergeEntities } from './api';
+import { decideEntity, deleteEntity, getEntities, getEntity, getMergeSuggestions, mergeEntities, updateEntity } from './api';
 import { ENTITY_STATUS, ENTITY_TYPES, ORIGINS } from './format';
 
 const config = window.lsecAdmin || {};
 const MIN_CONFIDENCE = Number( config.minConfidence ?? 0.6 );
-const DECIDABLE = [ 'candidate', 'probable', 'unresolved' ];
+const EDITABLE_STATUS = [ 'candidate', 'probable', 'unresolved', 'confirmed', 'rejected' ];
+const PROFILE = 'business_profile';
+
+/**
+ * Formular zum Bearbeiten. Einträge aus dem Unternehmensprofil: nur Beschreibung und Schreibweisen.
+ *
+ * @param {Object}   props          Eigenschaften.
+ * @param {Object}   props.entity   Entität.
+ * @param {Function} props.onSave   Speichern mit den Feldern.
+ * @param {Function} props.onCancel Abbrechen.
+ * @param {boolean}  props.busy     Speichert gerade.
+ */
+function EditForm( { entity, onSave, onCancel, busy } ) {
+	const fromProfile = entity.origin === PROFILE;
+	const [ form, setForm ] = useState( {
+		name: entity.canonical_name,
+		type: entity.type,
+		status: entity.status,
+		description: entity.description || '',
+		aliases: entity.aliases.slice(),
+	} );
+	const [ alias, setAlias ] = useState( '' );
+	const set = ( key, value ) => setForm( ( f ) => ( { ...f, [ key ]: value } ) );
+	const addAlias = () => {
+		const value = alias.trim();
+		if ( value && ! form.aliases.includes( value ) && value !== form.name ) {
+			set( 'aliases', [ ...form.aliases, value ] );
+		}
+		setAlias( '' );
+	};
+	return (
+		<div className="lsec-edit">
+			{ fromProfile && (
+				<Notice status="info" isDismissible={ false }>
+					Dieser Eintrag stammt aus dem Unternehmensprofil. Name, Typ und Status bitte unter „Unternehmen“ ändern; hier lassen sich Beschreibung und Schreibweisen pflegen.
+				</Notice>
+			) }
+			<TextControl label="Name" value={ form.name } disabled={ fromProfile } onChange={ ( v ) => set( 'name', v ) } __nextHasNoMarginBottom __next40pxDefaultSize />
+			<div className="lsec-edit__row">
+				<SelectControl
+					label="Typ"
+					value={ form.type }
+					disabled={ fromProfile }
+					options={ Object.entries( ENTITY_TYPES ).map( ( [ value, label ] ) => ( { label, value } ) ) }
+					onChange={ ( v ) => set( 'type', v ) }
+					__nextHasNoMarginBottom
+					__next40pxDefaultSize
+				/>
+				<SelectControl
+					label="Status"
+					value={ form.status }
+					disabled={ fromProfile }
+					options={ EDITABLE_STATUS.map( ( value ) => ( { label: ENTITY_STATUS[ value ], value } ) ) }
+					onChange={ ( v ) => set( 'status', v ) }
+					__nextHasNoMarginBottom
+					__next40pxDefaultSize
+				/>
+			</div>
+			<TextareaControl label="Beschreibung" rows={ 2 } value={ form.description } onChange={ ( v ) => set( 'description', v ) } __nextHasNoMarginBottom />
+			<fieldset className="lsec-aliases">
+				<legend>Weitere Schreibweisen</legend>
+				{ form.aliases.length === 0 && <p className="lsec-muted">Keine.</p> }
+				<ul>
+					{ form.aliases.map( ( a ) => (
+						<li key={ a }>
+							{ a }
+							<Button variant="link" isDestructive onClick={ () => set( 'aliases', form.aliases.filter( ( x ) => x !== a ) ) } aria-label={ `${ a } entfernen` }>
+								entfernen
+							</Button>
+						</li>
+					) ) }
+				</ul>
+				<div className="lsec-aliases__add">
+					<TextControl
+						label="Schreibweise hinzufügen"
+						value={ alias }
+						onChange={ setAlias }
+						onKeyDown={ ( e ) => {
+							if ( e.key === 'Enter' ) {
+								e.preventDefault();
+								addAlias();
+							}
+						} }
+						__nextHasNoMarginBottom
+						__next40pxDefaultSize
+					/>
+					<Button variant="secondary" onClick={ addAlias } disabled={ ! alias.trim() }>Hinzufügen</Button>
+				</div>
+			</fieldset>
+			{ form.name !== entity.canonical_name && (
+				<p className="lsec-muted">Der bisherige Name „{ entity.canonical_name }“ bleibt als Schreibweise erhalten.</p>
+			) }
+			<div className="lsec-savebar lsec-savebar--inline">
+				<Button variant="primary" isBusy={ busy } disabled={ busy || ! form.name.trim() } onClick={ () => onSave( form ) }>Speichern</Button>
+				<Button variant="tertiary" disabled={ busy } onClick={ onCancel }>Abbrechen</Button>
+			</div>
+		</div>
+	);
+}
 
 function Suggestions( { groups, onMerge, busy } ) {
 	if ( ! groups.length ) {
@@ -39,7 +139,8 @@ function Suggestions( { groups, onMerge, busy } ) {
 					<div key={ group.target.id } className="lsec-suggestion">
 						<p>
 							<strong>{ group.target.name }</strong>
-							{ ` – ${ group.candidates.length } weitere Schreibweise${ group.candidates.length === 1 ? '' : 'n' }:` }
+							<span className="lsec-muted">{ ` (${ ENTITY_TYPES[ group.target.type ] || group.target.type }${ group.reason ? `, ${ group.reason }` : '' })` }</span>
+							{ ` – ${ group.candidates.length } weitere${ group.candidates.length === 1 ? 'r Eintrag' : ' Einträge' }:` }
 						</p>
 						<ul>
 							{ group.candidates.map( ( c ) => (
@@ -58,18 +159,56 @@ function Suggestions( { groups, onMerge, busy } ) {
 	);
 }
 
-function Detail( { id, onClose } ) {
+function Detail( { id, edit, onClose, onChanged } ) {
 	const [ entity, setEntity ] = useState( null );
 	const [ error, setError ] = useState( null );
+	const [ editing, setEditing ] = useState( !! edit );
+	const [ busy, setBusy ] = useState( false );
 	useEffect( () => {
 		getEntity( id ).then( setEntity ).catch( ( e ) => setError( e.message ) );
 	}, [ id ] );
+
+	const save = ( form ) => {
+		const fields = { description: form.description, aliases: form.aliases };
+		if ( entity.origin !== PROFILE ) {
+			fields.name = form.name.trim();
+			fields.type = form.type;
+			fields.status = form.status;
+		}
+		setBusy( true );
+		setError( null );
+		updateEntity( id, fields )
+			.then( ( updated ) => {
+				setEntity( updated );
+				setEditing( false );
+				onChanged( `„${ updated.canonical_name }“ gespeichert.` );
+			} )
+			.catch( ( e ) => setError( e.message ) )
+			.finally( () => setBusy( false ) );
+	};
+
+	const remove = () => {
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( `„${ entity.canonical_name }“ mit allen Schreibweisen und Fundstellen löschen?\n\nAnders als „Ablehnen“ merkt sich das Plugin den Namen dann nicht: Eine spätere Erkennung kann ihn wieder vorschlagen. Für Begriffe, die nicht wiederkommen sollen, ist „Ablehnen“ besser.` ) ) {
+			return;
+		}
+		setBusy( true );
+		deleteEntity( id )
+			.then( () => {
+				onChanged( `„${ entity.canonical_name }“ gelöscht.` );
+				onClose();
+			} )
+			.catch( ( e ) => {
+				setError( e.message );
+				setBusy( false );
+			} );
+	};
 
 	const wikidata = entity && entity.external_ids && entity.external_ids.wikidata;
 	const candidates = ( entity && entity.properties && entity.properties.candidates ) || [];
 	const posts = {};
 	( ( entity && entity.mentions ) || [] ).forEach( ( m ) => {
-		const key = m.object_id;
+		const key = `${ m.object_type }:${ m.object_id }`;
 		posts[ key ] = posts[ key ] || { title: m.title, url: m.url, excerpts: [] };
 		posts[ key ].excerpts.push( m.excerpt );
 	} );
@@ -78,8 +217,17 @@ function Detail( { id, onClose } ) {
 		<Modal title={ entity ? entity.canonical_name : 'Entität' } onRequestClose={ onClose } className="lsec-detail">
 			{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
 			{ ! entity && ! error && <Spinner /> }
-			{ entity && (
+			{ entity && editing && <EditForm entity={ entity } onSave={ save } onCancel={ () => setEditing( false ) } busy={ busy } /> }
+			{ entity && ! editing && (
 				<>
+					{ entity.status !== 'merged' && (
+						<div className="lsec-detail__actions">
+							<Button variant="secondary" size="small" onClick={ () => setEditing( true ) }>Bearbeiten</Button>
+							{ entity.origin !== PROFILE && (
+								<Button variant="tertiary" size="small" isDestructive disabled={ busy } onClick={ remove }>Löschen</Button>
+							) }
+						</div>
+					) }
 					<p>
 						{ ENTITY_TYPES[ entity.type ] || entity.type } · <span className={ `lsec-badge lsec-badge--e-${ entity.status }` }>{ ENTITY_STATUS[ entity.status ] || entity.status }</span>
 						{ ' · ' }
@@ -131,7 +279,7 @@ function Detail( { id, onClose } ) {
 					{ Object.entries( posts ).map( ( [ postId, post ] ) => (
 						<div key={ postId } className="lsec-mentions">
 							<p>
-								{ post.url ? <a href={ post.url } target="_blank" rel="noreferrer">{ post.title || `Beitrag ${ postId }` }</a> : `Beitrag ${ postId }` }
+								{ post.url ? <a href={ post.url } target="_blank" rel="noreferrer">{ post.title || postId }</a> : post.title || postId }
 							</p>
 							<ul>
 								{ post.excerpts.slice( 0, 5 ).map( ( text, i ) => <li key={ i }>„{ text }“</li> ) }
@@ -301,7 +449,7 @@ export default function Entities() {
 													/>
 												</td>
 												<td>
-													<Button variant="link" onClick={ () => setDetail( id ) }>{ row.canonical_name }</Button>
+													<Button variant="link" onClick={ () => setDetail( { id, edit: false } ) }>{ row.canonical_name }</Button>
 													{ Number( row.aliases ) > 0 && <span className="lsec-muted"> +{ row.aliases }</span> }
 												</td>
 												<td>{ ENTITY_TYPES[ row.type ] || row.type }</td>
@@ -310,11 +458,14 @@ export default function Entities() {
 												<td className="lsec-num">{ row.posts }</td>
 												<td>{ ORIGINS[ row.origin ] || row.origin }</td>
 												<td className="lsec-actions">
-													{ DECIDABLE.includes( row.status ) && (
-														<>
-															<Button variant="secondary" size="small" disabled={ busy } onClick={ () => decide( id, 'confirmed' ) }>Bestätigen</Button>
-															<Button variant="tertiary" size="small" isDestructive disabled={ busy } onClick={ () => decide( id, 'rejected' ) }>Ablehnen</Button>
-														</>
+													{ row.status !== 'merged' && row.origin !== PROFILE && row.status !== 'confirmed' && (
+														<Button variant="secondary" size="small" disabled={ busy } onClick={ () => decide( id, 'confirmed' ) }>Bestätigen</Button>
+													) }
+													{ row.status !== 'merged' && row.origin !== PROFILE && row.status !== 'rejected' && (
+														<Button variant="tertiary" size="small" isDestructive disabled={ busy } onClick={ () => decide( id, 'rejected' ) }>Ablehnen</Button>
+													) }
+													{ row.status !== 'merged' && (
+														<Button variant="tertiary" size="small" disabled={ busy } onClick={ () => setDetail( { id, edit: true } ) }>Bearbeiten</Button>
 													) }
 												</td>
 											</tr>
@@ -326,7 +477,18 @@ export default function Entities() {
 					) }
 				</CardBody>
 			</Card>
-			{ detail !== null && <Detail id={ detail } onClose={ () => setDetail( null ) } /> }
+			{ detail !== null && (
+				<Detail
+					key={ `${ detail.id }-${ detail.edit }` }
+					id={ detail.id }
+					edit={ detail.edit }
+					onClose={ () => setDetail( null ) }
+					onChanged={ ( text ) => {
+						setNotice( { status: 'success', text } );
+						load();
+					} }
+				/>
+			) }
 			{ merging && selectedRows.length > 1 && <MergeDialog entities={ selectedRows } onMerge={ merge } onClose={ () => setMerging( false ) } busy={ busy } /> }
 		</div>
 	);

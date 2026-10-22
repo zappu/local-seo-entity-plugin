@@ -6,6 +6,7 @@
 #   Stufe B: B1 Inhaltsindex · B2 Entity-Erkennung als Ablauf (KI-Attrappe) · B3 Zusammenführen mit Vorschlägen
 #            B4 Unternehmensprofil · B5 REST-Routen · B6 Ortsabgleich Hemmingen (nur mit --online, fragt Wikidata)
 #            B7 Kategorieseiten im Index, Auswahl der Erkennung, Abbrechen und Wiederaufnehmen (0.4.2)
+#            B8 Entitäten bearbeiten und löschen, weitere Vorschläge zum Zusammenführen (0.4.3)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -293,6 +294,40 @@ check "derselbe Ablauf wieder eingeplant" "queued" "$(run_by id "$RUN" status)"
 wpc lsec runs cancel "$RUN" >/dev/null
 check "Erkennung abgebrochen" "cancelled" "$(run_by id "$RUN" status)"
 contains "unbekannte Art abgelehnt" "Unbekannt: quatsch" "$($WP "${WP_ARGS[@]}" lsec settings set entity_extract_types page,quatsch 2>&1)"
+
+# ---------------------------------------------------------------------------
+echo "B8 Entitäten bearbeiten, löschen, weitere Vorschläge"
+E1=$(wpj lsec entities add concept "LSECTEST Alter Name" | grep -oE 'ID [0-9]+|[0-9]+' | grep -oE '[0-9]+' | head -1)
+OUT=$(wpc lsec entities update "$E1" --name="LSECTEST Neuer Name" --type=service --status=confirmed --add-alias="LSECTEST Dritte Schreibweise" 2>&1)
+contains "geändert" "geändert" "$OUT"
+D=$(wpj lsec entities show "$E1" --format=json)
+check "neuer Name" "LSECTEST Neuer Name" "$(echo "$D" | json canonical_name)"
+check "Typ geändert" "service" "$(echo "$D" | json type)"
+check "Status bestätigt" "confirmed" "$(echo "$D" | json status)"
+check "alter Name und neue Schreibweise als Alias" "2" "$(echo "$D" | json aliases.count)"
+wpc lsec entities update "$E1" --status=candidate --remove-alias="LSECTEST Dritte Schreibweise" >/dev/null
+D=$(wpj lsec entities show "$E1" --format=json)
+check "Status zurück auf Kandidat" "candidate" "$(echo "$D" | json status)"
+check "Alias entfernt" "1" "$(echo "$D" | json aliases.count)"
+wpc lsec entities add concept "LSECTEST Doppelt" >/dev/null
+wpc lsec entities add service "LSECTEST Doppelt" >/dev/null
+wpc lsec entities add place "LSECTEST Dorf" >/dev/null
+wpc lsec entities add service_area "Region LSECTEST Dorf" >/dev/null
+SUG=$(wpj lsec entities suggest-merges --format=json | json .)
+contains "gleicher Name, anderer Typ vorgeschlagen" "gleicher Name, anderer Typ" "$SUG"
+contains "Gebietsangabe dem Ort zugeordnet" "Gebietsangabe zum Ort" "$SUG"
+OUT=$($WP "${WP_ARGS[@]}" lsec entities update "$E1" --name="LSECTEST Doppelt" --type=concept 2>&1)
+contains "Namenskollision verweist aufs Zusammenführen" "zusammenführen" "$OUT"
+OUT=$(wpc lsec entities delete "$E1" --yes 2>&1)
+contains "gelöscht" "Gelöscht: 1 Entität" "$OUT"
+contains "nach dem Löschen nicht mehr vorhanden" "nicht gefunden" "$($WP "${WP_ARGS[@]}" lsec entities show "$E1" 2>&1)"
+ORG=$(json organization.id < "$TMP/profil.json")
+if [ -n "$ORG" ]; then
+	contains "Profil-Eintrag nur im Profil umbenennen" "Unternehmensprofil" "$($WP "${WP_ARGS[@]}" lsec entities update "$ORG" --name="LSECTEST Umbenannt" 2>&1)"
+	contains "Profil-Eintrag nicht löschbar" "Unternehmensprofil" "$($WP "${WP_ARGS[@]}" lsec entities delete "$ORG" --yes 2>&1)"
+fi
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "neue Routen geschützt" "Routen geschützt" "$OUT"
 
 cleanup_b >/dev/null 2>&1
 

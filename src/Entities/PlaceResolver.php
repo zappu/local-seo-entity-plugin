@@ -14,7 +14,10 @@ use Lsec\Research\Keywords\KeywordNormalizer;
  * Abgleich über Kontext (Spezifikation 8.3, Prüfpunkt M18):
  * 1. Kandidaten mit gleichem Namen und Koordinaten im Land der Website
  * 2. Kandidaten, die in einem anderen Kandidaten liegen (Ortskern, Ortsteil), entfallen
- * 3. Mit Servicegebiet: Lage in einer Verwaltungseinheit des Gebiets oder innerhalb des Radius
+ * 3. Mit Servicegebiet: Lage in einer Verwaltungseinheit des Gebiets oder innerhalb des Radius; das Gebiet
+ *    selbst zählt dazu
+ * 4. Passt keiner, aber genau einer ist dem Servicegebiet übergeordnet (Niedersachsen zur Region Hannover),
+ *    gilt er als probable (Nachtrag 22.10.)
  * Genau ein passender Kandidat → probable, mehrere → unresolved, keiner → candidate ohne Zuordnung.
  */
 final class PlaceResolver {
@@ -82,7 +85,7 @@ final class PlaceResolver {
 		$list = array();
 		foreach ( $candidates as $id => $e ) {
 			$distance = null !== $area && null !== $area->center && null !== $e['coord'] ? self::distance_km( $area->center, $e['coord'] ) : null;
-			$in_admin = null !== $area && array() !== array_intersect( $area->wikidata_ids, $ancestors[ $id ] );
+			$in_admin = null !== $area && ( in_array( (string) $id, $area->wikidata_ids, true ) || array() !== array_intersect( $area->wikidata_ids, $ancestors[ $id ] ) );
 			$in_range = null !== $distance && null !== $area && $area->radius_km > 0 && $distance <= $area->radius_km;
 			$list[]   = array(
 				'id'          => $id,
@@ -112,6 +115,13 @@ final class PlaceResolver {
 		$matching = array_values( array_filter( $list, static fn( array $c ): bool => true === $c['in_area'] ) );
 		if ( 1 === count( $matching ) ) {
 			return self::result( 'probable', $name, $matching[0], $list, 'Einziger Kandidat im Servicegebiet ' . $area->label . '.' );
+		}
+		if ( array() === $matching ) {
+			$parents  = $this->area_parents( $area, $country );
+			$covering = array_values( array_filter( $list, static fn( array $c ): bool => in_array( (string) $c['id'], $parents, true ) ) );
+			if ( 1 === count( $covering ) ) {
+				return self::result( 'probable', $name, $covering[0], $list, 'Übergeordnetes Gebiet des Servicegebiets ' . $area->label . '.' );
+			}
 		}
 		return self::result(
 			'unresolved',
@@ -160,6 +170,33 @@ final class PlaceResolver {
 				}
 			}
 			$out[ (string) $id ] = array_keys( $seen );
+		}
+		return $out;
+	}
+
+	/**
+	 * Übergeordnete Verwaltungseinheiten des Servicegebiets (ohne Staat). Eine Woche zwischengespeichert,
+	 * weil Wikidata schnell „zu viele Anfragen“ meldet.
+	 *
+	 * @param ServiceArea $area    Servicegebiet.
+	 * @param string|null $country Staat.
+	 * @return string[]
+	 */
+	private function area_parents( ServiceArea $area, ?string $country ): array {
+		if ( array() === $area->wikidata_ids ) {
+			return array();
+		}
+		$key = 'lsec_area_parents_' . md5( implode( ',', $area->wikidata_ids ) );
+		if ( function_exists( 'get_transient' ) ) {
+			$cached = get_transient( $key );
+			if ( is_array( $cached ) ) {
+				return array_map( 'strval', $cached );
+			}
+		}
+		$areas = $this->wikidata->entities( $area->wikidata_ids );
+		$out   = array() === $areas ? array() : array_values( array_unique( array_merge( ...array_values( $this->ancestors( $areas, $country ) ) ) ) );
+		if ( function_exists( 'set_transient' ) ) {
+			set_transient( $key, $out, WEEK_IN_SECONDS );
 		}
 		return $out;
 	}

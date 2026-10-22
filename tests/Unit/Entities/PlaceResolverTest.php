@@ -128,6 +128,102 @@ final class PlaceResolverTest extends TestCase {
 		$this->assertSame( array( 'Q666253' ), $entity['located_in'] );
 	}
 
+	/**
+	 * Wikidata-Eintrag als Antwort von wbgetentities.
+	 *
+	 * @param string   $id      ID.
+	 * @param string   $label   Bezeichnung.
+	 * @param string[] $parents Übergeordnete Einheiten (P131).
+	 * @return array{status: int, body: string}
+	 */
+	private static function entity_response( string $id, string $label, array $parents ): array {
+		$item = static fn( string $q ): array => array( 'mainsnak' => array( 'datavalue' => array( 'value' => array( 'id' => $q ) ) ) );
+		return array(
+			'status' => 200,
+			'body'   => (string) json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- ohne WordPress.
+				array(
+					'entities' => array(
+						$id => array(
+							'labels' => array( 'de' => array( 'value' => $label ) ),
+							'claims' => array(
+								'P17'  => array( $item( 'Q183' ) ),
+								'P131' => array_map( $item, $parents ),
+								'P625' => array(
+									array(
+										'mainsnak' => array(
+											'datavalue' => array(
+												'value' => array(
+													'latitude' => 52.7,
+													'longitude' => 9.0,
+												),
+											),
+										),
+									),
+								),
+							),
+						),
+					),
+					'success'  => 1,
+				)
+			),
+		);
+	}
+
+	public function test_superordinate_region_of_service_area_is_probable(): void {
+		$search = array(
+			'status' => 200,
+			'body'   => (string) json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- ohne WordPress.
+				array(
+					'search' => array(
+						array(
+							'id'    => 'Q1197',
+							'label' => 'Niedersachsen',
+							'match' => array(
+								'text'     => 'Niedersachsen',
+								'language' => 'de',
+							),
+						),
+					),
+				)
+			),
+		);
+		$http   = new FakeTransport(
+			array(
+				$search,
+				self::entity_response( 'Q1197', 'Niedersachsen', array( 'Q183' ) ),
+				self::entity_response( 'Q5963', 'Region Hannover', array( 'Q1197' ) ),
+				self::entity_response( 'Q1197', 'Niedersachsen', array( 'Q183' ) ),
+			)
+		);
+		$area   = new ServiceArea( 'Region Hannover', array( 'Q5963' ) );
+		$result = ( new PlaceResolver( new WikidataClient( $http ) ) )->resolve( 'Niedersachsen', $area );
+
+		$this->assertSame( 'probable', $result['status'] );
+		$this->assertSame( 'Q1197', $result['chosen']['id'] );
+		$this->assertStringContainsString( 'Übergeordnetes Gebiet', $result['reason'] );
+	}
+
+	public function test_service_area_itself_is_in_area(): void {
+		$search = array(
+			'status' => 200,
+			'body'   => (string) json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- ohne WordPress.
+				array(
+					'search' => array(
+						array(
+							'id'    => 'Q5963',
+							'label' => 'Region Hannover',
+						),
+					),
+				)
+			),
+		);
+		$http   = new FakeTransport( array( $search, self::entity_response( 'Q5963', 'Region Hannover', array( 'Q1197' ) ), self::entity_response( 'Q1197', 'Niedersachsen', array( 'Q183' ) ) ) );
+		$result = ( new PlaceResolver( new WikidataClient( $http ) ) )->resolve( 'Region Hannover', new ServiceArea( 'Region Hannover', array( 'Q5963' ) ) );
+
+		$this->assertSame( 'probable', $result['status'] );
+		$this->assertSame( 'Q5963', $result['chosen']['id'] );
+	}
+
 	public function test_service_area_from_settings_array(): void {
 		$this->assertNull( ServiceArea::from_array( array() ) );
 		$this->assertNull( ServiceArea::from_array( array( 'center' => array( 52.3, 9.7 ) ) ) );

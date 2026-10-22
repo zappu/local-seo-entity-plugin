@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## 0.4.3 – 22.10.2026
+
+- Entitäten bearbeiten: Name, Typ, Beschreibung, Status (auch zurück auf Kandidat) und Schreibweisen; ein geänderter Name bleibt als Schreibweise (`wp lsec entities update`)
+- Entitäten löschen, mit Fundstellen und Beziehungen; Einträge aus dem Unternehmensprofil bleiben geschützt (`wp lsec entities delete`)
+- Entitäten-Tabelle: Bestätigen, Ablehnen und Bearbeiten auch für schon entschiedene Einträge
+- Weitere Vorschläge zum Zusammenführen: gleicher Name mit anderem Typ, „Region/Raum Gehrden“ zu „Gehrden“
+- Entity-Erkennung ordnet Leistungen denen aus dem Unternehmensprofil zu und lässt allgemeine Materialien weg; „Raum X“ wird zum Ort X
+- Ortsabgleich: Gebiete über dem Servicegebiet (z. B. Niedersachsen) und das Servicegebiet selbst gelten als wahrscheinlich
+- Prüfskript: B8
+
 ## 0.4.2 – 22.10.2026
 
 - Inhaltsindex liest jetzt auch WooCommerce-Produkte und Kategorieseiten (Beitrags- und Produktkategorien); Warenkorb, Kasse, Kundenkonto und Standardkategorien bleiben draußen

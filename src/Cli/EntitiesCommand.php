@@ -13,6 +13,7 @@ use Lsec\Core\Settings;
 use Lsec\Entities\EntityExtractionWorkflow;
 use Lsec\Entities\EntityExtractor;
 use Lsec\Entities\EntityRepository;
+use Lsec\Research\Keywords\KeywordNormalizer;
 use Lsec\Entities\PlaceResolver;
 use Lsec\Entities\TextfocusEntityImport;
 use Lsec\Entities\ServiceArea;
@@ -203,7 +204,7 @@ final class EntitiesCommand {
 		WP_CLI::log( sprintf( '„%s“: %d Wörter (%s)', $title, $content['words'], $content['source'] ) );
 		try {
 			$service = $this->plugin->ai->service();
-			$result  = ( new EntityExtractor( $service ) )->extract( $title, $content['text'], $this->entities->known_names() );
+			$result  = ( new EntityExtractor( $service ) )->extract( $title, $content['text'], $this->entities->known_names(), null, $this->entities->profile_services() );
 		} catch ( RetryableException $e ) {
 			WP_CLI::error( 'Vorübergehend (' . $e->error_code . '): ' . $this->plugin->logger->redact( $e->getMessage() ) );
 		} catch ( \RuntimeException $e ) {
@@ -326,6 +327,125 @@ final class EntitiesCommand {
 			)
 		);
 		WP_CLI::success( 'Entität ' . (int) $args[0] . ': ' . $args[1] );
+	}
+
+	/**
+	 * Ändert eine Entität: Name, Typ, Beschreibung, Status, Schreibweisen.
+	 *
+	 * Ein geänderter Name bleibt als Schreibweise erhalten. Einträge aus dem Unternehmensprofil: nur
+	 * Beschreibung und Schreibweisen.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Entität.
+	 *
+	 * [--name=<name>]
+	 * : Neuer Name.
+	 *
+	 * [--type=<type>]
+	 * : organization, brand, place, service_area, service, product, person, competitor oder concept.
+	 *
+	 * [--description=<text>]
+	 * : Beschreibung (leer = löschen).
+	 *
+	 * [--status=<status>]
+	 * : candidate, probable, unresolved, confirmed oder rejected.
+	 *
+	 * [--add-alias=<alias>]
+	 * : Weitere Schreibweise; mehrere mit |.
+	 *
+	 * [--remove-alias=<alias>]
+	 * : Schreibweise entfernen; mehrere mit |.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec entities update 44 --status=rejected
+	 *     wp lsec entities update 66 --name=Gehrden --type=place
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function update( array $args, array $assoc_args ): void {
+		$id     = (int) ( $args[0] ?? 0 );
+		$fields = array();
+		foreach ( array( 'name', 'type', 'description', 'status' ) as $key ) {
+			if ( isset( $assoc_args[ $key ] ) ) {
+				$fields[ $key ] = (string) $assoc_args[ $key ];
+			}
+		}
+		if ( isset( $assoc_args['add-alias'] ) || isset( $assoc_args['remove-alias'] ) ) {
+			$detail            = $this->entities->detail( $id );
+			$aliases           = (array) ( $detail['aliases'] ?? array() );
+			$split             = static fn( string $v ): array => array_values( array_filter( array_map( 'trim', explode( '|', $v ) ) ) );
+			$remove            = array_map( array( KeywordNormalizer::class, 'normalize' ), $split( (string) ( $assoc_args['remove-alias'] ?? '' ) ) );
+			$aliases           = array_filter( $aliases, static fn( string $a ): bool => ! in_array( KeywordNormalizer::normalize( $a ), $remove, true ) );
+			$fields['aliases'] = array_merge( array_values( $aliases ), $split( (string) ( $assoc_args['add-alias'] ?? '' ) ) );
+		}
+		if ( array() === $fields ) {
+			WP_CLI::error( 'Nichts zu ändern. Optionen: --name, --type, --description, --status, --add-alias, --remove-alias.' );
+		}
+		try {
+			$changes = $this->entities->update( $id, $fields, get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		if ( array() === $changes ) {
+			WP_CLI::success( 'Unverändert.' );
+			return;
+		}
+		$this->plugin->logger->audit(
+			'Entität bearbeitet',
+			array(
+				'entity_id' => $id,
+				'changes'   => $changes,
+				'user_id'   => get_current_user_id(),
+				'via'       => 'cli',
+			)
+		);
+		WP_CLI::success( 'Entität ' . $id . ' geändert: ' . implode( ', ', array_keys( $changes ) ) . '.' );
+	}
+
+	/**
+	 * Löscht eine Entität mit Schreibweisen, Fundstellen und Beziehungen.
+	 *
+	 * Anders als „abgelehnt“ merkt sich das Plugin den Namen nicht; eine spätere Erkennung kann ihn wieder
+	 * vorschlagen. Für Begriffe, die nie wieder auftauchen sollen: update <id> --status=rejected.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Entität.
+	 *
+	 * [--yes]
+	 * : Ohne Rückfrage.
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function delete( array $args, array $assoc_args ): void {
+		$id     = (int) ( $args[0] ?? 0 );
+		$detail = $this->entities->detail( $id );
+		if ( null === $detail ) {
+			WP_CLI::error( 'Entität nicht gefunden.' );
+		}
+		WP_CLI::confirm( sprintf( '„%s“ mit %d Fundstellen löschen?', $detail['canonical_name'], count( (array) $detail['mentions'] ) ), $assoc_args );
+		try {
+			$out = $this->entities->delete( $id );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		$this->plugin->logger->audit(
+			'Entität gelöscht',
+			array(
+				'entity_id' => $id,
+				'name'      => (string) $detail['canonical_name'],
+				'deleted'   => $out['deleted'],
+				'user_id'   => get_current_user_id(),
+				'via'       => 'cli',
+			)
+		);
+		WP_CLI::success( sprintf( 'Gelöscht: %d Entität(en), %d Fundstellen.', $out['deleted'], $out['mentions'] ) );
 	}
 
 	/**

@@ -46,4 +46,14 @@ final class MergeSuggestionTest extends TestCase {
 		$this->assertFalse( EntityRepository::same_name( self::FIRMA, 'Staats Gartenbau Berlin' ) );
 		$this->assertFalse( EntityRepository::same_name( self::FIRMA, '' ) );
 	}
+
+	public function test_group_key_joins_area_phrases_with_the_place(): void {
+		$this->assertSame( EntityRepository::group_key( 'Gehrden', 'place' )['key'], EntityRepository::group_key( 'Region Gehrden', 'service_area' )['key'] );
+		$this->assertTrue( EntityRepository::group_key( 'Raum Gehrden', 'place' )['area'] );
+		$this->assertSame( 'hochdruckreinigung', EntityRepository::group_key( 'Hochdruckreinigung', 'concept' )['key'] );
+		// Echte Verwaltungsgebiete bleiben eigenständig.
+		$this->assertSame( 'region hannover', EntityRepository::group_key( 'Region Hannover', 'service_area', true )['key'] );
+		// Bei anderen Typen wird nichts gekürzt.
+		$this->assertSame( 'region hannover marketing', EntityRepository::group_key( 'Region Hannover Marketing', 'organization' )['key'] );
+	}
 }

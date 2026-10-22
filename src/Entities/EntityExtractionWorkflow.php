@@ -59,7 +59,8 @@ final class EntityExtractionWorkflow {
 						$content = $item->read();
 						$title   = $item->title();
 						$ai      = EntityExtractionWorkflow::ai( $this->plugin, $context->input );
-						$result  = ( new EntityExtractor( $ai ) )->extract( $title, $content['text'], ( new EntityRepository() )->known_names(), $context->run_id );
+						$repo    = new EntityRepository();
+						$result  = ( new EntityExtractor( $ai ) )->extract( $title, $content['text'], $repo->known_names(), $context->run_id, $repo->profile_services() );
 						return StepResult::done(
 							$result + array(
 								'title' => $title,

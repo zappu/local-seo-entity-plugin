@@ -169,4 +169,28 @@ final class EntityExtractorTest extends TestCase {
 		$this->assertStringContainsString( 'Bekannte Entitäten', (string) $body['messages'][1]['content'] );
 		$this->assertStringContainsString( 'Häufige Fragen', (string) $body['messages'][1]['content'] );
 	}
+
+	public function test_area_phrase_becomes_the_place(): void {
+		$data   = array(
+			'entities' => array(
+				array(
+					'type'        => 'service_area',
+					'name'        => 'Raum Gehrden',
+					'aliases'     => array(),
+					'description' => '',
+					'confidence'  => 0.8,
+					'evidence'    => array(
+						array(
+							'excerpt'  => 'im Raum Gehrden',
+							'location' => 'body',
+						),
+					),
+				),
+			),
+		);
+		$result = EntityExtractor::verify( $data, 'Wir reinigen Pflaster im Raum Gehrden und in Seelze.' );
+		$this->assertSame( 'place', $result['entities'][0]['type'] );
+		$this->assertSame( 'Gehrden', $result['entities'][0]['name'] );
+		$this->assertSame( array( 'Raum Gehrden' ), $result['entities'][0]['aliases'] );
+	}
 }

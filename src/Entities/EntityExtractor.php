@@ -37,24 +37,32 @@ final class EntityExtractor {
 	 *
 	 * @param string   $title  Titel.
 	 * @param string   $text   Text des Beitrags.
-	 * @param string[] $known  Bereits bekannte Entitäten (Name, optional mit Typ in Klammern), damit die KI dieselbe Schreibweise nutzt.
-	 * @param int|null $run_id Ablauf.
+	 * @param string[] $known    Bereits bekannte Entitäten (Name, optional mit Typ in Klammern), damit die KI dieselbe Schreibweise nutzt.
+	 * @param int|null $run_id   Ablauf.
+	 * @param string[] $services Leistungen aus dem Unternehmensprofil; erwähnte Leistungen werden ihnen zugeordnet.
 	 * @return array{entities: array<int, array{type: string, name: string, aliases: string[], description: string, confidence: float, evidence: array<int, array{excerpt: string, location: string}>}>, rejected: array<int, array{name: string, reason: string}>, ambiguities: array<int, array{name: string, reason: string}>, cost: float|null}
 	 */
-	public function extract( string $title, string $text, array $known = array(), ?int $run_id = null ): array {
+	public function extract( string $title, string $text, array $known = array(), ?int $run_id = null, array $services = array() ): array {
 		$excerpt  = mb_substr( $text, 0, self::MAX_CHARS );
 		$system   = 'Du erkennst Entitäten für die lokale Suchmaschinenoptimierung eines deutschen Unternehmens. '
 			. 'Entitäten sind Dinge mit eigener Identität: Unternehmen, Marken, Orte, Einzugsgebiete, Leistungen, Produkte, Personen, Wettbewerber, Fachbegriffe. '
 			. 'Erfasse nur Benanntes: Firmen- und Markennamen, Orte und Ortsteile, konkrete Leistungen und Produkte, Personen mit Namen, '
 			. 'Wettbewerber mit Namen und feste Fachbegriffe der Branche. '
 			. 'Nicht erfassen: allgemeine Tätigkeiten oder Eigenschaften (z. B. „regelmäßige Wartung“, „schnelle Reaktionszeit“, „professionelle Reinigung“), '
-			. 'Zielgruppen, Werbeaussagen, Floskeln, Adjektive und Satzteile. '
+			. 'Zielgruppen, Werbeaussagen, Floskeln, Adjektive und Satzteile; '
+			. 'allgemeine Materialien, Stoffe und Oberflächen (z. B. Beton, Fliesen, Epoxidharz, Pflaster), außer als Produkt mit Marken- oder Produktnamen. '
+			. 'Einzugsgebiete (service_area) nur für echte Verwaltungs- oder Regionsnamen wie „Region Hannover“ oder „Landkreis Hildesheim“. '
+			. 'Formulierungen wie „Raum Gehrden“, „Region Gehrden“ oder „Gehrden und Umgebung“ meinen den Ort „Gehrden“ (place). '
+			. 'Leistungen: Gibt es eine Liste der Leistungen des Unternehmens, ordne jede erwähnte Leistung dem passenden Listeneintrag zu, '
+			. 'auch wenn der Text sie anders, enger oder für einen bestimmten Ort oder Objekttyp beschreibt; nutze dann genau den Namen aus der Liste '
+			. 'und trage die Formulierung aus dem Text unter aliases ein. Eine neue Leistung nur, wenn keiner der Einträge passt. '
 			. 'Die eigene Firma ist eine Entität, auch wenn sie unterschiedlich geschrieben wird; nutze dann die bekannte Schreibweise und trage die Variante unter aliases ein. '
 			. 'confidence: 0,9 und mehr bei eindeutig benannten Dingen, 0,6 bis 0,8 bei wahrscheinlichen, darunter bei unsicheren. '
 			. 'Jede Fundstelle ist ein wörtliches Zitat aus dem Text (5 bis 25 Wörter), unverändert, ohne Auslassungen. '
 			. 'Wenn ein Name mehrdeutig ist (z. B. ein Ort, den es mehrfach gibt), trage ihn zusätzlich unter ambiguities ein. '
 			. 'Erfinde nichts. Antworte auf Deutsch.';
 		$user     = "Titel: {$title}\n\n"
+			. ( array() !== $services ? 'Leistungen des Unternehmens: ' . implode( '; ', array_slice( $services, 0, 60 ) ) . "\n\n" : '' )
 			. ( array() !== $known ? 'Bekannte Entitäten (gleiche Schreibweise verwenden, wenn gemeint): ' . implode( ', ', array_slice( $known, 0, 80 ) ) . "\n\n" : '' )
 			. "Text:\n<<<\n{$excerpt}\n>>>";
 		$response = $this->ai->structured( new AiRequest( 'entity_extraction', $system, $user, self::schema(), 'entities', false, 4000, 120 ), $run_id );
@@ -80,10 +88,17 @@ final class EntityExtractor {
 			if ( ! is_array( $entity ) ) {
 				continue;
 			}
-			$name = trim( (string) ( $entity['name'] ?? '' ) );
-			$type = (string) ( $entity['type'] ?? '' );
+			$name    = trim( (string) ( $entity['name'] ?? '' ) );
+			$type    = (string) ( $entity['type'] ?? '' );
+			$aliases = array_values( array_filter( array_map( static fn( $a ): string => trim( (string) $a ), (array) ( $entity['aliases'] ?? array() ) ) ) );
 			if ( '' === $name ) {
 				continue;
+			}
+			// „Raum Gehrden“, „Umgebung Gehrden“ sind der Ort Gehrden; die Formulierung bleibt als Schreibweise.
+			if ( in_array( $type, array( 'place', 'service_area' ), true ) && preg_match( '/^(?:Großraum|Raum|Umgebung(?: von)?|Umkreis(?: von)?)\s+(.+)$/u', $name, $m ) ) {
+				$aliases[] = $name;
+				$name      = trim( $m[1] );
+				$type      = 'place';
 			}
 			if ( ! in_array( $type, self::TYPES, true ) ) {
 				$rejected[] = array(
@@ -125,7 +140,7 @@ final class EntityExtractor {
 			$entities[]   = array(
 				'type'        => $type,
 				'name'        => $name,
-				'aliases'     => array_values( array_filter( array_map( static fn( $a ): string => trim( (string) $a ), (array) ( $entity['aliases'] ?? array() ) ) ) ),
+				'aliases'     => array_values( array_unique( $aliases ) ),
 				'description' => trim( (string) ( $entity['description'] ?? '' ) ),
 				'confidence'  => max( 0.0, min( 1.0, (float) ( $entity['confidence'] ?? 0.5 ) ) ),
 				'evidence'    => array_slice( $evidence, 0, 5 ),

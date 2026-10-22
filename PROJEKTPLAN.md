@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 22.10.2026 · Phase: MVP 1, Stufe B auf Staging geprüft (0.4.0), Nachbesserungen 0.4.1/0.4.2, Abnahme von Hand offen
+**Stand:** 22.10.2026 · Phase: MVP 1, Stufe B auf Staging geprüft (0.4.0), Nachbesserungen 0.4.1–0.4.3, Abnahme von Hand offen
 
 ## Ziel
 
@@ -98,7 +98,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Stufe | Inhalt | Version | Stand |
 |---|---|---|---|
 | A | Schemaversion 3, KI-Budget, Recherchemodell, Restprüfung M8, Dashboard und Einstellungen | 0.3.0 | bestanden: lokal mit WordPress 6.4.5 und 7.1.3, CI, Staging am 18.10.2026 (`mvp-pruefung.sh` 25/25, `check secrets` ohne Fund für alle vier Schlüssel und den Dienstkonto-Schlüssel) |
-| B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | Prüfskript auf Staging am 22.10.2026 bestanden (`mvp-pruefung.sh --online` 44/44, Hemmingen `probable` mit Region Hannover); offen von Hand: Profil eintragen, Staats-Schreibweisen zusammenführen, Index mit Erkennung. 0.4.1: Profil aus Webseiten lesen; 0.4.2: Produkte und Kategorieseiten im Index, Erkennung standardmäßig ohne Blogbeiträge, Anhalten |
+| B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | Prüfskript auf Staging am 22.10.2026 bestanden (`mvp-pruefung.sh --online` 44/44, Hemmingen `probable` mit Region Hannover); offen von Hand: Profil eintragen, Staats-Schreibweisen zusammenführen, Index mit Erkennung. 0.4.1: Profil aus Webseiten lesen; 0.4.2: Produkte und Kategorieseiten im Index, Erkennung standardmäßig ohne Blogbeiträge, Anhalten; 0.4.3: Entitäten bearbeiten und löschen, Erkennung nach erster Auswertung geschärft |
 | C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | offen |
 | D | Themen mit Faktenprüfung | 0.6.0 | offen |
 | E | Produktion | 0.7.0 | offen |

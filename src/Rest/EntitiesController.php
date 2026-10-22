@@ -51,6 +51,8 @@ final class EntitiesController {
 		};
 
 		$route( '/entities/(?P<id>\d+)', 'GET', array( $this, 'detail' ) );
+		$route( '/entities/(?P<id>\d+)', 'POST', array( $this, 'update_entity' ) );
+		$route( '/entities/(?P<id>\d+)', 'DELETE', array( $this, 'delete_entity' ) );
 		$route( '/entities/merge', 'POST', array( $this, 'merge' ) );
 		$route( '/entities/merge-suggestions', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new EntityRepository() )->merge_suggestions() ) );
 		$route( '/profile', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new BusinessProfile() )->get() ) );
@@ -81,6 +83,64 @@ final class EntitiesController {
 	public function detail( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$detail = ( new EntityRepository() )->detail( (int) $request['id'] );
 		return null === $detail ? new \WP_Error( 'lsec_not_found', 'Entität nicht gefunden.', array( 'status' => 404 ) ) : new \WP_REST_Response( $detail );
+	}
+
+	/**
+	 * Ändert eine Entität: name, type, description, status, aliases (vollständige Liste).
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function update_entity( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$fields = array();
+		foreach ( array( 'name', 'type', 'description', 'status', 'aliases' ) as $key ) {
+			if ( null !== $request->get_param( $key ) ) {
+				$fields[ $key ] = 'aliases' === $key ? array_map( 'strval', (array) $request->get_param( $key ) ) : sanitize_text_field( (string) $request->get_param( $key ) );
+			}
+		}
+		$repo = new EntityRepository();
+		try {
+			$changes = $repo->update( (int) $request['id'], $fields, get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			return new \WP_Error( 'lsec_invalid', $e->getMessage(), array( 'status' => 422 ) );
+		}
+		if ( array() !== $changes ) {
+			$this->plugin->logger->audit(
+				'Entität bearbeitet',
+				array(
+					'entity_id' => (int) $request['id'],
+					'changes'   => $changes,
+					'user_id'   => get_current_user_id(),
+				)
+			);
+		}
+		return new \WP_REST_Response( $repo->detail( (int) $request['id'] ) );
+	}
+
+	/**
+	 * Löscht eine Entität.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function delete_entity( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$repo   = new EntityRepository();
+		$detail = $repo->detail( (int) $request['id'] );
+		try {
+			$out = $repo->delete( (int) $request['id'] );
+		} catch ( \InvalidArgumentException $e ) {
+			return new \WP_Error( 'lsec_invalid', $e->getMessage(), array( 'status' => 422 ) );
+		}
+		$this->plugin->logger->audit(
+			'Entität gelöscht',
+			array(
+				'entity_id' => (int) $request['id'],
+				'name'      => (string) ( $detail['canonical_name'] ?? '' ),
+				'deleted'   => $out['deleted'],
+				'user_id'   => get_current_user_id(),
+			)
+		);
+		return new \WP_REST_Response( $out );
 	}
 
 	/**
