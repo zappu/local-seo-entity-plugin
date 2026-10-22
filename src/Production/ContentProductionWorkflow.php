@@ -334,6 +334,7 @@ final class ContentProductionWorkflow {
 				'claims'        => $claims,
 				'keywords'      => $keywords,
 				'link_targets'  => self::link_targets( $topic ),
+				'own_pages'     => self::own_pages( $topic ),
 				'categories'    => $categories,
 				'style'         => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'], false ),
 				'style_full'    => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'] ),
@@ -695,6 +696,65 @@ final class ContentProductionWorkflow {
 			),
 			array_slice( $scored, 0, 12 )
 		);
+	}
+
+	/**
+	 * Eigene Seiten zur Leistung des Themas mit ihrem Text (Nachtrag 22.10., 0.7.6): Was der Betrieb tut und wie er
+	 * arbeitet, steht auf seiner Website; die KI erhält es als belegte Angabe des Unternehmens, ohne dass jemand
+	 * Beschreibungen pflegen muss. Gewählt werden höchstens zwei veröffentlichte Seiten oder Produkte (vor
+	 * Blogbeiträgen), deren Titel oder Pfad die meisten Wörter aus Titel und Keywords des Themas enthält
+	 * (ohne den Ort), je bis 3000 Zeichen.
+	 *
+	 * @param array<string, mixed> $topic Thema.
+	 * @return array<int, array{post_id: int, title: string, url: string, text: string}>
+	 */
+	private static function own_pages( array $topic ): array {
+		$region = explode( ' ', KeywordFilter::fold( (string) $topic['region'] ) );
+		$words  = array();
+		$text   = (string) $topic['title'] . ' ' . implode( ' ', array_map( static fn( array $k ): string => (string) $k['keyword'], (array) $topic['keywords'] ) );
+		foreach ( explode( ' ', KeywordFilter::fold( $text ) ) as $word ) {
+			if ( mb_strlen( $word ) >= 5 && ! in_array( $word, $region, true ) ) {
+				$words[ mb_substr( $word, 0, 7 ) ] = true;
+			}
+		}
+		$scored = array();
+		foreach ( ContentIndex::entries( 500 ) as $entry ) {
+			if ( (int) $entry['post_id'] <= 0 ) {
+				continue;
+			}
+			$hay   = ' ' . KeywordFilter::fold( $entry['title'] . ' ' . str_replace( array( '-', '/' ), ' ', (string) wp_parse_url( $entry['url'], PHP_URL_PATH ) ) );
+			$score = 0;
+			foreach ( array_keys( $words ) as $word ) {
+				if ( str_contains( $hay, ' ' . $word ) ) {
+					++$score;
+				}
+			}
+			if ( $score > 0 ) {
+				$scored[] = $entry + array(
+					'score' => $score,
+					'page'  => in_array( (string) $entry['kind'], array( 'page', 'product' ), true ) ? 1 : 0,
+				);
+			}
+		}
+		usort( $scored, static fn( array $a, array $b ): int => array( $b['page'], $b['score'] ) <=> array( $a['page'], $a['score'] ) );
+		$out = array();
+		foreach ( array_slice( $scored, 0, 2 ) as $entry ) {
+			$post = get_post( (int) $entry['post_id'] );
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+			$body = trim( ContentReader::read( $post )['text'] );
+			if ( '' === $body ) {
+				continue;
+			}
+			$out[] = array(
+				'post_id' => (int) $entry['post_id'],
+				'title'   => (string) $entry['title'],
+				'url'     => (string) $entry['url'],
+				'text'    => mb_substr( $body, 0, 3000 ),
+			);
+		}
+		return $out;
 	}
 
 	/**

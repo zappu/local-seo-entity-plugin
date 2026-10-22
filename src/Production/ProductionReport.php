@@ -49,6 +49,7 @@ final class ProductionReport {
 			'model'               => implode( ', ', array_values( array_unique( array_map( static fn( array $c ): string => (string) $c['model'], $calls ) ) ) ),
 			'cost_usd'            => round( $repo->cost_of_run( $id ), 4 ),
 			'company_description' => '' !== (string) ( $outputs['gather_context']['company']['description'] ?? '' ),
+			'own_pages'           => array_values( array_map( static fn( array $p ): string => (string) $p['title'], (array) ( $outputs['gather_context']['own_pages'] ?? array() ) ) ),
 			'services'            => array_values( array_map( static fn( array $d ): string => (string) $d['name'], (array) ( $outputs['gather_context']['company']['service_details'] ?? array() ) ) ),
 			'unpriced'            => count( array_filter( $calls, static fn( array $c ): bool => null === $c['cost_estimate'] && 'ok' === (string) $c['status'] ) ),
 			'post_id'             => $post_id,

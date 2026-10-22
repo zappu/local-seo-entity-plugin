@@ -51,7 +51,7 @@ final class DraftGenerator {
 			. "- Was das Unternehmen selbst tut (Ablauf, Verfahren, Geräte, Zusagen), nur aus den Angaben des Unternehmens zu seinen Leistungen. Fehlen sie, beschreibe Verfahren allgemein als Fachwissen („Bei der Pflasterreinigung wird …“), nicht als feste Schritte oder Zusage des Unternehmens.\n"
 			. "- Keine Versprechen zu Dauer, Ergebnis, Schonung oder Garantie.\n"
 			. "- Jeden internen Link höchstens einmal setzen.\n"
-			. "- Angaben des Unternehmens sind die Beschreibung „Über das Unternehmen“ und die Beschreibungen der Leistungen.\n"
+			. "- Angaben des Unternehmens sind die Beschreibung „Über das Unternehmen“, die Beschreibungen der Leistungen und die Texte der eigenen Website. Was dort über Vorgehen, Verfahren und Leistungen steht, darfst du als Vorgehen des Unternehmens schreiben, in eigenen Worten.\n"
 			. "- Ohne Angabe des Unternehmens zur Leistung keine Sätze, die einen Ablauf mit dem Leser zusagen („Sie schildern uns …“, „Wir sehen uns … an“, „Gemeinsam prüfen wir …“, „Wir stimmen ab …“). Stattdessen: wie das Verfahren funktioniert und worauf Eigentümer achten sollten.\n"
 			. "- Keine Behauptungen über Erfahrung oder Ortskenntnis des Unternehmens („kennen die Verhältnisse“), wenn sie nicht belegt sind.\n"
 			. "- Keywords natürlich einbinden: Haupt-Keyword im Titel, in der Einleitung und in einer Zwischenüberschrift; keine erzwungenen Wortfolgen aus Suchanfragen.\n"

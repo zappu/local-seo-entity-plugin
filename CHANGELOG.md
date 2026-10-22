@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.7.6 – 22.10.2026
+
+- **Angaben des Betriebs aus der eigenen Website:** Zu jedem Entwurf liest das Plugin die passenden eigenen Leistungsseiten (höchstens zwei) und gibt ihren Text der KI als belegte Angaben. Vorgehen, Verfahren und Leistungen kommen so von der Website und bleiben aktuell, ohne Beschreibungen im Profil zu pflegen.
+- **Bericht:** nennt die verwendeten eigenen Seiten.
+
 ## 0.7.5 – 22.10.2026
 
 - **Unternehmensbeschreibung** aus dem Profil gilt als Angabe des Betriebs und geht an Briefing, Entwurf und Prüfung (bisher nicht).

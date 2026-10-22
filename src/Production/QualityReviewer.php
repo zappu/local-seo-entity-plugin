@@ -49,7 +49,7 @@ final class QualityReviewer {
 		return Context::text( $context, true )
 			. "\nDer Beitrag steht unten als vereinfachte Textfassung; im Beitrag sind es Gutenberg-Blöcke (Tabellen, Listen, FAQ). Bewerte nicht die Formatierung dieser Fassung.\n"
 			. "Interne Links auf Adressen aus der Liste „Linkziele“ sind geprüft und kein Mangel. Externe Links sind nur auf Quellen der geprüften Tatsachen erlaubt.\n"
-			. "Kontaktdaten aus dem Profil, Angaben zum Servicegebiet, die Beschreibung „Über das Unternehmen“ und die Angaben des Unternehmens zu seinen Leistungen sind belegt.\n"
+			. "Kontaktdaten aus dem Profil, Angaben zum Servicegebiet, die Beschreibung „Über das Unternehmen“, die Angaben des Unternehmens zu seinen Leistungen und die Texte der eigenen Website sind belegt.\n"
 			. "Allgemeines Fachwissen, wie ein Verfahren funktioniert, ist kein Mangel, solange es nicht als feste Zusage oder konkretes Vorgehen dieses Unternehmens formuliert ist. blocking_issues mit UNSUPPORTED_FACT nur für konkrete unbelegte Angaben: Zahlen, Preise, Dauern, Garantien, Zertifikate, eigene Geräte, Ablaufzusagen des Unternehmens oder Tatsachen über Orte.\n"
 			. "\nBeitrag (Titel als #, Überschriften als ##, Listen mit -, Tabellen mit |, FAQ als F:/A:):\n<<<\n# " . $draft['title'] . "\n\n" . DraftGenerator::outline_text( (array) $draft['content'] ) . "\n>>>\n\n"
 			. "\nSchreibstil mit Beispielen (für style_match; Beispielsätze sollen nicht wörtlich im Beitrag stehen):\n" . (string) ( $context['style_full'] ?? $context['style'] ) . "\n\n"

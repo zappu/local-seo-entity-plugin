@@ -42,6 +42,9 @@ final class Context {
 			$out .= sprintf( "Leistung %s (Angabe des Unternehmens, belegt): %s\n", $detail['name'], mb_substr( (string) $detail['description'], 0, 600 ) );
 		}
 		$out .= 'Servicegebiet: ' . ( '' !== (string) $context['area'] ? $context['area'] : 'nicht festgelegt' ) . "\n\n";
+		foreach ( (array) ( $context['own_pages'] ?? array() ) as $page ) {
+			$out .= sprintf( "Eigene Website, Seite „%s“ (%s) – Angaben des Unternehmens, belegt:\n<<<\n%s\n>>>\n\n", $page['title'], $page['url'], $page['text'] );
+		}
 
 		$out .= "Entitäten (#ID Name, Typ, Rolle):\n";
 		foreach ( (array) $context['entities'] as $entity ) {
