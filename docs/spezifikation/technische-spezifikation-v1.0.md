@@ -1094,6 +1094,15 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 | C – Keywords | `keyword_sync` täglich; Import im Backend mit Spaltenzuordnung; Textfocus-Volumina im Ablauf; `competition`; Filter (6.4); Keywords-Seite | Search Console läuft täglich ohne Eingriff; `tf_related`-Ergebnisse für „flächenreinigung“ erhalten Ausschlussgründe für Wettbewerber und Hamburg | 0.5.0 |
 | D – Themen | `topic_research` mit Websuche, Faktenprüfung, Priorisierung und Überschneidung; Themen-Seite mit Freigabe; Vergleich der Websuche mit 3 und 5 Treffern und Auswahl des Recherchemodells | Eltze/Dollbergen-Fall: die falsch zugeordnete Jahreszahl wird nicht `verified`; eine Anfrage, für die eine passende Seite rankt, erscheint als Überschneidung | 0.6.0 |
 | E – Produktion | Briefing, Style Mimic, Entwurf, Qualitätsprüfung, `content_production` vollständig; Modellvergleich mit drei Beispielbeiträgen | Drei Entwürfe zu freigegebenen Themen entstehen über den Cronjob; ein Entwurf mit unbelegter Zahl wird `blocked`; Kosten je Beitrag gemessen | 0.7.0 |
-| F – Abschluss | Abläufe-Seite, Content- und Entity-Bericht, Sammelauftrag, Hinweise „bestehende Seite verbessern“; Integrationstests; Dokumentation | Abnahme MVP 1 durch Thomas auf Staging; danach Beginn der Testphase | 1.0.0 |
+| F – Abschluss | Einrichtungsassistent (Nachtrag 22.10.); Abläufe-Seite, Content- und Entity-Bericht, Sammelauftrag, Hinweise „bestehende Seite verbessern“; Integrationstests; Dokumentation | Einrichtung einer frischen Website mit dem Assistenten ohne weitere Befehle außer Schlüsseln und Cronjob; Abnahme MVP 1 durch Thomas auf Staging; danach Beginn der Testphase | 1.0.0 |
+
+**Nachtrag 22.10.2026 – Einrichtungsassistent (Wunsch von Thomas, Stufe F, nach der Abnahme von Stufe E):** Die Ersteinrichtung ist auf rund zehn Stellen verteilt. Ein Assistent (Seite „Einrichtung“ und `wp lsec setup`) führt Schritt für Schritt und hakt jeden Schritt ab; fehlt später etwas (z. B. Cronjob), zeigt das Dashboard den Schritt wieder.
+
+1. **Technik prüfen:** Schlüssel, Cronjob, Search Console, Rank Math; je Lücke der Text zum Einfügen. Von Hand bleiben Schlüssel in `wp-config.php`, Cronjob in Plesk und die Freigabe des Dienstkontos in der Search Console.
+2. **Website lesen:** Profil aus Startseite, Impressum, Kontakt und Leistungsseiten (vorhandener Profilvorschlag), neu: Servicegebiet aus der Firmenadresse mit Radius.
+3. **KI-Einstellungen mit einem Klick:** erprobte Werte (Recherchemodell, Suchmaschine, Budget; Hauptmodell nach dem Vergleich in Stufe E).
+4. **Style Mimic:** neu aus einem Freitext (z. B. ZimmWriter-Prompt), den die KI in ein Profil überträgt und auf Konflikte mit den Regeln prüft (frei gewählte externe Links, feste Städtelisten, unbelegte Zahlen); oder automatisch aus den eigenen Seiten mit den meisten Impressionen und genug Text.
+5. **Alles starten:** Index, Entity-Erkennung, Keyword-Abgleich und eine erste Themenrecherche mit Kostenschätzung.
+6. **Entscheidungen:** unsichere Entitäten, Ausschlüsse, Freigabe der Themen.
 
 **Entschieden am 18.10.2026:** KI-Budget, Treffer der Websuche, eigenes Recherchemodell, Testphase (20 Beiträge in 60 Tagen). **Noch offen:** Recherchemodell (Auswahl in Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).
