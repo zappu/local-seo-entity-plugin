@@ -1,5 +1,16 @@
 # Änderungsprotokoll
 
+## 0.6.4 – 22.10.2026
+
+- **Faktenprüfung praxistauglich** (nach der Recherche mit Perplexity, bei der alle 11 richtig zitierten Tatsachen verworfen wurden):
+  - Ein Wert gilt auch, wenn die KI ihn als eigenen Satz formuliert: Alle Zahlen müssen stimmen, bei Werten ohne Zahlen mindestens 60 % der Wörter.
+  - Steht der Wert nicht im Absatz des Zitats, zählen die zwei Absätze davor und danach.
+  - Der Ort darf im Titel oder in der Adresse der Seite stehen (z. B. uetze.de), solange der Absatz keinen anderen bekannten Ort nennt. Eltze/Dollbergen bleibt „unklar“.
+  - Gegenstände wie „Sommerreinigung in Uetze“ oder „Gemeinde Uetze“ werden über den enthaltenen Ort zugeordnet.
+- **Eigene Website** zählt nicht als Quelle für Tatsachen; diese Angaben stehen im Profil.
+- **Auftrag an die KI:** Werte kurz und in den Worten der Quelle, keine Tatsachen über das eigene Unternehmen.
+- **Bericht** `--facts` fasst gleiche Tatsachen aus mehreren Themen zusammen.
+
 ## 0.6.3 – 22.10.2026
 
 - **Websuche nicht mehr abgeschnitten:** Die Antwort der Websuche darf 8000 statt 3000 Token lang sein. Bei Modellen mit Denkschritten brach sie vorher nach wenigen Absätzen ab. Ein Abbruch steht jetzt im Bericht.

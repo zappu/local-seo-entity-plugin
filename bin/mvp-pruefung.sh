@@ -432,13 +432,15 @@ cat > "$TMP/recherche.json" <<JSON
 {"subject":"LSECTEST Eltze","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
 {"subject":"LSECTEST Dollbergen","subject_type":"place","property":"first_mentioned","value":"1226","source_url":"$SRC","quote":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt"},
 {"subject":"LSECTEST Eltze","subject_type":"place","property":"river","value":"Fuhse","source_url":"$SRC","quote":"LSECTEST Eltze liegt an dem Fluss Fuhse"},
-{"subject":"LSECTEST Eltze","subject_type":"place","property":"population","value":"999","source_url":"$SRC","quote":"LSECTEST Eltze hat 999 Einwohner"}],"insufficient_data":false},
+{"subject":"LSECTEST Eltze","subject_type":"place","property":"population","value":"999","source_url":"$SRC","quote":"LSECTEST Eltze hat 999 Einwohner"},
+{"subject":"LSECTEST Firma","subject_type":"organization","property":"address","value":"Teststraße 1","source_url":"$HOME_URL/lsectest-kontakt/","quote":"LSECTEST Firma, Teststraße 1"}],"insufficient_data":false},
 {"title":"LSECTEST Terrassenreinigung","intent":"commercial","format":"article","region":"","primary_keyword_ids":[$K_RANK],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[],"insufficient_data":false}],
 "excluded_keywords":[{"keyword_id":$K_OFF,"reason":"off_topic","note":"LSECTEST kein Bezug"}]}}
 JSON
 OUT=$(wpc lsec topics research --service=lsectest --stub="$TMP/recherche.json" --offline --now 2>&1)
 contains "Recherche abgeschlossen" "succeeded" "$OUT"
 contains "Tatsachen geprüft" "4 Tatsachen: 2 geprüft, 1 unklar, 1 verworfen" "$OUT"
+contains "Tatsache von der eigenen Website nicht verwendet" "Quelle ist die eigene Website" "$OUT"
 TOPICS=$(wpj lsec topics list --status=proposed --format=json | json .)
 T1=$(echo "$TOPICS" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Pflasterreinigung in Eltze"){ echo $r["id"]; break; } }')
 FACTS=$(wpj lsec topics show "$T1" --format=json | json facts)

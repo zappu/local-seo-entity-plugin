@@ -559,6 +559,14 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 - **Zwischenspeicher (8.1b):** Ein gleicher Schwerpunkt aus Leistung und Ort wird innerhalb von 14 Tagen nur mit „trotzdem“ bzw. `--force` neu recherchiert.
 - **Vergleich der Trefferzahl und der Recherchemodelle:** `wp lsec topics report <ablauf>` zeigt Kosten, Modell, Treffer, Quellen und den Anteil geprüfter Tatsachen. Vergleichen lassen sich so z. B. zwei Recherchen mit `--web-results=3` und `--web-results=5` oder mit `--research-model=…` und `--force`. Das Ergebnis wird hier nachgetragen, wenn es auf der Testwebsite vorliegt.
   - **Zwischenstand 22.10.:** 3 Treffer (Lauf 114) und 5 Treffer (Lauf 115) kosteten 0,149 bzw. 0,129 USD. Beide lieferten 0 Quellen, ein Vergleich der geprüften Tatsachen ist so nicht möglich. Er wird mit `--web-engine=exa` wiederholt.
+  - **Vergleich der Recherchemodelle (22.10., 5 Treffer, Prüfung noch nach 0.6.3):**
+
+    | Lauf | Recherche | Kosten | Quellen | Tatsachen | Art der Quellen |
+    |---|---|---|---|---|---|
+    | 118 | `perplexity/sonar-pro`, Suche des Modells | 0,234 USD | 20 | 11, alle verworfen | Seiten der Gemeinde, Zitate wörtlich richtig |
+    | 119 | `openai/gpt-6-luna`, Exa | 0,098 USD | 5 | 11: 1 geprüft, 5 unklar, 5 verworfen | überwiegend die eigene Website |
+
+    Die Verwerfungen in Lauf 118 lagen an der Prüfung (Nachtrag 0.6.4 in 8.4a). Die Entscheidung über den Standard folgt nach einem Lauf mit 0.6.4.
 - **`off_topic`:** Der Keyword-Abgleich hebt diesen Grund nicht wieder auf. Er setzt nur einen anderen Grund davor, z. B. `competitor`.
 
 **`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.
@@ -807,6 +815,13 @@ Seiten, die keinen Abruf erlauben (z. B. Anmeldung, Skript-Inhalte), führen zu 
     | Wert nicht in der Quelle | `rejected`, „Zitat und Wert nicht in der Quelle gefunden“ | – |
 
     Der Eltze/Dollbergen-Fall bleibt abgedeckt: Dollbergen 1226 wird `disputed`, weil im Absatz mit 1226 nur Eltze steht (Unit-Test und Prüfskript D1).
+  - **Nachtrag 22.10. (0.6.4), nach den Läufen 118 und 119:** Perplexity Sonar Pro fand die passenden Seiten der Gemeinde (uetze.de) mit wörtlich richtigen Zitaten, trotzdem wurden alle 11 Tatsachen verworfen („Wert steht nicht im Zitat oder Absatz“). Ursachen lagen in der Prüfung: Die KI gibt den Wert als eigenen Satz wieder („20.723 Einwohner (Stand Oktober 2022)“ zum Zitat „Einwohner: 20.723 (Stand: 10/2022)“) und den Gegenstand als Beschreibung („Sommerreinigung in Uetze“). Die Seite nennt den Ort oft nur im Titel und in der Adresse. Neue Regeln:
+    - **Wert:** wörtlich → `strong`; sonst alle Zahlen des Werts → `strong`; ein Wert ohne Zahlen gilt, wenn mindestens 60 % seiner Wörter ab vier Buchstaben vorkommen (Wortanfang, fünf Buchstaben) → `medium`. Steht der Wert nicht im Absatz des Zitats, zählen bis zu zwei Absätze davor und danach → `medium`.
+    - **Bezug:** Name, Name ohne allgemeine Wörter („Gemeinde“, „Stadt“, „Büro“ …) oder ein bekannter Ort im Namen („Sommerreinigung in Uetze“ → Uetze) im Zitat oder Absatz → wie beim Wert. Sonst genügt der Name im Titel oder in der Adresse der Seite → `medium`, aber nur, wenn der Absatz keinen anderen bekannten Ort nennt. Bekannte Orte sind Orte und Servicegebiet aus dem Kontext, der Ort des Schwerpunkts und die Orte der Tatsachen dieser Recherche. Damit bleibt Eltze/Dollbergen abgedeckt: „Uetze 1226“ auf der Seite „Ortsteile der Gemeinde Uetze“ wird `disputed`, weil der Absatz Eltze nennt.
+    - Ohne wörtliches Zitat reichen Zahlen allein nicht, wenn der Wert auch Wörter hat; mindestens eines davon muss im Absatz stehen.
+    - **Eigene Website:** Tatsachen mit einer Quelle auf dem Host der Website oder der Search-Console-Property werden nicht geprüft, sondern als „Quelle ist die eigene Website“ verworfen; diese Angaben stehen im Profil. Mit Exa kamen zwei von fünf Quellen von der eigenen Website.
+    - **Auftrag an die KI:** `value` ist nur die Angabe selbst, kurz und in den Worten der Quelle. Keine Tatsachen über das eigene Unternehmen.
+    - Unit-Test `FactCheckerRealTest` mit den Fällen aus Lauf 118; Prüfskript D1 mit einer Tatsache von der eigenen Website.
 - **Speicherung:** Aussagen landen in `lsec_claims` (`value` = JSON aus Wert und Hinweis), Belege mit Zitat und Qualität in `lsec_evidence`. Eine bessere Prüfung ersetzt eine schwächere; eine bestätigte Aussage bleibt.
 - **Entscheidung von Hand:** auf der Themen-Seite, über `POST lsec/v1/claims/<id>/decision` oder `wp lsec topics fact <id> confirmed|rejected`.
 - **`fact_check_ai`** ist nicht umgesetzt; der Vorschlag lautete „in MVP 1 ausgeschaltet“.

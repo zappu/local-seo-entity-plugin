@@ -214,8 +214,17 @@ final class TopicsCommand {
 			WP_CLI::log( '  Quellen aus dem Recherchetext gelesen (das Modell lieferte keine Quellenangaben).' );
 		}
 		if ( ! empty( $assoc_args['facts'] ) ) {
+			$unique = array();
 			foreach ( $report['fact_details'] as $fact ) {
-				WP_CLI::log( sprintf( '[%s%s] %s: %s = %s', (string) $fact['status'], empty( $fact['quality'] ) ? '' : '/' . $fact['quality'], (string) $fact['subject'], (string) $fact['property'], (string) $fact['value'] ) );
+				$key = implode( '|', array( (string) $fact['subject'], (string) $fact['property'], (string) $fact['value'], (string) ( $fact['source_url'] ?? '' ) ) );
+				if ( isset( $unique[ $key ] ) ) {
+					++$unique[ $key ]['times'];
+					continue;
+				}
+				$unique[ $key ] = $fact + array( 'times' => 1 );
+			}
+			foreach ( $unique as $fact ) {
+				WP_CLI::log( sprintf( '[%s%s] %s: %s = %s%s', (string) $fact['status'], empty( $fact['quality'] ) ? '' : '/' . $fact['quality'], (string) $fact['subject'], (string) $fact['property'], (string) $fact['value'], $fact['times'] > 1 ? ' (in ' . $fact['times'] . ' Themen)' : '' ) );
 				WP_CLI::log( '    Prüfung: ' . (string) ( $fact['note'] ?? '' ) );
 				WP_CLI::log( '    Quelle:  ' . (string) ( $fact['source_url'] ?? '' ) );
 				WP_CLI::log( '    Zitat KI: ' . mb_substr( (string) ( $fact['quote'] ?? '' ), 0, 200 ) );

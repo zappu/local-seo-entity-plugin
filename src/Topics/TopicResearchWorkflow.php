@@ -282,7 +282,7 @@ final class TopicResearchWorkflow {
 			);
 			$data     = $response->data;
 		}
-		$valid = TopicResearcher::validate( $data, $collected, (array) $state['sources'] );
+		$valid = self::without_own_site( TopicResearcher::validate( $data, $collected, (array) $state['sources'] ) );
 		return StepResult::done(
 			array(
 				'research'     => mb_substr( (string) $state['research'], 0, 20000 ),
@@ -294,6 +294,31 @@ final class TopicResearchWorkflow {
 				'engine'       => (string) ( $context->input['web_engine'] ?? Settings::get( 'ai_web_engine' ) ),
 			) + $valid
 		);
+	}
+
+	/**
+	 * Tatsachen von der eigenen Website zählen nicht als Recherche: Diese Angaben stehen im Profil
+	 * (Nachtrag 22.10., 0.6.4; mit Exa kamen zwei von fünf Quellen von der eigenen Website).
+	 *
+	 * @param array<string, mixed> $valid Ergebnis von TopicResearcher::validate.
+	 * @return array<string, mixed>
+	 */
+	private static function without_own_site( array $valid ): array {
+		foreach ( (array) ( $valid['topics'] ?? array() ) as $index => $topic ) {
+			$keep = array();
+			foreach ( (array) ( $topic['facts'] ?? array() ) as $fact ) {
+				if ( null !== self::own_url( (string) $fact['source_url'] ) ) {
+					$valid['dropped'][] = sprintf( '%s: %s – Quelle ist die eigene Website', (string) $fact['subject'], (string) $fact['property'] );
+					continue;
+				}
+				$keep[] = $fact;
+			}
+			$valid['topics'][ $index ]['facts'] = $keep;
+		}
+		if ( isset( $valid['dropped'] ) ) {
+			$valid['dropped'] = array_values( array_unique( (array) $valid['dropped'] ) );
+		}
+		return $valid;
 	}
 
 	/**
@@ -353,11 +378,14 @@ final class TopicResearchWorkflow {
 		// Prüfen, Widersprüche erkennen, speichern.
 		$entities = new EntityRepository();
 		$checked  = array();
+		$places   = self::known_places( $context, $state['facts'] );
 		foreach ( $state['facts'] as $index => $fact ) {
 			$entity_id = self::subject_entity( $entities, (string) $fact['subject'], (string) $fact['subject_type'] );
 			$names     = array_merge( array( (string) $fact['subject'] ), self::names( $entity_id ) );
 			$text      = 0 < (int) $fact['source_id'] ? ( $sources->cached_content( (int) $fact['source_id'] )['text'] ?? null ) : null;
-			$result    = FactChecker::check( $fact, $names, $text, $state['texts'][ $fact['source_url'] ]['error'] ?? null );
+			$row       = 0 < (int) $fact['source_id'] ? $sources->find( (int) $fact['source_id'] ) : null;
+			$page_ref  = null === $row ? (string) $fact['source_url'] : (string) $row['title'] . ' ' . (string) $row['url'];
+			$result    = FactChecker::check( $fact, $names, $text, $state['texts'][ $fact['source_url'] ]['error'] ?? null, $page_ref, $places );
 			$checked[] = $fact + $result + array( 'entity_id' => $entity_id );
 		}
 		$checked = FactChecker::contradictions( $checked );
@@ -749,6 +777,34 @@ final class TopicResearchWorkflow {
 			return $id;
 		}
 		return $entities->add( $type, $name, 'candidate', 'ai_research' )['id'];
+	}
+
+	/**
+	 * Bekannte Orte für die Faktenprüfung: Orte und Servicegebiet aus dem Kontext, der Ort des Schwerpunkts und
+	 * die Orte, um die es in den Tatsachen dieser Recherche geht.
+	 *
+	 * @param RunContext                       $context Kontext.
+	 * @param array<int, array<string, mixed>> $facts   Tatsachen.
+	 * @return string[]
+	 */
+	private static function known_places( RunContext $context, array $facts ): array {
+		$out       = array();
+		$collected = $context->output_of( 'collect_keywords' );
+		foreach ( (array) ( $collected['entities'] ?? array() ) as $entity ) {
+			if ( in_array( (string) ( $entity['type'] ?? '' ), array( 'place', 'service_area' ), true ) ) {
+				$out[] = (string) $entity['name'];
+			}
+		}
+		$region = (string) ( $context->input['focus']['region'] ?? '' );
+		if ( '' !== $region ) {
+			$out[] = $region;
+		}
+		foreach ( $facts as $fact ) {
+			if ( 'place' === (string) ( $fact['subject_type'] ?? '' ) ) {
+				$out[] = (string) $fact['subject'];
+			}
+		}
+		return array_values( array_unique( array_filter( $out ) ) );
 	}
 
 	/**
