@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.4.1 – 22.10.2026
+
+- Unternehmen: Textfeld „Seiten, aus denen die Angaben gelesen werden“ (bis zu acht Adressen, auch `/impressum`). „Angaben lesen“ lässt die KI Unternehmen, Standorte, Leistungen, Marken und Servicegebiet vorschlagen; übernommen wird nur, was wörtlich auf den Seiten steht, und nur, was angekreuzt ist (`wp lsec profile suggest`)
+
 ## 0.4.0 – 18.10.2026
 
 MVP 1, Stufe B (Spezifikation v1.0, Abschnitt 14).
