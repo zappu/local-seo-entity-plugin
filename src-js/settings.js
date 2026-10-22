@@ -8,6 +8,7 @@ import { createElement, Fragment, useEffect, useState } from '@wordpress/element
 import {
 	Button,
 	Card,
+	CheckboxControl,
 	CardBody,
 	CardHeader,
 	Notice,
@@ -35,7 +36,21 @@ function initial( field ) {
 	if ( field.type === 'number' ) {
 		return String( field.value ?? '' );
 	}
+	if ( field.type === 'checkboxes' ) {
+		return [ ...( field.value || [] ) ].sort();
+	}
 	return field.value;
+}
+
+/**
+ * Gleichheit für den Vergleich mit dem geladenen Stand (Listen nach Inhalt).
+ *
+ * @param {*} a Wert.
+ * @param {*} b Wert.
+ * @return {boolean} Gleich.
+ */
+function same( a, b ) {
+	return Array.isArray( a ) || Array.isArray( b ) ? JSON.stringify( a ) === JSON.stringify( b ) : a === b;
 }
 
 /**
@@ -104,6 +119,29 @@ function Field( { field, value, error, onChange } ) {
 					options={ ( field.choices || [] ).map( ( c ) => ( { label: c, value: c } ) ) }
 					onChange={ onChange }
 				/>
+			);
+			break;
+		case 'checkboxes':
+			control = (
+				<fieldset className="lsec-checkboxes">
+					<legend>{ label }</legend>
+					{ ( field.choices || [] ).map( ( choice ) => (
+						<CheckboxControl
+							key={ choice.value }
+							__nextHasNoMarginBottom
+							label={ choice.label }
+							checked={ ( value || [] ).includes( choice.value ) }
+							onChange={ ( on ) => {
+								const next = ( value || [] ).filter( ( v ) => v !== choice.value );
+								if ( on ) {
+									next.push( choice.value );
+								}
+								onChange( next.sort() );
+							} }
+						/>
+					) ) }
+					{ help && <p className="components-base-control__help">{ help }</p> }
+				</fieldset>
 			);
 			break;
 		case 'toggle':
@@ -176,7 +214,7 @@ export default function Settings() {
 
 	const fields = {};
 	groups.forEach( ( g ) => g.fields.forEach( ( f ) => ( fields[ f.key ] = f ) ) );
-	const changed = Object.keys( values ).filter( ( k ) => values[ k ] !== original[ k ] && fields[ k ].type !== 'readonly' );
+	const changed = Object.keys( values ).filter( ( k ) => ! same( values[ k ], original[ k ] ) && fields[ k ].type !== 'readonly' );
 
 	const onSave = () => {
 		const local = {};

@@ -31,6 +31,7 @@ final class Settings {
 		'ai_web_max_results'       => 3,
 		'entity_min_confidence'    => 0.6,
 		'entity_auto_extract'      => true,
+		'entity_extract_types'     => array( 'page', 'product', 'category', 'product_cat' ),
 		'openai_endpoint'          => '',
 		'textfocus_lang'           => '',
 		'textfocus_locale'         => '',
@@ -62,6 +63,13 @@ final class Settings {
 		'ai_web_max_results'    => array( 1, 10 ),
 		'entity_min_confidence' => array( 0.0, 1.0 ),
 	);
+
+	/**
+	 * Listen aus Kennungen (Kleinbuchstaben, Ziffern, _ und -). Auch als „a,b,c“ setzbar.
+	 *
+	 * @var list<string>
+	 */
+	public const LISTS = array( 'entity_extract_types' );
 
 	/**
 	 * Alle Einstellungen mit Standardwerten ergänzt.
@@ -100,6 +108,8 @@ final class Settings {
 			$value = max( 0, (int) $value );
 		} elseif ( is_float( $default ) ) {
 			$value = max( 0.0, (float) str_replace( ',', '.', (string) $value ) );
+		} elseif ( in_array( $key, self::LISTS, true ) ) {
+			$value = self::parse_list( $key, $value );
 		} elseif ( is_array( $default ) ) {
 			$value = is_string( $value ) ? json_decode( $value, true ) : $value;
 			if ( ! is_array( $value ) ) {
@@ -129,5 +139,32 @@ final class Settings {
 			 */
 			do_action( 'lsec_setting_changed', $key, $old, $value );
 		}
+	}
+
+	/**
+	 * Liste aus JSON oder „a,b,c“. Bei der Erkennungsauswahl nur Arten, die der Index kennt.
+	 *
+	 * @param string $key   Schlüssel.
+	 * @param mixed  $value Eingabe.
+	 * @return list<string>
+	 * @throws \InvalidArgumentException Bei unbekannten Werten.
+	 */
+	private static function parse_list( string $key, mixed $value ): array {
+		if ( is_string( $value ) ) {
+			$decoded = json_decode( $value, true );
+			$value   = is_array( $decoded ) ? $decoded : ( '' === trim( $value ) ? array() : explode( ',', $value ) );
+		}
+		if ( ! is_array( $value ) ) {
+			throw new \InvalidArgumentException( $key . ' erwartet eine Liste, z. B. page,product.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
+		$list = array_values( array_unique( array_filter( array_map( static fn( $v ): string => sanitize_key( (string) $v ), $value ) ) ) );
+		if ( 'entity_extract_types' === $key ) {
+			$known   = array_keys( \Lsec\Content\ContentIndex::kinds() );
+			$unknown = array_diff( $list, $known );
+			if ( array() !== $unknown ) {
+				throw new \InvalidArgumentException( sprintf( 'Unbekannt: %s. Möglich: %s.', implode( ', ', $unknown ), implode( ', ', $known ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+		}
+		return $list;
 	}
 }

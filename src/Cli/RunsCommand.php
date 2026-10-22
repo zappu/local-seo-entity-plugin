@@ -62,6 +62,7 @@ final class RunsCommand {
 			$rows[] = array(
 				'id'      => $run['id'],
 				'typ'     => $run['type'],
+				'objekt'  => '' === (string) $run['subject_type'] ? '' : $run['subject_type'] . ':' . $run['subject_id'],
 				'status'  => $run['status'],
 				'schritt' => (string) $run['current_step'],
 				'kosten'  => number_format( $calls->cost_of_run( (int) $run['id'] ), 4, ',', '' ),
@@ -69,7 +70,7 @@ final class RunsCommand {
 				'stand'   => $run['updated_at'],
 			);
 		}
-		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'id', 'typ', 'status', 'schritt', 'kosten', 'grund', 'stand' ) );
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'id', 'typ', 'objekt', 'status', 'schritt', 'kosten', 'grund', 'stand' ) );
 	}
 
 	/**
@@ -93,21 +94,45 @@ final class RunsCommand {
 	}
 
 	/**
-	 * Bricht einen Ablauf ab, der noch nicht beendet ist.
+	 * Bricht einen Ablauf ab, der noch nicht beendet ist, oder mit --open alle offenen.
 	 *
 	 * ## OPTIONS
 	 *
-	 * <id>
+	 * [<id>]
 	 * : Ablauf-ID.
 	 *
-	 * @param string[]              $args       Argumente.
-	 * @param array<string, string> $assoc_args Optionen.
+	 * [--open]
+	 * : Alle wartenden, eingeplanten und laufenden Abläufe abbrechen.
+	 *
+	 * [--type=<type>]
+	 * : Mit --open nur diesen Typ, z. B. entity_extraction oder content_index (mit Komma mehrere).
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec runs cancel 42
+	 *     wp lsec runs cancel --open --type=content_index,entity_extraction
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
 	 */
 	public function cancel( array $args, array $assoc_args ): void {
+		if ( ! empty( $assoc_args['open'] ) ) {
+			$types = array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $assoc_args['type'] ?? '' ) ) ) ) );
+			$count = $this->plugin->runs->cancel_open( $types );
+			$this->plugin->logger->audit(
+				'Offene Abläufe abgebrochen',
+				array(
+					'types' => array() === $types ? 'alle' : implode( ',', $types ),
+					'count' => $count,
+				)
+			);
+			WP_CLI::success( sprintf( '%d Abläufe abgebrochen.', $count ) );
+			return;
+		}
 		$id  = (int) ( $args[0] ?? 0 );
 		$run = $this->plugin->runs->find( $id );
 		if ( null === $run ) {
-			WP_CLI::error( 'Ablauf nicht gefunden: ' . $id );
+			WP_CLI::error( 0 === $id ? 'Ablauf-ID oder --open angeben.' : 'Ablauf nicht gefunden: ' . $id );
 		}
 		$status = RunStatus::tryFrom( (string) $run['status'] );
 		if ( null !== $status && $status->is_terminal() ) {

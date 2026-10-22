@@ -6,7 +6,7 @@
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/components';
-import { getDashboard, refreshTextfocus, runAction, runIndex } from './api';
+import { getDashboard, refreshTextfocus, runAction, runIndex, stopIndex } from './api';
 import { ago, dateTime, number, RUN_STATUS, usd } from './format';
 
 const REFRESH_MS = 60000;
@@ -14,17 +14,20 @@ const REFRESH_MS = 60000;
 /**
  * Balken für Verbrauch gegen Grenze.
  *
- * @param {Object} props       Eigenschaften.
- * @param {number} props.value Verbrauch.
- * @param {number} props.limit Grenze; 0 = ohne Grenze.
+ * @param {Object}  props          Eigenschaften.
+ * @param {number}  props.value    Verbrauch.
+ * @param {number}  props.limit    Grenze; 0 = ohne Grenze.
+ * @param {boolean} props.progress Fortschritt statt Verbrauch: voll ist gut, nicht rot.
  */
-function Meter( { value, limit } ) {
+function Meter( { value, limit, progress } ) {
 	if ( ! limit ) {
 		return <p className="lsec-muted">Ohne Grenze</p>;
 	}
 	const share = Math.min( 1, value / limit );
 	let tone = 'ok';
-	if ( share >= 1 ) {
+	if ( progress ) {
+		tone = 'ok';
+	} else if ( share >= 1 ) {
 		tone = 'over';
 	} else if ( share >= 0.8 ) {
 		tone = 'high';
@@ -61,7 +64,7 @@ function Row( { label, children } ) {
 /**
  * Ja/Nein mit Farbe.
  *
- * @param {Object}  props       Eigenschaften.
+ * @param {Object}  props          Eigenschaften.
  * @param {boolean} props.ok    Zustand.
  * @param {string}  props.yes   Text für ja.
  * @param {string}  props.no    Text für nein.
@@ -167,30 +170,63 @@ function TextfocusCard( { tf, onRefresh, busy } ) {
 	);
 }
 
-function ContentCard( { content, onRunIndex, busy } ) {
+function ContentCard( { content, onRunIndex, onStopIndex, busy } ) {
 	const { index, entities } = content;
 	const open = ( entities.candidate || 0 ) + ( entities.probable || 0 ) + ( entities.unresolved || 0 );
 	const pages = ( window.lsecAdmin && window.lsecAdmin.pages ) || {};
+	const runs = content.open_runs || {};
+	const indexOpen = runs.content_index || 0;
+	const extractOpen = runs.entity_extraction || 0;
+	const kinds = Object.entries( index.kinds || {} ).filter( ( [ , k ] ) => k.published > 0 );
+	let state = index.last_indexed_at ? `Letzter Lauf ${ ago( index.last_indexed_at.replace( ' ', 'T' ) + 'Z' ) }` : 'Noch nicht vollständig gelaufen';
+	if ( indexOpen || extractOpen ) {
+		const parts = [];
+		if ( indexOpen ) {
+			parts.push( 'Index läuft' );
+		}
+		if ( extractOpen ) {
+			parts.push( `${ number( extractOpen ) } Erkennungen in der Warteschlange` );
+		}
+		state = parts.join( ' · ' );
+	}
 	return (
 		<Card>
 			<CardHeader>
 				<h2>Inhalte und Entitäten</h2>
-				<Button variant="secondary" size="small" onClick={ onRunIndex } isBusy={ busy } disabled={ busy }>
-					Index starten
-				</Button>
+				<div className="lsec-card-actions">
+					{ ( indexOpen > 0 || extractOpen > 0 ) && (
+						<Button variant="tertiary" size="small" isDestructive onClick={ onStopIndex } disabled={ busy }>
+							Anhalten
+						</Button>
+					) }
+					<Button variant="secondary" size="small" onClick={ onRunIndex } isBusy={ busy } disabled={ busy || indexOpen > 0 }>
+						Index starten
+					</Button>
+				</div>
 			</CardHeader>
 			<CardBody>
 				<p className="lsec-figure">
 					{ number( index.indexed ) }
 					<span className="lsec-figure__limit"> von { number( index.published ) } Inhalten im Index</span>
 				</p>
-				<p className="lsec-muted">
-					{ index.last_indexed_at ? `Letzter Lauf ${ ago( index.last_indexed_at.replace( ' ', 'T' ) + 'Z' ) }` : 'Noch nicht gestartet' }
-				</p>
-				<Meter value={ index.indexed } limit={ index.published || 1 } />
+				<p className="lsec-muted">{ state }</p>
+				<Meter value={ index.indexed } limit={ index.published || 1 } progress />
 				<dl>
-					<Row label="Neu oder geändert">{ number( index.pending ) }</Row>
-					<Row label="Automatische Erkennung">{ content.auto_extract ? 'ein' : 'aus' }</Row>
+					{ kinds.map( ( [ kind, k ] ) => (
+						<Row key={ kind } label={ k.label }>
+							{ number( k.indexed ) } von { number( k.published ) }
+							{ content.auto_extract && k.extract && <span className="lsec-tag">Erkennung</span> }
+						</Row>
+					) ) }
+					<Row label="Automatische Erkennung">
+						{ pages.settings ? <a href={ pages.settings }>{ content.auto_extract ? 'ein' : 'aus' }</a> : ( content.auto_extract ? 'ein' : 'aus' ) }
+					</Row>
+					{ content.auto_extract && content.due && (
+						<Row label="Erkennung fällig">
+							{ number( content.due.due ) }
+							{ content.due.unread > 0 && ` + bis zu ${ number( content.due.unread ) } ungelesene` }
+						</Row>
+					) }
 					<Row label="Entitäten offen">
 						{ pages.entities ? <a href={ pages.entities }>{ number( open ) }</a> : number( open ) }
 					</Row>
@@ -361,17 +397,39 @@ export default function Dashboard() {
 	};
 
 	const onRunIndex = () => {
-		const pending = data.content.index.pending;
-		const text = data.content.auto_extract
-			? `Index starten? Für ${ pending } neue oder geänderte Inhalte startet danach die Entity-Erkennung (KI, etwa 0,04 USD je Beitrag, im Rahmen des KI-Budgets).`
-			: 'Index starten? Die automatische Entity-Erkennung ist ausgeschaltet.';
+		const { auto_extract: auto, due, index } = data.content;
+		const labels = Object.values( index.kinds || {} ).filter( ( k ) => k.extract ).map( ( k ) => k.label );
+		let text = 'Index starten? Alle Inhalte werden gelesen; das kostet nichts. Die automatische Entity-Erkennung ist ausgeschaltet.';
+		if ( auto ) {
+			const count = due.due + due.unread;
+			text = labels.length
+				? `Index starten? Alle Inhalte werden gelesen. Danach startet die Entity-Erkennung für ${ labels.join( ', ' ) }: voraussichtlich ${ due.due }${ due.unread ? ` bis ${ count }` : '' } Inhalte, etwa 0,04 USD je Inhalt (bis zu ${ usd( count * 0.04 ) }), im Rahmen des KI-Budgets.`
+				: 'Index starten? Alle Inhalte werden gelesen. Für die Entity-Erkennung ist keine Art ausgewählt (Einstellungen).';
+		}
 		// eslint-disable-next-line no-alert
 		if ( ! window.confirm( text ) ) {
 			return;
 		}
 		setIndexBusy( true );
-		runIndex()
+		// Immer alle lesen: Unveränderte Inhalte kosten nichts, und Erkennungen, die angehalten wurden oder
+		// nach einer Änderung der Auswahl fehlen, werden so nachgeholt.
+		runIndex( true )
 			.then( ( run ) => setMessage( { status: 'success', text: `Inhaltsindex eingeplant (Ablauf ${ run.run_id }); der Cronjob arbeitet ihn ab.` } ) )
+			.catch( ( e ) => setMessage( { status: 'error', text: e.message } ) )
+			.finally( () => {
+				setIndexBusy( false );
+				load();
+			} );
+	};
+
+	const onStopIndex = () => {
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( 'Index und alle offenen Entity-Erkennungen abbrechen? Bereits erkannte Entitäten bleiben erhalten; „Index starten“ holt den Rest später nach.' ) ) {
+			return;
+		}
+		setIndexBusy( true );
+		stopIndex()
+			.then( ( result ) => setMessage( { status: 'success', text: `${ result.cancelled } Abläufe abgebrochen.` } ) )
 			.catch( ( e ) => setMessage( { status: 'error', text: e.message } ) )
 			.finally( () => {
 				setIndexBusy( false );
@@ -393,7 +451,7 @@ export default function Dashboard() {
 			<Hints hints={ data.hints } />
 			<div className="lsec-grid">
 				<AiCard ai={ data.ai } />
-				<ContentCard content={ data.content } onRunIndex={ onRunIndex } busy={ indexBusy } />
+				<ContentCard content={ data.content } onRunIndex={ onRunIndex } onStopIndex={ onStopIndex } busy={ indexBusy } />
 				<TextfocusCard tf={ data.textfocus } onRefresh={ onRefreshTf } busy={ tfBusy } />
 				<CronCard cron={ data.cron } />
 				<SiteCard data={ data } />

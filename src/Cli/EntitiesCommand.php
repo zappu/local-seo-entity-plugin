@@ -8,7 +8,7 @@
 namespace Lsec\Cli;
 
 use Lsec\Core\Plugin;
-use Lsec\Content\ContentReader;
+use Lsec\Content\IndexItem;
 use Lsec\Core\Settings;
 use Lsec\Entities\EntityExtractionWorkflow;
 use Lsec\Entities\EntityExtractor;
@@ -167,14 +167,16 @@ final class EntitiesCommand {
 	}
 
 	/**
-	 * Erkennt Entitäten in einem Beitrag und speichert sie als Kandidaten mit Fundstellen (M11).
+	 * Erkennt Entitäten in einem Beitrag oder einer Kategorie und speichert sie als Kandidaten mit Fundstellen (M11).
+	 *
+	 * Geht auch für Arten, die von der automatischen Erkennung ausgenommen sind (z. B. Blogbeiträge).
 	 *
 	 * Ruft die KI auf (Kosten laut Modell, meist wenige Cent).
 	 *
 	 * ## OPTIONS
 	 *
 	 * <id>
-	 * : Beitrag oder Seite (auch Elementor).
+	 * : Beitrag, Seite oder Produkt (auch Elementor), term:<id> für eine Kategorie.
 	 *
 	 * [--dry-run]
 	 * : Nur anzeigen, nichts speichern.
@@ -186,19 +188,18 @@ final class EntitiesCommand {
 	 * @param array<string, string|bool> $assoc_args Optionen.
 	 */
 	public function extract( array $args, array $assoc_args ): void {
-		$post = get_post( (int) ( $args[0] ?? 0 ) );
-		if ( ! $post instanceof \WP_Post ) {
-			WP_CLI::error( 'Beitrag nicht gefunden.' );
+		$item = IndexItem::from_ref( (string) ( $args[0] ?? '' ) );
+		if ( null === $item ) {
+			WP_CLI::error( 'Inhalt nicht gefunden.' );
 		}
+		$content = $item->read();
+		$title   = $item->title();
 		if ( ! empty( $assoc_args['queue'] ) ) {
-			$content = ContentReader::read( $post );
-			$hash    = \Lsec\Content\ContentIndex::hash( ContentReader::title( $post ), $content['text'] );
-			$run     = EntityExtractionWorkflow::start( $this->plugin, $post->ID, $hash, array( 'manual' => gmdate( 'c' ) ) );
+			$hash = \Lsec\Content\ContentIndex::hash( $title, $content['text'] );
+			$run  = EntityExtractionWorkflow::start_item( $this->plugin, $item, $hash, array( 'manual' => gmdate( 'c' ) ) );
 			WP_CLI::success( 'Ablauf ' . $run['run_id'] . ' eingeplant. Stand: wp lsec runs list' );
 			return;
 		}
-		$content = ContentReader::read( $post );
-		$title   = ContentReader::title( $post );
 		WP_CLI::log( sprintf( '„%s“: %d Wörter (%s)', $title, $content['words'], $content['source'] ) );
 		try {
 			$service = $this->plugin->ai->service();
@@ -230,7 +231,8 @@ final class EntitiesCommand {
 			WP_CLI::success( 'Probelauf, nichts gespeichert.' );
 			return;
 		}
-		$saved = $this->entities->save_extraction( $post->ID, $result['entities'] );
+		$saved = $this->entities->save_extraction( $item->id, $result['entities'], $item->object_type );
+		$item->set_meta( \Lsec\Content\ContentIndex::EXTRACTED, \Lsec\Content\ContentIndex::hash( $title, $content['text'] ) );
 		WP_CLI::success( sprintf( '%d neue Kandidaten, %d vorhandene Entitäten, %d Fundstellen gespeichert.', $saved['created'], $saved['reused'], $saved['mentions'] ) );
 	}
 

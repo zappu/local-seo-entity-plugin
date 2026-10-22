@@ -1,6 +1,6 @@
 <?php
 /**
- * Liest den Text eines Beitrags für den Inhaltsindex.
+ * Liest den Text eines Beitrags oder einer Kategorie für den Inhaltsindex.
  *
  * @package Lsec
  */
@@ -31,7 +31,22 @@ final class ContentReader {
 				);
 			}
 		}
-		$html     = has_blocks( $post->post_content ) ? (string) do_blocks( $post->post_content ) : (string) wpautop( $post->post_content );
+		if ( has_blocks( $post->post_content ) ) {
+			return self::read_html( (string) do_blocks( $post->post_content ), 'blocks', false );
+		}
+		return self::read_html( $post->post_content, 'classic' );
+	}
+
+	/**
+	 * Text und Überschriften aus HTML, z. B. Beitragsinhalt oder Kategoriebeschreibung.
+	 *
+	 * @param string $html    HTML.
+	 * @param string $source  Quelle für den Index.
+	 * @param bool   $autop   Absätze wie im klassischen Editor ergänzen.
+	 * @return array{text: string, headings: array<int, array{level: int, text: string}>, source: string, words: int}
+	 */
+	public static function read_html( string $html, string $source, bool $autop = true ): array {
+		$html     = $autop ? (string) wpautop( $html ) : $html;
 		$headings = array();
 		if ( preg_match_all( '#<h([1-6])[^>]*>(.*?)</h\1>#is', $html, $m, PREG_SET_ORDER ) ) {
 			foreach ( $m as $match ) {
@@ -45,7 +60,7 @@ final class ContentReader {
 		return array(
 			'text'     => $text,
 			'headings' => $headings,
-			'source'   => has_blocks( $post->post_content ) ? 'blocks' : 'classic',
+			'source'   => $source,
 			'words'    => self::words( $text ),
 		);
 	}

@@ -317,6 +317,86 @@ final class RunRepository {
 	}
 
 	/**
+	 * Nicht beendete Abläufe je Typ.
+	 *
+	 * @param string[] $types Ablauftypen.
+	 * @return array<string, int>
+	 */
+	public function count_open( array $types ): array {
+		$out = array_fill_keys( $types, 0 );
+		if ( array() === $types ) {
+			return $out;
+		}
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+		$rows         = $this->db->get_results(
+			$this->db->prepare(
+				"SELECT type, COUNT(*) AS n FROM {$this->t( 'runs' )} WHERE status IN (%s, %s, %s) AND type IN ({$placeholders}) GROUP BY type", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				array_merge( array( RunStatus::Queued->value, RunStatus::Running->value, RunStatus::Waiting->value ), $types )
+			),
+			ARRAY_A
+		);
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$out[ (string) $row['type'] ] = (int) $row['n'];
+		}
+		return $out;
+	}
+
+	/**
+	 * Bricht alle nicht beendeten Abläufe der Typen ab. Ein Schritt, der gerade läuft, endet noch; danach
+	 * überspringt die Engine den Ablauf.
+	 *
+	 * @param string[] $types Ablauftypen; leer = alle.
+	 * @return int Anzahl abgebrochener Abläufe.
+	 */
+	public function cancel_open( array $types = array() ): int {
+		$now    = self::now();
+		$params = array( RunStatus::Cancelled->value, $now, $now, RunStatus::Queued->value, RunStatus::Running->value, RunStatus::Waiting->value );
+		$where  = '';
+		if ( array() !== $types ) {
+			$where  = ' AND type IN (' . implode( ', ', array_fill( 0, count( $types ), '%s' ) ) . ')';
+			$params = array_merge( $params, $types );
+		}
+		return (int) $this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'runs' )} SET status = %s, updated_at = %s, finished_at = %s WHERE status IN (%s, %s, %s){$where}", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$params
+			)
+		);
+	}
+
+	/**
+	 * Nimmt einen abgebrochenen Ablauf wieder auf. Erledigte Schritte bleiben erledigt (bezahlte Ergebnisse
+	 * gehen nicht verloren), übersprungene laufen erneut.
+	 *
+	 * @param int $run_id Ablauf-ID.
+	 * @return bool True, wenn der Ablauf abgebrochen war.
+	 */
+	public function reopen_cancelled( int $run_id ): bool {
+		$changed = $this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'runs' )} SET status = %s, error_code = NULL, error_message = NULL, finished_at = NULL, updated_at = %s WHERE id = %d AND status = %s",
+				RunStatus::Queued->value,
+				self::now(),
+				$run_id,
+				RunStatus::Cancelled->value
+			)
+		);
+		if ( 1 !== (int) $changed ) {
+			return false;
+		}
+		$this->db->query(
+			$this->db->prepare(
+				"UPDATE {$this->t( 'run_steps' )} SET status = %s, error_code = NULL, error_message = NULL WHERE run_id = %d AND status IN (%s, %s)",
+				StepStatus::Pending->value,
+				$run_id,
+				StepStatus::Skipped->value,
+				StepStatus::Running->value
+			)
+		);
+		return true;
+	}
+
+	/**
 	 * Wartende Abläufe mit einem bestimmten Grund.
 	 *
 	 * @param string $code  Grund, z. B. ai_budget.
@@ -380,7 +460,7 @@ final class RunRepository {
 		$params = '' === $status ? array( $limit ) : array( $status, $limit );
 		$rows   = $this->db->get_results(
 			$this->db->prepare(
-				"SELECT id, uuid, type, status, current_step, error_code, error_message, created_at, updated_at, finished_at
+				"SELECT id, uuid, type, subject_type, subject_id, status, current_step, error_code, error_message, created_at, updated_at, finished_at
 				FROM {$this->t( 'runs' )} {$where} ORDER BY id DESC LIMIT %d",
 				$params
 			),

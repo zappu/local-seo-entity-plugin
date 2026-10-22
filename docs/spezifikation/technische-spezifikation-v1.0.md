@@ -292,6 +292,22 @@ Prüfbefehl: `wp lsec check content <id>` (vorhanden), neu `wp lsec index run|st
 
 **Umsetzung Stufe B (Nachtrag 18.10.):** Post-Meta `_lsec_index` (Hash, Titel, Wörter, Quelle, Überschriften, Kategorien, Fokus-Keyword, Zeitpunkt), `_lsec_index_dirty` (von `save_post` gesetzt) und `_lsec_extracted_hash` (Inhalt, für den die Entity-Erkennung zuletzt lief). Der Ablauf `content_index` läuft in Durchgängen zu 20 Beiträgen (`StepResult::more`, 7.4). Die Erkennung startet für Inhalte ab 50 Wörtern, deren `_lsec_extracted_hash` nicht zum aktuellen Hash passt, wenn `entity_auto_extract` an ist (Standard). Der Cronjob prüft höchstens stündlich auf neue oder geänderte Inhalte, aber erst nachdem der Administrator den Index einmal selbst gestartet hat; so beginnt die erste Erkennung mit KI-Kosten nicht unbemerkt. `wp lsec index run [--all] [--now] [--ids=…]`, `status`, `show <id>`; im Dashboard Karte „Inhalte und Entitäten“ mit „Index starten“. Beim Löschen eines Beitrags werden seine Fundstellen entfernt.
 
+**Nachtrag 22.10. (0.4.2): Produkte, Kategorieseiten, Auswahl der Erkennung.**
+- **Was gelesen wird:** Beiträge, Seiten, mit WooCommerce auch Produkte (`product`, Kurzbeschreibung vor der Beschreibung) und Kategorieseiten (`category`, `product_cat`: Name als Titel, Kategoriebeschreibung als Text, Rank-Math-Fokus-Keyword aus Term-Meta). Filter `lsec_index_post_types` und neu `lsec_index_taxonomies`.
+- **Ausnahmen:** Ausgenommen sind die Standardkategorien (`default_category`, `default_product_cat`) und die WooCommerce-Seiten Warenkorb, Kasse und Kundenkonto. Nach diesen Seiten fragt niemand, und auf sie soll nicht verlinkt werden.
+- **Speicherort:** Kategorien tragen dieselben Meta-Schlüssel als Term-Meta. Sie werden über `created_term` und `edited_term` vorgemerkt; `delete_term` entfernt ihre Fundstellen (`lsec_mentions.object_type = term`).
+- **Kennungen:** In Warteschlangen und Befehlen heißen Inhalte `post:12` und `term:34`; eine reine Zahl ist ein Beitrag (`Lsec\Content\IndexItem`).
+- **Gelesen werden immer alle Inhalte.** Das kostet nichts und ist die Grundlage für die Dublettenprüfung, die internen Links und die Keyword-Zuordnung.
+- **Erkennung nur für ausgewählte Arten:** Die KI-Erkennung läuft automatisch nur für die Arten aus der neuen Einstellung `entity_extract_types`. Standard: Seiten, Produkte, Beitrags- und Produktkategorien; Blogbeiträge sind nicht dabei. Begründung: Für das Unternehmen bringen vor allem Leistungsseiten, Produkte und Kategorien etwas. Blogbeiträge liefern meist Randbegriffe und würden auf der Testwebsite etwa die Hälfte des Monatsbudgets kosten. Einzelne Beiträge lassen sich von Hand erkennen (`wp lsec entities extract <id|term:id> [--queue]`); das setzt jetzt auch `_lsec_extracted_hash`.
+- **Dashboard:**
+  - Die Karte zeigt den Stand je Art, welche Arten erkannt werden und wie viele Erkennungen fällig sind.
+  - „Index starten“ liest immer alle Inhalte, damit angehaltene oder durch eine geänderte Auswahl fehlende Erkennungen nachgeholt werden. Vorher fragt es mit einer Kostenschätzung nach (`ContentIndex::extraction_due()`).
+  - „Anhalten“ bricht den Indexlauf und alle offenen Erkennungen ab.
+- **Abbrechen und Wiederaufnehmen:**
+  - Neu: `POST lsec/v1/index/stop`, `wp lsec index stop` und `wp lsec runs cancel --open [--type=…]`. `wp lsec runs list` zeigt das Objekt (`post:12`, `term:34`).
+  - Ein abgebrochener Ablauf wird wieder aufgenommen, wenn er mit gleichem Idempotenz-Schlüssel erneut gestartet wird (`RunRepository::reopen_cancelled`, 7.2). Erledigte Schritte bleiben dabei erledigt.
+  - Endet ein Schritt erst nach dem Abbruch, speichert die Engine sein Ergebnis, setzt den Ablauf aber nicht fort.
+
 ---
 
 ## 6. Keyword-Datenquellen
@@ -442,6 +458,8 @@ queued ──► running ──► succeeded
 `failed` und `blocked` lassen sich ab dem betroffenen Schritt fortsetzen; erledigte Schritte laufen nicht erneut. **Neu:** `waiting` gilt auch, wenn das Textfocus-Tagesbudget oder das KI-Budget (8.1b) erreicht ist; der Ablauf läuft nach dem Tages- bzw. Monatswechsel oder nach Freigabe weiter.
 
 **Umsetzung (Nachtrag 18.10., Stufe A):** Ein Schritt wirft `WaitException` mit einem Grund (`ai_budget`). Der Ablauf geht auf `waiting`, `error_code` ist der Grund, der Schritt bleibt `pending`, und der Versuch zählt nicht. `wp lsec cron` prüft je Grund, ob es weitergehen kann (KI-Budget: `AiBudget::allows()`), und plant den Ablauf dann neu ein. Von Hand: `wp lsec runs resume <id>` oder „Fortsetzen“ im Dashboard; `wp lsec runs cancel <id>` bzw. „Abbrechen“. Das Textfocus-Budget wird in Stufe C auf denselben Weg umgestellt.
+
+**Nachtrag 22.10. (0.4.2):** `cancelled` ist nicht mehr endgültig, wenn derselbe Ablauf (gleicher Idempotenz-Schlüssel) erneut gestartet wird. Er geht dann zurück auf `queued`, übersprungene Schritte laufen erneut, erledigte nicht; so wird eine bezahlte Erkennung nicht doppelt bezahlt. Beim Abbruch während eines Schritts speichert die Engine das Ergebnis des Schritts, belebt den Ablauf aber nicht wieder.
 
 ### 7.3 Abläufe in MVP 1
 

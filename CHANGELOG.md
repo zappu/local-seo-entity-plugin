@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 0.4.2 – 22.10.2026
+
+- Inhaltsindex liest jetzt auch WooCommerce-Produkte und Kategorieseiten (Beitrags- und Produktkategorien); Warenkorb, Kasse, Kundenkonto und Standardkategorien bleiben draußen
+- Neue Einstellung „Entitäten erkennen für“ (`entity_extract_types`): Standard Seiten, Produkte und Kategorien, Blogbeiträge aus. Gelesen werden weiterhin alle Inhalte, das kostet nichts
+- Dashboard-Karte „Inhalte und Entitäten“: Stand je Art, fällige Erkennungen mit Kostenschätzung vor dem Start, Knopf „Anhalten“ für Index und Erkennungen
+- `wp lsec index stop`, `wp lsec runs cancel --open [--type=…]`; `wp lsec runs list` zeigt das Objekt; `wp lsec index show|run` und `wp lsec entities extract` verstehen `term:<id>`
+- Ein abgebrochener Ablauf wird beim erneuten Start wieder aufgenommen, erledigte Schritte werden nicht noch einmal bezahlt
+- Prüfskript: B7 (Kategorieseiten, Auswahl der Erkennung, Abbrechen und Wiederaufnehmen)
+
 ## 0.4.1 – 22.10.2026
 
 - Unternehmen: Textfeld „Seiten, aus denen die Angaben gelesen werden“ (bis zu acht Adressen, auch `/impressum`). „Angaben lesen“ lässt die KI Unternehmen, Standorte, Leistungen, Marken und Servicegebiet vorschlagen; übernommen wird nur, was wörtlich auf den Seiten steht, und nur, was angekreuzt ist (`wp lsec profile suggest`)

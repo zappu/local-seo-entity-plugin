@@ -10,6 +10,8 @@ namespace Lsec\Admin;
 use Lsec\Cli\GscCommand;
 use Lsec\Cli\LsecCommand;
 use Lsec\Content\ContentIndex;
+use Lsec\Content\ContentIndexWorkflow;
+use Lsec\Entities\EntityExtractionWorkflow;
 use Lsec\Content\DraftWriter;
 use Lsec\Entities\BusinessProfile;
 use Lsec\Core\Plugin;
@@ -103,6 +105,8 @@ final class DashboardData {
 			'content'      => array(
 				'index'        => ContentIndex::stats(),
 				'auto_extract' => (bool) Settings::get( 'entity_auto_extract' ),
+				'due'          => ContentIndex::extraction_due(),
+				'open_runs'    => $plugin->runs->count_open( array( ContentIndexWorkflow::TYPE, EntityExtractionWorkflow::TYPE ) ),
 				'entities'     => self::entity_counts(),
 				'profile'      => null !== ( new BusinessProfile() )->organization_row(),
 			),

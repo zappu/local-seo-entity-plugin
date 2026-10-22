@@ -58,8 +58,18 @@ final class EntitiesController {
 		$route( '/profile/analyze', 'POST', array( $this, 'analyze_profile' ) );
 		$route( '/wikidata/search', 'GET', array( $this, 'search_wikidata' ) );
 		$route( '/service-area', 'POST', array( $this, 'service_area' ) );
-		$route( '/index', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ContentIndex::stats() + array( 'auto_extract' => (bool) Settings::get( 'entity_auto_extract' ) ) ) );
+		$route(
+			'/index',
+			'GET',
+			static fn(): \WP_REST_Response => new \WP_REST_Response(
+				ContentIndex::stats() + array(
+					'auto_extract' => (bool) Settings::get( 'entity_auto_extract' ),
+					'due'          => ContentIndex::extraction_due(),
+				)
+			)
+		);
 		$route( '/index/run', 'POST', array( $this, 'run_index' ) );
+		$route( '/index/stop', 'POST', array( $this, 'stop_index' ) );
 	}
 
 	/**
@@ -227,5 +237,14 @@ final class EntitiesController {
 			)
 		);
 		return new \WP_REST_Response( $run );
+	}
+
+	/**
+	 * Hält den Index an: bricht Indexlauf und offene Entity-Erkennungen ab.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function stop_index(): \WP_REST_Response {
+		return new \WP_REST_Response( array( 'cancelled' => ContentIndexWorkflow::stop( $this->plugin ) ) );
 	}
 }

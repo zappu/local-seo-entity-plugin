@@ -7,6 +7,7 @@
 
 namespace Lsec\Admin;
 
+use Lsec\Content\ContentIndex;
 use Lsec\Core\Settings;
 
 /**
@@ -17,7 +18,7 @@ use Lsec\Core\Settings;
 final class SettingsSchema {
 
 	/**
-	 * Gruppen mit Feldern. Typen: text, number, select, toggle, json, readonly.
+	 * Gruppen mit Feldern. Typen: text, number, select, toggle, json, checkboxes, readonly.
 	 *
 	 * @var array<string, array{label: string, fields: array<string, array<string, mixed>>}>
 	 */
@@ -124,7 +125,12 @@ final class SettingsSchema {
 				'entity_auto_extract'   => array(
 					'label' => 'Entitäten automatisch erkennen',
 					'type'  => 'toggle',
-					'help'  => 'Der Inhaltsindex startet für neue und geänderte Beiträge die Entity-Erkennung (KI, etwa 0,04 USD je Beitrag, im Rahmen des KI-Budgets).',
+					'help'  => 'Der Inhaltsindex startet für neue und geänderte Inhalte die Entity-Erkennung (KI, etwa 0,04 USD je Inhalt, im Rahmen des KI-Budgets).',
+				),
+				'entity_extract_types'  => array(
+					'label' => 'Entitäten erkennen für',
+					'type'  => 'checkboxes',
+					'help'  => 'Gelesen werden immer alle Inhalte (kostenlos, für Dublettenprüfung und interne Links). Die KI-Erkennung lohnt sich vor allem für Seiten, Produkte und Kategorien. Einzelne Blogbeiträge: wp lsec entities extract <id> --queue.',
 				),
 				'entity_min_confidence' => array(
 					'label' => 'Mindest-Sicherheit für die Anzeige',
@@ -166,7 +172,7 @@ final class SettingsSchema {
 					'key'     => $key,
 					'value'   => $values[ $key ] ?? null,
 					'default' => Settings::DEFAULTS[ $key ],
-					'choices' => Settings::CHOICES[ $key ] ?? null,
+					'choices' => 'checkboxes' === $field['type'] ? self::checkbox_choices( $key ) : ( Settings::CHOICES[ $key ] ?? null ),
 					'min'     => Settings::RANGES[ $key ][0] ?? 0,
 					'max'     => Settings::RANGES[ $key ][1] ?? null,
 				);
@@ -176,6 +182,25 @@ final class SettingsSchema {
 				'label'  => $group['label'],
 				'fields' => $fields,
 			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Auswahl für Listenfelder.
+	 *
+	 * @param string $key Schlüssel.
+	 * @return list<array{value: string, label: string}>
+	 */
+	private static function checkbox_choices( string $key ): array {
+		$out = array();
+		if ( 'entity_extract_types' === $key ) {
+			foreach ( ContentIndex::kinds() as $kind => $info ) {
+				$out[] = array(
+					'value' => $kind,
+					'label' => $info['label'],
+				);
+			}
 		}
 		return $out;
 	}

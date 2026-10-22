@@ -44,7 +44,8 @@ final class WorkflowEngine {
 	) {}
 
 	/**
-	 * Startet einen Ablauf oder findet den vorhandenen mit gleichem Schlüssel.
+	 * Startet einen Ablauf oder findet den vorhandenen mit gleichem Schlüssel. Ein abgebrochener Ablauf mit
+	 * gleichem Schlüssel wird wieder aufgenommen (Nachtrag 22.10.); erledigte Schritte bleiben erledigt.
 	 *
 	 * @param string               $type         Ablauftyp.
 	 * @param string|null          $subject_type Gegenstand.
@@ -67,6 +68,22 @@ final class WorkflowEngine {
 			$this->retry->max_attempts(),
 			function_exists( 'get_current_user_id' ) ? get_current_user_id() : null
 		);
+
+		if ( ! $created && $this->runs->reopen_cancelled( $run_id ) ) {
+			$created = true;
+			$this->queue->enqueue( $run_id );
+			$this->logger->info(
+				'Abgebrochener Ablauf wieder aufgenommen',
+				array(
+					'run_id' => $run_id,
+					'type'   => $type,
+				)
+			);
+			return array(
+				'run_id'  => $run_id,
+				'created' => $created,
+			);
+		}
 
 		if ( $created ) {
 			$this->queue->enqueue( $run_id );
@@ -211,6 +228,25 @@ final class WorkflowEngine {
 	 * @param StepResult $result       Ergebnis.
 	 */
 	private function apply_result( int $run_id, int $step_id, string $step_name, int $attempt, int $max_attempts, StepResult $result ): void {
+		// Während des Schritts abgebrochen (z. B. „Index anhalten“): Ergebnis sichern, Ablauf nicht wiederbeleben.
+		if ( RunStatus::Cancelled->value === (string) ( $this->runs->find( $run_id )['status'] ?? '' ) ) {
+			if ( StepResult::DONE === $result->outcome ) {
+				$this->runs->finish_step( $step_id, StepStatus::Done, $result->output );
+			} elseif ( StepResult::MORE === $result->outcome ) {
+				$this->runs->continue_step( $step_id, $result->output );
+			} else {
+				$this->runs->finish_step( $step_id, StepStatus::Skipped, null, 'cancelled', 'Ablauf abgebrochen.' );
+			}
+			$this->runs->update_run( $run_id, array( 'current_step' => null ) );
+			$this->logger->info(
+				'Abgebrochener Ablauf nicht fortgesetzt',
+				array(
+					'run_id' => $run_id,
+					'step'   => $step_name,
+				)
+			);
+			return;
+		}
 		switch ( $result->outcome ) {
 			case StepResult::DONE:
 				$this->runs->finish_step( $step_id, StepStatus::Done, $result->output );

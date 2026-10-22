@@ -206,6 +206,9 @@ final class Plugin {
 		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
 		add_action( 'save_post', array( ContentIndex::class, 'mark_dirty' ), 10, 2 );
 		add_action( 'deleted_post', array( EntityRepository::class, 'forget_post' ) );
+		add_action( 'created_term', array( ContentIndex::class, 'mark_term_dirty' ), 10, 3 );
+		add_action( 'edited_term', array( ContentIndex::class, 'mark_term_dirty' ), 10, 3 );
+		add_action( 'delete_term', array( EntityRepository::class, 'forget_term' ) );
 		add_action( 'rest_api_init', array( new RestController( $this ), 'register' ) );
 		add_action( 'action_scheduler_init', array( $this, 'schedule_heartbeat' ) );
 		add_action( 'action_scheduler_before_process_queue', array( $this, 'mark_cli_queue_run' ) );

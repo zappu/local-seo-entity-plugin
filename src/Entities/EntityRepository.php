@@ -7,6 +7,7 @@
 
 namespace Lsec\Entities;
 
+use Lsec\Content\IndexItem;
 use Lsec\Infrastructure\Database\Schema;
 use Lsec\Research\Keywords\KeywordNormalizer;
 
@@ -108,15 +109,16 @@ final class EntityRepository {
 	}
 
 	/**
-	 * Speichert erkannte Entitäten eines Beitrags als Kandidaten mit Fundstellen (M11).
+	 * Speichert erkannte Entitäten eines Beitrags oder einer Kategorie als Kandidaten mit Fundstellen (M11).
 	 * Vorhandene Entitäten (gleicher Typ und Name oder Alias) werden wiederverwendet. Fundstellen
 	 * des Beitrags werden bei jedem Lauf ersetzt, damit eine Wiederholung keine Dubletten erzeugt.
 	 *
-	 * @param int                                                                                                                                                                      $post_id  Beitrag.
-	 * @param array<int, array{type: string, name: string, aliases: string[], description: string, confidence: float, evidence: array<int, array{excerpt: string, location: string}>}> $entities Geprüfte Vorschläge.
+	 * @param int                                                                                                                                                                      $post_id     Beitrag oder Kategorie.
+	 * @param array<int, array{type: string, name: string, aliases: string[], description: string, confidence: float, evidence: array<int, array{excerpt: string, location: string}>}> $entities    Geprüfte Vorschläge.
+	 * @param string                                                                                                                                                                   $object_type post oder term.
 	 * @return array{created: int, reused: int, mentions: int}
 	 */
-	public function save_extraction( int $post_id, array $entities ): array {
+	public function save_extraction( int $post_id, array $entities, string $object_type = 'post' ): array {
 		global $wpdb;
 		$table    = Schema::table( $wpdb->prefix, 'entities' );
 		$aliases  = Schema::table( $wpdb->prefix, 'entity_aliases' );
@@ -132,7 +134,7 @@ final class EntityRepository {
 		$wpdb->delete(
 			$mentions,
 			array(
-				'object_type' => 'post',
+				'object_type' => $object_type,
 				'object_id'   => $post_id,
 			)
 		);
@@ -183,7 +185,7 @@ final class EntityRepository {
 					$mentions,
 					array(
 						'entity_id'   => $id,
-						'object_type' => 'post',
+						'object_type' => $object_type,
 						'object_id'   => $post_id,
 						'location'    => $evidence['location'],
 						'excerpt'     => $evidence['excerpt'],
@@ -509,12 +511,31 @@ final class EntityRepository {
 	 * @param int $post_id Beitrag.
 	 */
 	public static function forget_post( int $post_id ): void {
+		self::forget( 'post', $post_id );
+	}
+
+	/**
+	 * Entfernt die Fundstellen einer gelöschten Kategorie (delete_term).
+	 *
+	 * @param int $term_id Kategorie.
+	 */
+	public static function forget_term( int $term_id ): void {
+		self::forget( 'term', $term_id );
+	}
+
+	/**
+	 * Entfernt die Fundstellen eines Objekts.
+	 *
+	 * @param string $object_type post oder term.
+	 * @param int    $object_id   ID.
+	 */
+	private static function forget( string $object_type, int $object_id ): void {
 		global $wpdb;
 		$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			Schema::table( $wpdb->prefix, 'mentions' ),
 			array(
-				'object_type' => 'post',
-				'object_id'   => $post_id,
+				'object_type' => $object_type,
+				'object_id'   => $object_id,
 			)
 		);
 	}
@@ -622,7 +643,7 @@ final class EntityRepository {
 			$wpdb->prepare(
 				"SELECT e.id, e.type, e.canonical_name, e.description, e.status, e.confidence, e.external_ids, e.origin, e.merged_into, e.decided_by, e.decided_at, e.updated_at,
 				(SELECT COUNT(*) FROM {$mtable} m WHERE m.entity_id = e.id) AS mentions,
-				(SELECT COUNT(DISTINCT m.object_id) FROM {$mtable} m WHERE m.entity_id = e.id AND m.object_type = 'post') AS posts,
+				(SELECT COUNT(DISTINCT m.object_type, m.object_id) FROM {$mtable} m WHERE m.entity_id = e.id) AS posts,
 				(SELECT COUNT(*) FROM {$atable} a WHERE a.entity_id = e.id) AS aliases
 				FROM {$table} e {$where}
 				ORDER BY FIELD(e.status, 'unresolved', 'candidate', 'probable', 'confirmed', 'rejected', 'merged'), posts DESC, e.updated_at DESC LIMIT %d",
@@ -653,9 +674,9 @@ final class EntityRepository {
 		$row['aliases']      = array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT alias FROM {$t( 'entity_aliases' )} WHERE entity_id = %d ORDER BY alias", $id ) ) );
 		$mentions            = (array) $wpdb->get_results( $wpdb->prepare( "SELECT object_type, object_id, location, excerpt FROM {$t( 'mentions' )} WHERE entity_id = %d ORDER BY object_id, id LIMIT 200", $id ), ARRAY_A );
 		foreach ( $mentions as &$mention ) {
-			$post             = 'post' === $mention['object_type'] ? get_post( (int) $mention['object_id'] ) : null;
-			$mention['title'] = $post instanceof \WP_Post ? html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ) : '';
-			$mention['url']   = $post instanceof \WP_Post ? (string) get_permalink( $post ) : '';
+			$item             = in_array( $mention['object_type'], array( 'post', 'term' ), true ) ? IndexItem::load( (string) $mention['object_type'], (int) $mention['object_id'] ) : null;
+			$mention['title'] = null !== $item ? $item->title() : '';
+			$mention['url']   = null !== $item ? $item->url() : '';
 		}
 		unset( $mention );
 		$row['mentions']    = $mentions;

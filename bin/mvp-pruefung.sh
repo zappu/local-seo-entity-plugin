@@ -5,6 +5,7 @@
 #            A3 REST-Routen der Oberfläche geschützt · A4 Dashboard-Daten · A5 Geheimnisse (M8) · A6 Oberfläche gebaut
 #   Stufe B: B1 Inhaltsindex · B2 Entity-Erkennung als Ablauf (KI-Attrappe) · B3 Zusammenführen mit Vorschlägen
 #            B4 Unternehmensprofil · B5 REST-Routen · B6 Ortsabgleich Hemmingen (nur mit --online, fragt Wikidata)
+#            B7 Kategorieseiten im Index, Auswahl der Erkennung, Abbrechen und Wiederaufnehmen (0.4.2)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -47,6 +48,7 @@ cleanup_b() {
 	wpc db query "DELETE r FROM ${PREFIX}lsec_relations r JOIN $e e ON e.id = r.source_entity_id OR e.id = r.target_entity_id WHERE e.canonical_name LIKE 'LSECTEST%'"
 	wpc db query "DELETE FROM $e WHERE canonical_name LIKE 'LSECTEST%'"
 	for id in $(wpc post list --post_type=post --post_status=any --s=LSECTEST --field=ID); do wpc post delete "$id" --force; done
+	for id in $(wpc term list category --search=LSECTEST --field=term_id); do wpc term delete category "$id"; done
 }
 trap cleanup EXIT
 
@@ -269,6 +271,29 @@ else
 		contains "Hemmingen in der Region Hannover" "Q534259" "$OUT"
 	fi
 fi
+
+# ---------------------------------------------------------------------------
+echo "B7 Kategorieseiten, Auswahl der Erkennung, Abbrechen"
+LONG="Die LSECTEST Musterbetrieb Flächenreinigung reinigt Pflaster, Terrassen und Dächer in Hemmingen, Pattensen und Laatzen. Wir beraten vor Ort, prüfen den Untergrund, wählen das passende Verfahren und versiegeln die Flächen auf Wunsch. Für Hausverwaltungen übernehmen wir die regelmäßige Pflege von Wegen, Parkplätzen und Innenhöfen. Alle Arbeiten erledigen eigene Mitarbeiter mit eigenen Maschinen."
+wpc lsec settings set entity_auto_extract true >/dev/null
+wpc lsec settings set entity_extract_types category >/dev/null
+P3=$(wpc post create --post_type=post --post_status=publish --post_title="LSECTEST Langer Beitrag" --post_content="$LONG" --porcelain | last_number)
+T1=$(wpc term create category "LSECTEST Kategorie" --description="$LONG" --porcelain | last_number)
+contains "Kategorien im Index" "Beitragskategorien (category)" "$(wpc lsec index status)"
+OUT=$(wpc lsec index run --now --ids="$P3,term:$T1" 2>&1)
+contains "Erkennung nur für die Kategorie, nicht für den Blogbeitrag" "Gelesen 2, neu oder geändert 2, Entity-Erkennungen gestartet 1" "$OUT"
+check "Kategorie im Index" "1" "$(wpc lsec index show "term:$T1" | grep -c '"kind": "category"')"
+# Feld eines Ablaufs aus der Liste: run_by <Suchfeld> <Wert> <Ausgabefeld>
+run_by() { wpj lsec runs list --limit=50 --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if((string)($r[$argv[1]]??"")===$argv[2]){ echo $r[$argv[3]]; break; } }' "$1" "$2" "$3"; }
+RUN=$(run_by objekt "term:$T1" id)
+wpc lsec runs cancel "$RUN" >/dev/null
+OUT=$(wpc lsec index run --now --ids="term:$T1" 2>&1)
+contains "abgebrochene Erkennung wieder aufgenommen" "Entity-Erkennungen gestartet 1" "$OUT"
+check "derselbe Ablauf wieder eingeplant" "queued" "$(run_by id "$RUN" status)"
+wpc lsec runs cancel "$RUN" >/dev/null
+check "Erkennung abgebrochen" "cancelled" "$(run_by id "$RUN" status)"
+contains "unbekannte Art abgelehnt" "Unbekannt: quatsch" "$($WP "${WP_ARGS[@]}" lsec settings set entity_extract_types page,quatsch 2>&1)"
+
 cleanup_b >/dev/null 2>&1
 
 echo

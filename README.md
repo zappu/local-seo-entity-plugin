@@ -64,7 +64,8 @@ wp lsec check secrets          # Schlüssel im Klartext in Datenbank oder Protok
 wp lsec settings set ai_research_model <modell>
 wp lsec profile show --format=json > profil.json   # Unternehmensprofil sichern / bearbeiten
 wp lsec profile suggest / /impressum /kontakt      # Vorschlag aus Webseiten (ein KI-Aufruf)
-wp lsec index run --now        # Inhaltsindex; startet bei entity_auto_extract die Erkennung (KI-Kosten)
+wp lsec index run --now        # Inhaltsindex; startet bei entity_auto_extract die Erkennung (KI-Kosten) für entity_extract_types
+wp lsec index stop             # Index und offene Entity-Erkennungen abbrechen
 wp lsec entities suggest-merges
 wp lsec entities merge <ziel> <quelle>…
 ```
