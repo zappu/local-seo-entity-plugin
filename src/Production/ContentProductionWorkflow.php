@@ -302,6 +302,7 @@ final class ContentProductionWorkflow {
 					'phone'           => (string) ( $profile['organization']['phone'] ?? '' ),
 					'email'           => (string) ( $profile['organization']['email'] ?? '' ),
 					'website'         => (string) ( $profile['organization']['website'] ?? home_url( '/' ) ),
+					'description'     => trim( (string) ( $profile['organization']['description'] ?? '' ) ),
 					'services'        => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
 					'service_details' => array_values(
 						array_filter(

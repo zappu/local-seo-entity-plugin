@@ -34,6 +34,9 @@ final class Context {
 				$out .= $label . ': ' . $company[ $key ] . "\n";
 			}
 		}
+		if ( '' !== (string) ( $company['description'] ?? '' ) ) {
+			$out .= 'Über das Unternehmen (Angabe des Unternehmens, belegt): ' . mb_substr( (string) $company['description'], 0, 1500 ) . "\n";
+		}
 		$out .= 'Leistungen: ' . implode( ', ', (array) $company['services'] ) . "\n";
 		foreach ( (array) ( $company['service_details'] ?? array() ) as $detail ) {
 			$out .= sprintf( "Leistung %s (Angabe des Unternehmens, belegt): %s\n", $detail['name'], mb_substr( (string) $detail['description'], 0, 600 ) );

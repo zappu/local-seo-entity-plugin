@@ -132,6 +132,7 @@ final class ProductionCommand {
 			return;
 		}
 		WP_CLI::log( sprintf( 'Ablauf %d · %s · Thema %d · Modell %s · Kosten %s USD', $id, $data['status'], $data['topic'], '' !== $data['model'] ? $data['model'] : '–', number_format( (float) $data['cost_usd'], 4, ',', '' ) ) );
+		WP_CLI::log( 'Unternehmensbeschreibung im Profil: ' . ( $data['company_description'] ? 'ja' : 'nein' ) );
 		WP_CLI::log( array() === $data['services'] ? 'Leistungsbeschreibungen im Profil: keine – Abläufe des Betriebs darf der Entwurf nicht beschreiben (Seite „Unternehmen“, Leistungen, Kurzbeschreibung).' : 'Leistungsbeschreibungen im Profil: ' . implode( ', ', $data['services'] ) );
 		if ( (int) $data['unpriced'] > 0 ) {
 			WP_CLI::warning( sprintf( '%d KI-Aufrufe ohne Kostenangabe; die Summe ist unvollständig. Einzeln: wp lsec production report %d --format=json', $data['unpriced'], $id ) );

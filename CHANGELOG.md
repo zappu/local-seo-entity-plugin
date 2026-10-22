@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.7.5 – 22.10.2026
+
+- **Unternehmensbeschreibung** aus dem Profil gilt als Angabe des Betriebs und geht an Briefing, Entwurf und Prüfung (bisher nicht).
+- **Seite „Unternehmen“:** Die Beschreibung je Leistung ist ein breites, mehrzeiliges Feld mit Hinweis, was hineingehört (Vorgehen, Verfahren, Nachbehandlung).
+- **Bericht:** nennt, ob eine Unternehmensbeschreibung vorlag.
+
 ## 0.7.4 – 22.10.2026
 
 - **Kein erfundener Ablauf mehr:** Ohne Leistungsbeschreibung im Profil plant das Briefing keinen Abschnitt „So arbeiten wir“, und der Entwurf sagt dem Leser keine Schritte zu („Sie schildern uns …“). Stattdessen erklärt er das Verfahren allgemein.

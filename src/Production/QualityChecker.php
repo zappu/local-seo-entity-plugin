@@ -163,7 +163,7 @@ final class QualityChecker {
 	 */
 	public static function numbers_check( string $text, array $used, array $claims, array $company ): array {
 		$allowed = array();
-		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ), implode( ' ', array_map( static fn( $d ): string => (string) ( $d['description'] ?? '' ), (array) ( $company['service_details'] ?? array() ) ) ) );
+		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ), (string) ( $company['description'] ?? '' ), implode( ' ', array_map( static fn( $d ): string => (string) ( $d['description'] ?? '' ), (array) ( $company['service_details'] ?? array() ) ) ) );
 		$phones  = array_filter( array_map( array( self::class, 'phone_digits' ), array_merge( array( (string) ( $company['phone'] ?? '' ) ), array_map( static fn( $l ): string => (string) ( $l['phone'] ?? '' ), (array) ( $company['locations'] ?? array() ) ) ) ) );
 		// Lauf 123: Die Zahlen „89, 22, 101, 72“ standen im Hostnamen der E-Mail-Adresse (Staging). Ziffern in
 		// E-Mail-Adressen, Internetadressen und Domainnamen sind keine Tatsachen.

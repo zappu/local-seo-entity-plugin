@@ -47,7 +47,13 @@ const LISTS = [
 		help: 'Grundlage für Geschäftsrelevanz und Themenvorschläge.',
 		fields: [
 			{ key: 'name', label: 'Leistung' },
-			{ key: 'description', label: 'Kurzbeschreibung' },
+			{
+				key: 'description',
+				label: 'Beschreibung: was Sie anbieten und wie Sie arbeiten',
+				wide: true,
+				multiline: true,
+				help: 'Alles hier gilt als Angabe Ihres Betriebs und darf in Beiträgen stehen, z. B. Besichtigung vor dem Angebot, Verfahren (Heißwasser, Hochdruck), Fugen neu einkehren, Versiegelung. Nur eintragen, was stimmt.',
+			},
 		],
 		empty: { name: '', description: '' },
 	},
@@ -101,6 +107,16 @@ function ListEditor( { list, items, onChange } ) {
 									/>
 								) : (
 									<div key={ field.key } className={ field.wide ? 'lsec-item__wide' : '' }>
+										{ field.multiline ? (
+											<TextareaControl
+												label={ field.label }
+												help={ field.help }
+												rows={ 3 }
+												value={ item[ field.key ] || '' }
+												onChange={ ( v ) => update( index, field.key, v ) }
+												__nextHasNoMarginBottom
+											/>
+										) : (
 										<TextControl
 											label={ field.label }
 											value={ item[ field.key ] || '' }
@@ -108,6 +124,7 @@ function ListEditor( { list, items, onChange } ) {
 											__nextHasNoMarginBottom
 											__next40pxDefaultSize
 										/>
+										) }
 									</div>
 								)
 							) }
