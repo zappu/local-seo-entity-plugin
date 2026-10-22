@@ -73,3 +73,43 @@ export const runIndex = ( all = false ) =>
 export const stopIndex = () => apiFetch( { path: `${ base }/index/stop`, method: 'POST' } );
 export const analyzeProfile = ( urls ) =>
 	apiFetch( { path: `${ base }/profile/analyze`, method: 'POST', data: { urls } } );
+
+/**
+ * Abfrage mit Suchparametern.
+ *
+ * @param {string} path  Pfad unter lsec/v1.
+ * @param {Object} query Parameter.
+ * @return {Promise<*>} Antwort.
+ */
+function getWith( path, query ) {
+	const params = new URLSearchParams();
+	Object.entries( query ).forEach( ( [ k, v ] ) => {
+		if ( v !== '' && v !== null && v !== undefined ) {
+			params.set( k, v );
+		}
+	} );
+	return apiFetch( { path: `${ base }${ path }?${ params.toString() }` } );
+}
+
+export const getKeywordTable = ( query ) => getWith( '/keywords/table', query );
+export const getKeywordOverview = () => apiFetch( { path: `${ base }/keywords/overview` } );
+export const decideKeyword = ( id, decision ) =>
+	apiFetch( { path: `${ base }/keywords/${ id }/exclusion`, method: 'POST', data: { decision } } );
+export const syncKeywords = () => apiFetch( { path: `${ base }/keywords/sync`, method: 'POST' } );
+export const relatedKeywords = ( keyword, ignoreTypos = false ) =>
+	apiFetch( { path: `${ base }/keywords/related`, method: 'POST', data: { keyword, ignore_typos: ignoreTypos } } );
+
+/**
+ * Lädt eine Datei für die Vorschau hoch.
+ *
+ * @param {File} file Datei.
+ * @return {Promise<Object>} Vorschau.
+ */
+export function previewImport( file ) {
+	const body = new window.FormData();
+	body.append( 'file', file );
+	return apiFetch( { path: `${ base }/keywords/import/preview`, method: 'POST', body } );
+}
+
+export const runImport = ( token, mapping, source ) =>
+	apiFetch( { path: `${ base }/keywords/import`, method: 'POST', data: { token, mapping, source } } );

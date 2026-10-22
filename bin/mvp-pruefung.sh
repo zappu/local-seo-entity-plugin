@@ -7,6 +7,8 @@
 #            B4 Unternehmensprofil · B5 REST-Routen · B6 Ortsabgleich Hemmingen (nur mit --online, fragt Wikidata)
 #            B7 Kategorieseiten im Index, Auswahl der Erkennung, Abbrechen und Wiederaufnehmen (0.4.2)
 #            B8 Entitäten bearbeiten und löschen, weitere Vorschläge zum Zusammenführen (0.4.3)
+#   Stufe C: C1 Ausschlüsse (KI-Attrappe, ohne Wikidata) · C2 Entscheidungen von Hand · C3 REST-Routen
+#            C4 täglicher Abgleich (nur mit --online, liest den letzten Ablauf)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -50,6 +52,9 @@ cleanup_b() {
 	wpc db query "DELETE FROM $e WHERE canonical_name LIKE 'LSECTEST%'"
 	for id in $(wpc post list --post_type=post --post_status=any --s=LSECTEST --field=ID); do wpc post delete "$id" --force; done
 	for id in $(wpc term list category --search=LSECTEST --field=term_id); do wpc term delete category "$id"; done
+	wpc db query "DELETE m FROM ${PREFIX}lsec_keyword_metrics m JOIN ${PREFIX}lsec_keywords k ON k.id = m.keyword_id WHERE k.normalized LIKE '%lsectest%'"
+	wpc db query "DELETE FROM ${PREFIX}lsec_keywords WHERE normalized LIKE '%lsectest%'"
+	wpc db query "DELETE FROM ${PREFIX}lsec_imports WHERE source = 'csv:lsec_c'"
 }
 trap cleanup EXIT
 
@@ -117,10 +122,10 @@ SAVED=$(wpc option get lsec_settings --format=json)
 wpc lsec selftest cleanup >/dev/null 2>&1
 
 # ---------------------------------------------------------------------------
-echo "A1 Schemaversion 3"
+echo "A1 Schemaversion (3 seit Stufe A, 4 seit Stufe C)"
 STATUS=$(wpj lsec status --format=json)
-check "Schemaversion installiert" "3" "$(echo "$STATUS" | json schema_version_installed)"
-for col in "keyword_metrics competition" "keywords exclusion" "entities merged_into"; do
+check "Schemaversion installiert" "4" "$(echo "$STATUS" | json schema_version_installed)"
+for col in "keyword_metrics competition" "keywords exclusion" "entities merged_into" "keywords exclusion_detail" "keywords exclusion_by" "keywords analyzed_at"; do
 	set -- $col
 	check "Spalte $1.$2" "1" "$(wpc db query "SHOW COLUMNS FROM ${PREFIX}lsec_$1 LIKE '$2'" --skip-column-names | grep -c "^$2")"
 done
@@ -330,6 +335,66 @@ fi
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "neue Routen geschützt" "Routen geschützt" "$OUT"
 
+cleanup_b >/dev/null 2>&1
+
+# ===========================================================================
+echo "C1 Ausschlüsse (KI-Attrappe, ohne Wikidata)"
+printf 'Keyword;Volume\nlsectest konkurrenz flächenreinigung;30\nflächenreinigung lsectest fremdort;20\nlsectest fremdmarke hochdruckreiniger;10\nlsectest pflasterreinigung;40\n' > "$TMP/c.csv"
+wpc lsec keywords import "$TMP/c.csv" --source=csv:lsec_c >/dev/null
+wpc lsec entities add competitor "LSECTEST Konkurrenz" >/dev/null
+ORT=$(wpc lsec entities add place "LSECTEST Fremdort" | grep -oE '(Angelegt|vorhanden): [0-9]+' | grep -oE '[0-9]+$' | head -1)
+wpc lsec entities update "$ORT" --status=rejected >/dev/null
+cat > "$TMP/analyse.json" <<'JSON'
+{"keywords":[
+{"keyword":"flächenreinigung lsectest fremdort","places":["lsectest fremdort"],"names":[]},
+{"keyword":"lsectest fremdmarke hochdruckreiniger","places":[],"names":["lsectest fremdmarke"]},
+{"keyword":"lsectest pflasterreinigung","places":["erfundener ort"],"names":[]}
+]}
+JSON
+# Feld eines Keywords aus der Tabelle: kw <Keyword> <Feld>
+kw() { wpj lsec keywords table --status=all --search=lsectest --limit=50 --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["keyword"]===$argv[1]){ echo $r[$argv[2]]; break; } }' "$1" "$2"; }
+IDS=$(wpj lsec keywords table --status=all --search=lsectest --limit=50 --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo implode(",", array_column((array)$d,"id"));')
+OUT=$(wpc lsec keywords sync --now --no-gsc --no-volumes --offline --ids="$IDS" --stub-analysis="$TMP/analyse.json" 2>&1)
+contains "Abgleich abgeschlossen" "succeeded" "$OUT"
+contains "Ort ohne wörtliche Fundstelle verworfen" '"found":2' "$OUT"
+check "Wettbewerber ausgeschlossen" "competitor: LSECTEST Konkurrenz" "$(kw 'lsectest konkurrenz flächenreinigung' ausschluss)"
+check "abgelehnter Ort als fremder Ort" "foreign_place: lsectest fremdort" "$(kw 'flächenreinigung lsectest fremdort' ausschluss)"
+check "fremde Marke ausgeschlossen" "brand: lsectest fremdmarke" "$(kw 'lsectest fremdmarke hochdruckreiniger' ausschluss)"
+check "eigenes Thema bleibt" "" "$(kw 'lsectest pflasterreinigung' ausschluss)"
+
+# ---------------------------------------------------------------------------
+echo "C2 Entscheidungen von Hand"
+K1=$(kw 'lsectest pflasterreinigung' id)
+K2=$(kw 'lsectest konkurrenz flächenreinigung' id)
+wpc lsec keywords decide manual "$K1" >/dev/null
+wpc lsec keywords decide include "$K2" >/dev/null
+wpc lsec keywords sync --now --no-gsc --no-volumes --offline --ids="$IDS" --stub-analysis="$TMP/analyse.json" >/dev/null 2>&1
+check "von Hand ausgeschlossen" "manual (von Hand)" "$(kw 'lsectest pflasterreinigung' ausschluss)"
+check "von Hand aufgenommen bleibt nach dem Abgleich" "" "$(kw 'lsectest konkurrenz flächenreinigung' ausschluss)"
+wpc lsec keywords decide auto "$K2" >/dev/null
+wpc lsec keywords sync --now --no-gsc --no-volumes --offline --ids="$IDS" --stub-analysis="$TMP/analyse.json" >/dev/null 2>&1
+check "zurück an den Filter" "competitor: LSECTEST Konkurrenz" "$(kw 'lsectest konkurrenz flächenreinigung' ausschluss)"
+
+# ---------------------------------------------------------------------------
+echo "C3 REST-Routen der Stufe C geschützt"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "alle Routen 403" "Routen geschützt" "$OUT"
+contains "Route Import" "/lsec/v1/keywords/import" "$OUT"
+contains "Route Ausschluss" "/lsec/v1/keywords/1/exclusion" "$OUT"
+
+# ---------------------------------------------------------------------------
+echo "C4 Täglicher Abgleich"
+if [ "$ONLINE" -eq 0 ]; then
+	skip "nur mit --online"
+else
+	LAST=$(wpj lsec runs list --limit=100 --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["typ"]==="keyword_sync" && $r["status"]==="succeeded" && strtotime($r["stand"]." UTC") > time()-2*86400){ echo $r["id"]; break; } }')
+	if [ -z "$LAST" ]; then
+		skip "noch kein erfolgreicher Abgleich in den letzten zwei Tagen (läuft einmal am Tag über wp lsec cron)"
+	else
+		check "Abgleich der letzten zwei Tage erfolgreich" "1" "$( [ -n "$LAST" ] && echo 1 || echo 0 )"
+		contains "Search Console abgerufen" "fetched" "$(wpj lsec runs show "$LAST" 2>&1)"
+	fi
+fi
 cleanup_b >/dev/null 2>&1
 
 echo

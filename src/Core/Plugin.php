@@ -40,6 +40,7 @@ use Lsec\Workflow\Selftest\SelftestWorkflow;
 use Lsec\Content\ContentIndex;
 use Lsec\Content\ContentIndexWorkflow;
 use Lsec\Entities\EntityExtractionWorkflow;
+use Lsec\Research\Keywords\KeywordSyncWorkflow;
 use Lsec\Workflow\Watchdog;
 use Lsec\Workflow\WorkflowEngine;
 use Lsec\Workflow\WorkflowRegistry;
@@ -178,6 +179,7 @@ final class Plugin {
 		$this->workflows->register( SelftestWorkflow::definition( (int) apply_filters( 'lsec_selftest_lock_ttl', 10 ) ) );
 		$this->workflows->register( ContentIndexWorkflow::definition( $this ) );
 		$this->workflows->register( EntityExtractionWorkflow::definition( $this ) );
+		$this->workflows->register( KeywordSyncWorkflow::definition( $this ) );
 
 		/**
 		 * Weitere Ablauftypen registrieren.
@@ -223,7 +225,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec selftest', new SelftestCommand( $this ) );
 			\WP_CLI::add_command( 'lsec ai', new AiCommand( $this ) );
 			\WP_CLI::add_command( 'lsec settings', new SettingsCommand() );
-			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository() ) );
+			\WP_CLI::add_command( 'lsec keywords', new KeywordsCommand( new KeywordRepository(), $this ) );
 			\WP_CLI::add_command( 'lsec textfocus', new TextfocusCommand( $this, new KeywordRepository() ) );
 			\WP_CLI::add_command( 'lsec entities', new EntitiesCommand( $this, new EntityRepository() ) );
 			\WP_CLI::add_command( 'lsec check', new CheckCommand( $this ) );

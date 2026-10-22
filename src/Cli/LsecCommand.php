@@ -8,6 +8,7 @@
 namespace Lsec\Cli;
 
 use Lsec\Content\ContentIndexWorkflow;
+use Lsec\Research\Keywords\KeywordSyncWorkflow;
 use Lsec\Core\Plugin;
 use Lsec\Infrastructure\Database\Migrator;
 use Lsec\Infrastructure\Database\Schema;
@@ -127,6 +128,16 @@ final class LsecCommand {
 		$released = $this->plugin->engine->resume_waiting( AiBudget::WAIT_CODE, static fn( int $run_id ): bool => $budget->allows( $run_id ) );
 		if ( array() !== $released ) {
 			WP_CLI::log( 'Budget reicht wieder, fortgesetzt: ' . implode( ', ', $released ) );
+		}
+
+		$tf_released = $this->plugin->engine->resume_waiting( KeywordSyncWorkflow::WAIT_TEXTFOCUS, static fn( int $run_id ): bool => KeywordSyncWorkflow::textfocus_budget_left() );
+		if ( array() !== $tf_released ) {
+			WP_CLI::log( 'Textfocus-Budget reicht wieder, fortgesetzt: ' . implode( ', ', $tf_released ) );
+		}
+
+		$sync = KeywordSyncWorkflow::maybe_start_scheduled( $this->plugin );
+		if ( null !== $sync ) {
+			WP_CLI::log( 'Täglicher Keyword-Abgleich gestartet: Ablauf ' . $sync );
 		}
 
 		$index = ContentIndexWorkflow::maybe_start_scheduled( $this->plugin );

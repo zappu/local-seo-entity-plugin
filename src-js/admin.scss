@@ -490,3 +490,56 @@
 		}
 	}
 }
+
+.lsec-steps {
+	margin: 8px 0;
+
+	li {
+		margin: 0 0 4px;
+	}
+}
+
+.lsec-inline {
+	display: flex;
+	gap: 8px;
+	align-items: flex-end;
+
+	.components-base-control {
+		flex: 1;
+	}
+}
+
+.lsec-mapping {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.lsec-sample {
+	margin-bottom: 12px;
+
+	th {
+		white-space: nowrap;
+	}
+
+	.lsec-tag {
+		display: block;
+		width: fit-content;
+		margin: 2px 0 0;
+	}
+}
+
+.lsec-source {
+	display: block;
+	font-size: 11px;
+	color: #646970;
+}
+
+.lsec-counts {
+	margin: 0 0 12px;
+
+	.components-button.is-link {
+		vertical-align: baseline;
+	}
+}

@@ -38,6 +38,8 @@ final class Settings {
 		'textfocus_daily_budget'   => 25,
 		'textfocus_min_interval'   => 60,
 		'textfocus_batch_size'     => 10,
+		'keyword_analysis'         => true,
+		'keyword_auto_volumes'     => true,
 		'service_area'             => array(),
 		'profile_source_urls'      => array(),
 		'gsc_credentials_file'     => '',

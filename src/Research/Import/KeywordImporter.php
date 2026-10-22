@@ -35,18 +35,22 @@ final class KeywordImporter {
 	/**
 	 * Liest eine Datei und wendet die Vorlage an.
 	 *
-	 * @param string $path     Pfad.
-	 * @param string $filename Originaler Dateiname.
-	 * @param string $profile  Vorlage oder leer.
-	 * @param string $map      Zusätzliche Spaltenzuordnung.
-	 * @param string $source   Eigene Quellkennung oder leer.
+	 * @param string                     $path     Pfad.
+	 * @param string                     $filename Originaler Dateiname.
+	 * @param string                     $profile  Vorlage oder leer.
+	 * @param string                     $map      Zusätzliche Spaltenzuordnung.
+	 * @param string                     $source   Eigene Quellkennung oder leer.
+	 * @param array<string, string>|null $mapping Vollständige Zuordnung Feld => Spalte (Backend) oder null.
 	 * @throws \InvalidArgumentException Bei falscher Vorlage, Zuordnung oder Quelle. TableReader wirft \RuntimeException, wenn die Datei nicht lesbar ist.
 	 */
-	public static function from_file( string $path, string $filename = '', string $profile = '', string $map = '', string $source = '' ): ImportResult {
+	public static function from_file( string $path, string $filename = '', string $profile = '', string $map = '', string $source = '', ?array $mapping = null ): ImportResult {
 		$name   = '' !== $filename ? $filename : basename( $path );
 		$format = str_ends_with( strtolower( $name ), '.xlsx' ) ? 'xlsx' : 'csv';
 		$table  = TableReader::read( $path, $name );
 		$chosen = ImportProfile::detect( $table['header'], $format, $profile )->with_map( $map, $table['header'] );
+		if ( null !== $mapping ) {
+			$chosen = $chosen->with_mapping( $mapping, $table['header'] );
+		}
 		if ( '' !== $source ) {
 			if ( ! preg_match( '/^[a-z0-9_]+:[a-z0-9_]+$/', $source ) ) {
 				throw new \InvalidArgumentException( 'Quelle im Format art:name angeben, z. B. csv:sistrix.' );

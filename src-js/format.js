@@ -123,3 +123,30 @@ export const ORIGINS = {
 	manual: 'von Hand',
 	import: 'Import',
 };
+
+export const EXCLUSIONS = {
+	competitor: 'Wettbewerber',
+	brand: 'fremde Firma oder Marke',
+	foreign_place: 'Ort außerhalb',
+	off_topic: 'ohne Bezug',
+	manual: 'von Hand',
+};
+
+const SOURCES = {
+	gsc: 'Search Console',
+	textfocus: 'Textfocus',
+	'xlsx:textfocus': 'Textfocus (Excel)',
+	'csv:keyword_revealer': 'Keyword Revealer',
+	'csv:keyword_chef': 'Keyword Chef',
+	import: 'alle Importe',
+};
+
+/**
+ * Bezeichnung einer Quelle; unbekannte bleiben, wie sie sind.
+ *
+ * @param {string} source Quelle.
+ * @return {string} Text.
+ */
+export function sourceLabel( source ) {
+	return SOURCES[ source ] || source;
+}

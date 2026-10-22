@@ -70,6 +70,10 @@ wp lsec entities update 44 --status=rejected   # Name, Typ, Status, Schreibweise
 wp lsec entities delete 66     # Entität mit Fundstellen löschen
 wp lsec entities suggest-merges
 wp lsec entities merge <ziel> <quelle>…
+wp lsec keywords sync --now    # Keyword-Abgleich: Search Console, Orte/Namen, Ausschlüsse, Textfocus-Volumina
+wp lsec keywords table --status=excluded
+wp lsec keywords related flächenreinigung   # verwandte Keywords (1 Textfocus-Credit)
+wp lsec keywords decide include <id>        # Ausschluss von Hand aufheben
 ```
 
 Stufe B (gleiches Skript): Inhaltsindex mit den eigenen Testbeiträgen, Entity-Erkennung als Ablauf über eine KI-Attrappe, Zusammenführen mit Vorschlägen, Profil unverändert speichern, REST-Schutz; mit `--online` zusätzlich der Ortsabgleich für Hemmingen. Testdaten heißen `LSECTEST …` und werden danach entfernt.

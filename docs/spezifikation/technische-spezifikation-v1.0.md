@@ -15,7 +15,7 @@
 | Rahmen | PHP 8.1 und WordPress 6.4 festgelegt (geprüft mit PHP 8.1, 8.3, 8.4 und WordPress 6.4.5, 7.1.3); Rank-Math-Funktionen nur ab der WordPress-Version, die Rank Math verlangt | 1 |
 | MVP-Zuschnitt | Ortsabgleich über Wikidata und Import der Textfocus-Entitäten gehören zu MVP 1; vollständige externe Verifizierung bleibt in Ausbau 2 | 2 |
 | Verzeichnisstruktur | an den tatsächlichen Stand angepasst, neue Module für Themen, Qualität und Style Mimic | 3 |
-| Datenbank | Schemaversion 2 ist Stand; Schemaversion 3 für MVP 1: Wettbewerbswert, Ausschlussgrund bei Keywords, Zusammenführen von Entitäten | 4 |
+| Datenbank | Schemaversion 3 für MVP 1: Wettbewerbswert, Ausschlussgrund bei Keywords, Zusammenführen von Entitäten; Schemaversion 4 (Stufe C): Ausschlussdetail, Entscheidung von Hand und Analyse je Keyword | 4 |
 | Keyword-Quellen | Nachträge aus dem Test in den Haupttext übernommen; Filter für Wettbewerber und fremde Orte; Search Console als Signal für Sichtbarkeit ohne Klicks | 6 |
 | KI | Kostensteuerung (Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell), Faktenprüfung gegen den Quelltext, Mindest-Sicherheit und Zusammenführen bei der Entity-Erkennung | 8 |
 | Qualitätsprüfung | `UNSUPPORTED_FACT` stützt sich auf die Faktenprüfung | 10 |
@@ -203,6 +203,12 @@ Unternehmen, Standorte, Leistungen und Servicegebiete sind Entitäten mit `origi
 
 **`lsec_keywords`**: id, keyword, normalized (INDEX), locale (`de_DE`, `de_AT`, `de_CH`), region (NULL oder Ort/PLZ), intent (`informational`, `commercial`, `transactional`, `navigational`, `local`), ab v3 `exclusion` (NULL, `competitor`, `brand`, `foreign_place`, `off_topic`, `manual`), first_seen_at, updated_at; UNIQUE (normalized, locale, region)
 
+**Schemaversion 4 (Nachtrag 22.10., Stufe C)** in `lsec_keywords`:
+- `exclusion_detail`: der Name oder Ort, der zum Ausschluss führte.
+- `exclusion_by`: der Benutzer, wenn der Administrator entschieden hat. Der automatische Filter lässt solche Keywords dann unberührt.
+- `analysis`: von der KI erkannte Orte und Namen als JSON.
+- `analyzed_at`.
+
 **`lsec_keyword_metrics`** – Kennzahlen je Quelle und Zeitraum
 
 | Spalte | Hinweis |
@@ -343,6 +349,11 @@ Alle Quellen schreiben in `lsec_keywords` und `lsec_keyword_metrics`. Jede Kennz
 - Erkennung von Trennzeichen, Kodierung (UTF-8 mit/ohne BOM, Windows-1252) und deutschen Zahlen (`1.200`, `0,45`).
 - Die Entitäten-Tabelle einer Textfocus-Seitenanalyse wird erkannt und an den Entitäten-Import verwiesen (8.3).
 - **MVP 1:** Upload im Backend mit Vorschau und änderbarer Spaltenzuordnung.
+- **Umsetzung (Nachtrag 22.10., Stufe C):**
+  - Upload über `POST lsec/v1/keywords/import/preview` (CSV, TXT oder XLSX, höchstens 10 MB).
+  - Die Datei liegt bis zum Import unter `uploads/lsec-import` mit zufälligem Namen und einem Sperrvermerk für Apache. Nach dem Import wird sie gelöscht, spätestens nach einem Tag.
+  - Die Vorschau zeigt Kopfzeile, fünf Zeilen, die erkannte Vorlage und die Zuordnung. Jedes Feld lässt sich einer Spalte zuordnen oder weglassen (`ImportProfile::with_mapping`).
+  - Der Import selbst läuft über `POST lsec/v1/keywords/import` und startet danach einen Abgleich ohne Search Console, damit Orte, Namen und Ausschlüsse geprüft werden.
 
 **Textfocus-API** (umgesetzt, M16): Abschnitt 6.5.
 
@@ -370,6 +381,21 @@ Alle Quellen schreiben in `lsec_keywords` und `lsec_keyword_metrics`. Jede Kennz
 | `manual` | vom Administrator ausgeschlossen |
 
 Ausgeschlossene Keywords bleiben gespeichert und sichtbar, gehen aber nicht in Themenvorschläge ein. Der Ausschluss lässt sich aufheben. Eigene Marken (z. B. Mosmatic als vertriebenes Produkt) werden als Entität `brand` mit Beziehung `owns_brand` oder `offers` gepflegt und nicht ausgeschlossen. Für regionale Abfragen bei Textfocus wird der Ortsname ins Keyword genommen.
+
+**Umsetzung (Nachtrag 22.10., Stufe C):**
+- **Erkennung von Orten und Namen:** Firmen- und Ortsnamen in Keywords lassen sich ohne Ortsverzeichnis nicht zuverlässig finden. Deshalb prüft die KI neue Keywords in Stapeln zu 100 (Aufgabe `keyword_analysis`, `KeywordAnalyzer`, Einstellung `keyword_analysis`, Standard an). Sie nennt Orte und Eigennamen. Erhalten bleibt nur, was wörtlich im Keyword steht.
+- **Regeln** (`KeywordFilter`, ganze Wörter, Umlaute vereinheitlicht), in dieser Reihenfolge:
+  - **`competitor`:** Name oder Schreibweise einer Entität vom Typ `competitor`.
+  - **`brand`:**
+    - ein von der KI erkannter Name, der nicht zur eigenen Firma gehört. Eigen sind Unternehmen und Marken aus dem Profil mit ihren Schreibweisen, also auch angebotene Marken.
+    - oder eine bestätigte fremde Firma oder Marke unter den Entitäten.
+  - **`foreign_place`:** ein erkannter Ort außerhalb des Servicegebiets. Zuerst gelten bekannte Orts-Entitäten: abgelehnt heißt außerhalb, bestätigt oder wahrscheinlich heißt im Gebiet. Sonst entscheidet der Ortsabgleich über Wikidata (8.3, mit übergeordneten Gebieten). Ohne Treffer bei Wikidata wird nichts ausgeschlossen.
+  - `off_topic` folgt mit der Themenrecherche (Stufe D).
+- **Entscheidungen von Hand** (`exclusion_by`):
+  - „Ausschließen“ setzt `manual`.
+  - „Aufnehmen“ hebt jeden Ausschluss auf, auch gegen den Filter.
+  - „Filter entscheiden lassen“ gibt das Keyword an den Filter zurück.
+  - Zugang: REST `POST lsec/v1/keywords/<id>/exclusion`, `wp lsec keywords decide manual|include|auto <id>…`.
 
 **Priorität.** Jeder Einzelwert steht in `score_breakdown` und wird im Backend angezeigt.
 
@@ -483,6 +509,21 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 **`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.
 
 **`keyword_sync`**: Search Console abrufen, Textfocus-Volumina für neue Keywords ohne Volumen nachholen (innerhalb des Budgets, Tippfehlerprüfung vorher).
+
+**Umsetzung (Nachtrag 22.10., Stufe C):** Schritte `gsc` → `analyze` → `filter` → `volumes` (`KeywordSyncWorkflow`).
+- **`gsc`:** 28 Tage, zusätzlich 90 Tage, wenn der letzte 90-Tage-Abruf eine Woche zurückliegt. Ohne Property oder Schlüsseldatei wird der Schritt übersprungen, ohne Fehler.
+- **`analyze`:** je Durchgang ein KI-Aufruf für 100 Keywords, höchstens 10 Durchgänge je Ablauf. Ohne eingerichtete KI wird der Schritt übersprungen.
+- **`filter`:** in Durchgängen zu 200 Keywords.
+- **`volumes`:**
+  - je Durchgang ein `tf_keyword`-Aufruf. Der Mindestabstand wird als Verzögerung eingeplant (`StepResult::more( $state, $sekunden )`, neu), nicht als Fehlversuch gezählt.
+  - Keywords ohne Antwort erhalten eine leere Kennzahl, damit sie 30 Tage nicht erneut abgefragt werden.
+  - Mögliche Tippfehler werden übersprungen.
+  - Fünf Credits des Tagesbudgets bleiben für Abfragen von Hand frei (`TEXTFOCUS_RESERVE`). Ist der Rest verbraucht, wartet der Ablauf mit dem Grund `textfocus_budget`. `wp lsec cron` setzt ihn fort, sobald wieder Credits frei sind, also am nächsten Tag (7.2). Damit ist das Textfocus-Budget wie angekündigt auf diesen Weg umgestellt.
+- **Start:**
+  - `wp lsec cron` startet den Abgleich höchstens alle 20 Stunden, sobald eine Property eingetragen ist oder Keywords vorhanden sind.
+  - Von Hand: „Jetzt abgleichen“ oder `wp lsec keywords sync [--now] [--no-gsc] [--no-volumes]`.
+  - Nach einem Import und nach verwandten Keywords läuft der Abgleich ohne Search Console.
+- **Verwandte Keywords:** `wp lsec keywords related <keyword>` bzw. REST `POST lsec/v1/keywords/related` speichert die `tf_related`-Ergebnisse als Quelle `textfocus` mit Volumen und Intention, nach Tippfehlerprüfung. Das kostet 1 Credit, der Zwischenspeicher gilt 14 Tage.
 
 **`content_index`**: 5.
 
@@ -790,7 +831,7 @@ Eingaben: ausgewählte eigene Beiträge (Text aus dem Inhaltsindex), Beispieltex
 | Dashboard | Status, offene Freigaben, letzte Abläufe, KI-Kosten und Budget, Textfocus-Credits, Cron-Zustand, Einrichtungshinweise | Statusseite vorhanden |
 | Unternehmensprofil | Unternehmen, Standorte, Leistungen, Marken, Wettbewerber, Servicegebiet mit Ortssuche | neu |
 | Entitäten | Filter nach Typ, Status und Mindest-Sicherheit; Bestätigen, Ablehnen, Zusammenführen; Fundstellen; einfache Graphansicht | Bestätigen/Ablehnen vorhanden (PHP-Seite) |
-| Keywords | Search Console, Import mit Spaltenzuordnung, Textfocus mit Credit-Anzeige, Quelle je Kennzahl, Ausschlüsse | neu (WP-CLI vorhanden) |
+| Keywords | Search Console, Import mit Spaltenzuordnung, Textfocus mit Credit-Anzeige, Quelle je Kennzahl, Ausschlüsse | umgesetzt in Stufe C (0.5.0): Karten „Täglicher Abgleich“, „Verwandte Keywords“, „Import“; Tabelle mit Volumen und Quelle, Wettbewerb, CPC, Search-Console-Werten, rankender Seite und Ausschluss; Filter nach Suche, Quelle, Status und Grund; Sortierung |
 | Themen | Vorschläge mit Priorität, Begründung, geprüften Tatsachen; Freigabe; Einzel- und Sammelauftrag | neu |
 | Abläufe | Status, Schritte, Kosten, Fehler, Fortsetzen/Abbrechen | neu |
 | Style Mimic | Eingaben, Profil, Versionen | neu |

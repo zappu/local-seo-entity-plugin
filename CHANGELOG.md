@@ -1,5 +1,26 @@
 # Änderungsprotokoll
 
+## 0.5.0 – 22.10.2026
+
+MVP 1, Stufe C (Spezifikation v1.0, Abschnitt 14).
+
+- **Neue Seite „Local SEO → Keywords“:**
+  - Tabelle mit Suchvolumen und Quelle, Wettbewerb, CPC, Impressionen, Klicks, Position und rankender Seite.
+  - Filter nach Suche, Quelle und Status, Sortierung.
+  - „Ausschließen“, „Aufnehmen“ und „Filter entscheiden lassen“.
+- **Täglicher Keyword-Abgleich** über `wp lsec cron`:
+  - Search Console, 28 Tage täglich und 90 Tage wöchentlich.
+  - Orte und Namen in neuen Keywords erkennen (KI, wenige Cent je 100 Keywords).
+  - Ausschlüsse setzen und fehlende Suchvolumina bei Textfocus nachholen, im Rahmen des Tagesbudgets und mit Tippfehlerprüfung.
+  - Wird das Textfocus-Budget erreicht, wartet der Abgleich bis zum nächsten Tag.
+- **Ausschlussgründe:** Wettbewerber, fremde Firma oder Marke, Ort außerhalb des Servicegebiets (über Ortsabgleich und abgelehnte Orte), von Hand.
+- **Verwandte Keywords von Textfocus** (`tf_related`, 1 Credit) direkt auf der Seite oder mit `wp lsec keywords related`.
+- **Import im Backend:** Vorschau, änderbare Spaltenzuordnung und eigene Quellkennung.
+- **WP-CLI:** `wp lsec keywords table|sync|decide|related` und `wp lsec runs show`.
+- **Einstellungen** in der neuen Gruppe „Keywords“: `keyword_analysis`, `keyword_auto_volumes`.
+- **Datenbank** auf Schemaversion 4.
+- **Prüfskript:** C1 bis C4.
+
 ## 0.4.3 – 22.10.2026
 
 - Entitäten bearbeiten: Name, Typ, Beschreibung, Status (auch zurück auf Kandidat) und Schreibweisen; ein geänderter Name bleibt als Schreibweise (`wp lsec entities update`)

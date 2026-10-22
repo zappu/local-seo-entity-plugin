@@ -286,7 +286,11 @@ final class WorkflowEngine {
 			case StepResult::MORE:
 				$this->runs->continue_step( $step_id, $result->output );
 				$this->runs->update_run( $run_id, array( 'status' => RunStatus::Queued->value ) );
-				$this->queue->enqueue( $run_id );
+				if ( $result->delay > 0 ) {
+					$this->queue->enqueue_in( $run_id, $result->delay );
+				} else {
+					$this->queue->enqueue( $run_id );
+				}
 				return;
 
 			case StepResult::WAIT:

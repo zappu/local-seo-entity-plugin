@@ -26,12 +26,14 @@ final class StepResult {
 	 * @param array<string, mixed> $output  Zwischenergebnis des Schritts.
 	 * @param string|null          $code    Fehler- oder Blockadecode.
 	 * @param string|null          $message Lesbare Meldung ohne Geheimnisse.
+	 * @param int                  $delay   Bei MORE: Sekunden bis zum nächsten Durchgang.
 	 */
 	private function __construct(
 		public readonly string $outcome,
 		public readonly array $output = array(),
 		public readonly ?string $code = null,
-		public readonly ?string $message = null
+		public readonly ?string $message = null,
+		public readonly int $delay = 0
 	) {}
 
 	/**
@@ -68,9 +70,10 @@ final class StepResult {
 	 * Der Zwischenstand steht beim nächsten Mal in RunContext::$state. Der Versuch zählt nicht.
 	 *
 	 * @param array<string, mixed> $state Zwischenstand.
+	 * @param int                  $delay Sekunden bis zum nächsten Durchgang, z. B. Mindestabstand eines Anbieters.
 	 */
-	public static function more( array $state ): self {
-		return new self( self::MORE, $state );
+	public static function more( array $state, int $delay = 0 ): self {
+		return new self( self::MORE, $state, null, null, max( 0, $delay ) );
 	}
 
 	/**

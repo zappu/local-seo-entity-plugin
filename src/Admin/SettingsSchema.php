@@ -99,6 +99,21 @@ final class SettingsSchema {
 				),
 			),
 		),
+		'keywords'  => array(
+			'label'  => 'Keywords',
+			'fields' => array(
+				'keyword_analysis'     => array(
+					'label' => 'Orte und Namen in Keywords erkennen',
+					'type'  => 'toggle',
+					'help'  => 'Grundlage für die Ausschlüsse fremder Orte und Firmen. Ein KI-Aufruf je 100 neue Keywords (wenige Cent, im Rahmen des KI-Budgets).',
+				),
+				'keyword_auto_volumes' => array(
+					'label' => 'Suchvolumen bei Textfocus nachholen',
+					'type'  => 'toggle',
+					'help'  => 'Der tägliche Abgleich fragt für Keywords ohne Volumen Textfocus ab (10 Keywords je Credit) und lässt 5 Credits des Tagesbudgets für Abfragen von Hand frei. Mögliche Tippfehler werden übersprungen.',
+				),
+			),
+		),
 		'gsc'       => array(
 			'label'  => 'Search Console',
 			'fields' => array(

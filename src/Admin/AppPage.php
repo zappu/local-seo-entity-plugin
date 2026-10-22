@@ -20,6 +20,7 @@ final class AppPage {
 	public const SETTINGS_SLUG = 'lsec-settings';
 	public const PROFILE_SLUG  = 'lsec-profile';
 	public const ENTITIES_SLUG = 'lsec-entities';
+	public const KEYWORDS_SLUG = 'lsec-keywords';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
@@ -28,6 +29,7 @@ final class AppPage {
 		self::SLUG          => 'dashboard',
 		self::PROFILE_SLUG  => 'profile',
 		self::ENTITIES_SLUG => 'entities',
+		self::KEYWORDS_SLUG => 'keywords',
 		self::SETTINGS_SLUG => 'settings',
 	);
 
@@ -79,6 +81,14 @@ final class AppPage {
 			self::ENTITIES_SLUG,
 			array( $this, 'render' )
 		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Keywords', 'local-seo-entity-plugin' ),
+			__( 'Keywords', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::KEYWORDS_SLUG,
+			array( $this, 'render' )
+		);
 	}
 
 	/**
@@ -116,6 +126,7 @@ final class AppPage {
 					'pages'         => array(
 						'profile'  => admin_url( 'admin.php?page=' . self::PROFILE_SLUG ),
 						'entities' => admin_url( 'admin.php?page=' . self::ENTITIES_SLUG ),
+						'keywords' => admin_url( 'admin.php?page=' . self::KEYWORDS_SLUG ),
 						'settings' => admin_url( 'admin.php?page=' . self::SETTINGS_SLUG ),
 					),
 				)
@@ -139,6 +150,7 @@ final class AppPage {
 			'dashboard' => __( 'Local SEO – Dashboard', 'local-seo-entity-plugin' ),
 			'profile'   => __( 'Local SEO – Unternehmen', 'local-seo-entity-plugin' ),
 			'entities'  => __( 'Local SEO – Entitäten', 'local-seo-entity-plugin' ),
+			'keywords'  => __( 'Local SEO – Keywords', 'local-seo-entity-plugin' ),
 			'settings'  => __( 'Local SEO – Einstellungen', 'local-seo-entity-plugin' ),
 		);
 		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ) . '</h1>';

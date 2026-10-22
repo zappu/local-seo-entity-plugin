@@ -18,7 +18,7 @@ final class Schema {
 	/**
 	 * Aktuelle Schemaversion. Bei jeder Änderung erhöhen.
 	 */
-	public const VERSION = 3;
+	public const VERSION = 4;
 
 	/**
 	 * Option, in der die installierte Schemaversion steht.
@@ -192,11 +192,16 @@ locale varchar(10) NOT NULL,
 region varchar(100) NOT NULL DEFAULT '',
 intent varchar(20) NULL,
 exclusion varchar(20) NULL,
+exclusion_detail varchar(255) NULL,
+exclusion_by bigint(20) unsigned NULL,
+analysis longtext NULL,
+analyzed_at datetime NULL,
 first_seen_at datetime NOT NULL,
 updated_at datetime NOT NULL,
 PRIMARY KEY  (id),
 UNIQUE KEY keyword_scope (normalized,locale,region),
-KEY exclusion (exclusion)
+KEY exclusion (exclusion),
+KEY analyzed_at (analyzed_at)
 ) $collate;";
 
 		$sql['keyword_metrics'] = "CREATE TABLE {$t('keyword_metrics')} (

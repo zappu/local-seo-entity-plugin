@@ -74,6 +74,32 @@ final class RunsCommand {
 	}
 
 	/**
+	 * Zeigt einen Ablauf mit seinen Schritten und deren Ergebnissen.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <id>
+	 * : Ablauf-ID.
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function show( array $args, array $assoc_args ): void {
+		$id  = (int) ( $args[0] ?? 0 );
+		$run = $this->plugin->runs->find( $id );
+		if ( null === $run ) {
+			WP_CLI::error( 'Ablauf nicht gefunden: ' . $id );
+		}
+		WP_CLI::log( sprintf( 'Ablauf %d · %s · %s · erstellt %s · Kosten %s USD', $id, $run['type'], $run['status'], $run['created_at'], number_format( ( new AiCallRepository() )->cost_of_run( $id ), 4, ',', '' ) ) );
+		if ( '' !== (string) $run['error_code'] ) {
+			WP_CLI::log( 'Grund: ' . $run['error_code'] . ' ' . $this->plugin->logger->redact( (string) $run['error_message'] ) );
+		}
+		foreach ( $this->plugin->runs->steps( $id ) as $step ) {
+			WP_CLI::log( sprintf( '%-10s %-8s Versuch %d  %s', $step['step'], $step['status'], (int) $step['attempt'], mb_substr( $this->plugin->logger->redact( (string) $step['output'] ), 0, 400 ) ) );
+		}
+	}
+
+	/**
 	 * Setzt einen wartenden Ablauf fort. Reicht das Budget noch nicht, wartet er beim nächsten KI-Aufruf erneut.
 	 *
 	 * ## OPTIONS

@@ -7,7 +7,12 @@
 
 namespace Lsec\Cli;
 
+use Lsec\Core\Plugin;
+use Lsec\Integrations\Textfocus\TextfocusException;
 use Lsec\Research\Import\KeywordImporter;
+use Lsec\Research\Keywords\KeywordSyncWorkflow;
+use Lsec\Research\Keywords\RelatedKeywords;
+use Lsec\Workflow\RetryableException;
 use Lsec\Research\Keywords\KeywordRepository;
 use Lsec\Research\Keywords\TypoChecker;
 use WP_CLI;
@@ -21,8 +26,9 @@ final class KeywordsCommand {
 	 * Konstruktor.
 	 *
 	 * @param KeywordRepository $repository Speicher.
+	 * @param Plugin|null       $plugin     Plugin (für Abgleich und Textfocus).
 	 */
-	public function __construct( private readonly KeywordRepository $repository ) {}
+	public function __construct( private readonly KeywordRepository $repository, private readonly ?Plugin $plugin = null ) {}
 
 	/**
 	 * Importiert eine CSV- oder Excel-Datei.
@@ -238,5 +244,242 @@ final class KeywordsCommand {
 			);
 		}
 		WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'quelle', 'datei', 'zeilen', 'importiert', 'übersprungen', 'hinweise', 'am' ) );
+	}
+
+	/**
+	 * Keywords mit Suchvolumen, Search-Console-Werten und Ausschlussgrund (wie die Keywords-Seite).
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--status=<status>]
+	 * : active (Standard), excluded, all oder ein Grund: competitor, brand, foreign_place, off_topic, manual.
+	 *
+	 * [--search=<text>]
+	 * : Teil des Keywords.
+	 *
+	 * [--source=<source>]
+	 * : gsc, textfocus, import oder eine Quellkennung.
+	 *
+	 * [--sort=<sort>]
+	 * : volume, impressions, clicks, position, keyword oder new.
+	 *
+	 * [--limit=<n>]
+	 * : Anzahl.
+	 * ---
+	 * default: 50
+	 * ---
+	 *
+	 * [--format=<format>]
+	 * : table, csv oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec keywords table --status=excluded
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function table( array $args, array $assoc_args ): void {
+		$result = $this->repository->table(
+			array(
+				'status' => (string) ( $assoc_args['status'] ?? 'active' ),
+				'search' => (string) ( $assoc_args['search'] ?? '' ),
+				'source' => (string) ( $assoc_args['source'] ?? '' ),
+				'sort'   => (string) ( $assoc_args['sort'] ?? 'volume' ),
+				'limit'  => (int) ( $assoc_args['limit'] ?? 50 ),
+			)
+		);
+		$rows   = array();
+		foreach ( $result['rows'] as $row ) {
+			$rows[] = array(
+				'id'           => $row['id'],
+				'keyword'      => $row['keyword'],
+				'volumen'      => null === $row['search_volume'] ? '' : $row['search_volume'] . ' (' . $row['volume_source'] . ')',
+				'wettbewerb'   => null === $row['competition'] ? '' : (string) $row['competition'],
+				'impressionen' => null === $row['impressions'] ? '' : (string) $row['impressions'],
+				'klicks'       => null === $row['clicks'] ? '' : (string) $row['clicks'],
+				'position'     => null === $row['position'] ? '' : number_format( (float) $row['position'], 1, ',', '' ),
+				'ausschluss'   => null === $row['exclusion'] ? '' : $row['exclusion'] . ( null === $row['exclusion_detail'] ? '' : ': ' . $row['exclusion_detail'] ) . ( null === $row['exclusion_by'] ? '' : ' (von Hand)' ),
+			);
+		}
+		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'id', 'keyword', 'volumen', 'wettbewerb', 'impressionen', 'klicks', 'position', 'ausschluss' ) );
+		if ( 'table' === ( $assoc_args['format'] ?? 'table' ) ) {
+			WP_CLI::log( sprintf( '%d von %d Keywords.', count( $rows ), $result['total'] ) );
+		}
+	}
+
+	/**
+	 * Startet den Keyword-Abgleich: Search Console, Orte und Namen (KI), Ausschlüsse, Textfocus-Volumina.
+	 *
+	 * Läuft sonst einmal am Tag über wp lsec cron.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--now]
+	 * : Hier abarbeiten statt über den Cronjob (Textfocus-Volumina nur bis zum ersten Mindestabstand).
+	 *
+	 * [--[no-]gsc]
+	 * : Search Console abrufen (Standard) oder mit --no-gsc nicht.
+	 *
+	 * [--[no-]volumes]
+	 * : Textfocus-Volumina nachholen (Standard) oder mit --no-volumes nicht.
+	 *
+	 * [--offline]
+	 * : Orte nur mit bekannten Entitäten prüfen, ohne Wikidata (Prüfskript).
+	 *
+	 * [--stub-analysis=<file>]
+	 * : JSON-Antwort statt KI-Aufruf (Prüfskript).
+	 *
+	 * [--ids=<ids>]
+	 * : Nur diese Keyword-IDs prüfen und filtern, ohne Volumina (Prüfskript).
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function sync( array $args, array $assoc_args ): void {
+		$plugin  = $this->plugin();
+		$options = array(
+			'gsc'     => ! isset( $assoc_args['gsc'] ) || false !== $assoc_args['gsc'],
+			'volumes' => ! isset( $assoc_args['volumes'] ) || false !== $assoc_args['volumes'],
+			'reason'  => 'cli',
+		);
+		if ( ! empty( $assoc_args['offline'] ) ) {
+			$options['offline'] = true;
+		}
+		if ( ! empty( $assoc_args['ids'] ) ) {
+			$options['keyword_ids'] = array_values( array_filter( array_map( 'intval', explode( ',', (string) $assoc_args['ids'] ) ) ) );
+		}
+		if ( ! empty( $assoc_args['stub-analysis'] ) ) {
+			$stub = (string) file_get_contents( (string) $assoc_args['stub-analysis'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			if ( null === json_decode( $stub, true ) ) {
+				WP_CLI::error( 'Die Datei enthält kein gültiges JSON.' );
+			}
+			$options['stub_analysis'] = $stub;
+		}
+		$run = KeywordSyncWorkflow::start( $plugin, $options );
+		if ( null === $run ) {
+			WP_CLI::error( 'Es läuft schon ein Keyword-Abgleich. Stand: wp lsec runs list' );
+		}
+		if ( empty( $assoc_args['now'] ) ) {
+			WP_CLI::success( 'Ablauf ' . $run['run_id'] . ' eingeplant; der Cronjob arbeitet ihn ab.' );
+			return;
+		}
+		for ( $i = 0; $i < 500; $i++ ) {
+			$plugin->engine->process( $run['run_id'] );
+			$found = $plugin->runs->find( $run['run_id'] );
+			$steps = $plugin->runs->steps( $run['run_id'] );
+			if ( ! in_array( (string) ( $found['status'] ?? '' ), array( 'queued', 'running' ), true ) ) {
+				break;
+			}
+			// Mindestabstand bei Textfocus: der Rest läuft über den Cronjob.
+			$volumes = array_values( array_filter( $steps, static fn( array $s ): bool => 'volumes' === $s['step'] ) )[0] ?? array();
+			if ( 'pending' === ( $volumes['status'] ?? '' ) && (int) ( json_decode( (string) $volumes['output'], true )['calls'] ?? 0 ) > 0 ) {
+				break;
+			}
+		}
+		$found = $plugin->runs->find( $run['run_id'] );
+		foreach ( $plugin->runs->steps( $run['run_id'] ) as $step ) {
+			WP_CLI::log( sprintf( '%-8s %-8s %s', $step['step'], $step['status'], mb_substr( (string) $step['output'], 0, 300 ) ) );
+		}
+		WP_CLI::success( sprintf( 'Ablauf %d: %s.', $run['run_id'], (string) ( $found['status'] ?? '' ) ) );
+	}
+
+	/**
+	 * Schließt Keywords aus, nimmt sie auf oder gibt sie an den automatischen Filter zurück.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <decision>
+	 * : manual (ausschließen), include (aufnehmen, auch gegen den Filter) oder auto (der Filter entscheidet).
+	 *
+	 * <id>...
+	 * : Keyword-IDs (siehe wp lsec keywords table).
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function decide( array $args, array $assoc_args ): void {
+		$decision = (string) array_shift( $args );
+		$done     = 0;
+		foreach ( $args as $id ) {
+			try {
+				$done += $this->repository->decide_exclusion( (int) $id, $decision, get_current_user_id() ) ? 1 : 0;
+			} catch ( \InvalidArgumentException $e ) {
+				WP_CLI::error( $e->getMessage() );
+			}
+		}
+		$this->plugin()->logger->audit(
+			'Keyword-Ausschluss entschieden',
+			array(
+				'decision' => $decision,
+				'ids'      => array_map( 'intval', $args ),
+				'user_id'  => get_current_user_id(),
+				'via'      => 'cli',
+			)
+		);
+		WP_CLI::success( sprintf( '%d Keywords: %s.', $done, $decision ) );
+	}
+
+	/**
+	 * Holt verwandte Keywords von Textfocus (tf_related, 1 Credit) und speichert sie.
+	 *
+	 * Danach prüft ein Abgleich Orte, Namen und Ausschlüsse.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <keyword>
+	 * : Ausgangs-Keyword.
+	 *
+	 * [--force]
+	 * : Zwischenspeicher (14 Tage) umgehen.
+	 *
+	 * [--ignore-typos]
+	 * : Trotz Hinweis auf eine Schreibvariante abfragen.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec keywords related flächenreinigung
+	 *
+	 * @param string[]                   $args       Argumente.
+	 * @param array<string, string|bool> $assoc_args Optionen.
+	 */
+	public function related( array $args, array $assoc_args ): void {
+		$sleep = static function ( int $seconds ): void {
+			WP_CLI::log( sprintf( 'Warte %d Sekunden (Mindestabstand zwischen Textfocus-Aufrufen) …', $seconds ) );
+			sleep( $seconds );
+		};
+		try {
+			$out = ( new RelatedKeywords( $this->plugin() ) )->fetch( (string) ( $args[0] ?? '' ), ! empty( $assoc_args['force'] ), ! empty( $assoc_args['ignore-typos'] ), $sleep );
+		} catch ( TextfocusException $e ) {
+			WP_CLI::error( $e->error_code . ': ' . $this->plugin()->logger->redact( $e->getMessage() ) );
+		} catch ( RetryableException $e ) {
+			WP_CLI::error( 'Vorübergehend (' . $e->error_code . '): ' . $this->plugin()->logger->redact( $e->getMessage() ) );
+		} catch ( \InvalidArgumentException $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		if ( null !== $out['typo'] ) {
+			WP_CLI::error( sprintf( 'Mögliche Schreibvariante: „%s“ → meinten Sie „%s“? Keine Credits verbraucht. Mit --ignore-typos trotzdem abfragen.', $out['keyword'], $out['typo'] ) );
+		}
+		WP_CLI::success(
+			sprintf(
+				'%d verwandte Keywords gespeichert (%s).%s',
+				$out['saved'],
+				$out['cached'] ? 'aus dem Zwischenspeicher, keine Credits' : '1 Credit',
+				null === $out['run_id'] ? ' Ein Abgleich läuft schon; Ausschlüsse folgen beim nächsten.' : ' Ausschlüsse prüft Ablauf ' . $out['run_id'] . ' über den Cronjob.'
+			)
+		);
+	}
+
+	/**
+	 * Plugin für Abläufe.
+	 */
+	private function plugin(): Plugin {
+		if ( null === $this->plugin ) {
+			WP_CLI::error( 'Plugin nicht verfügbar.' );
+		}
+		return $this->plugin;
 	}
 }

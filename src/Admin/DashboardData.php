@@ -215,7 +215,7 @@ final class DashboardData {
 	 *
 	 * @return array{at: string, rows: int}|null
 	 */
-	private static function last_gsc_import(): ?array {
+	public static function last_gsc_import(): ?array {
 		global $wpdb;
 		$table = Schema::table( $wpdb->prefix, 'imports' );
 		$row   = $wpdb->get_row( "SELECT created_at, rows_imported FROM {$table} WHERE source = 'gsc' ORDER BY id DESC LIMIT 1", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared

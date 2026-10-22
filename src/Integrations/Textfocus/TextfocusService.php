@@ -11,6 +11,7 @@ use Lsec\Core\Settings;
 use Lsec\Infrastructure\Http\HttpTransport;
 use Lsec\Infrastructure\Security\Secrets;
 use Lsec\Integrations\AI\Json;
+use Lsec\Research\Import\KeywordImporter;
 use Lsec\Research\Keywords\KeywordNormalizer;
 use Lsec\Workflow\RetryableException;
 
@@ -300,6 +301,30 @@ final class TextfocusService {
 				'difficulty'  => $num( 'difficulty' ),
 				'competition' => $num( 'concurrency' ),
 			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Wandelt das Ergebnis von tf_related (Liste „semantic“) in Kennzahlen je normalisiertem Keyword.
+	 * Gleiche Regeln wie tf_keyword: 0 heißt unbekannt.
+	 *
+	 * @param mixed $result Feld result.
+	 * @return array<string, array{keyword: string, volume: int|null, cpc: float|null, difficulty: float|null, competition: float|null, intent: string|null}>
+	 */
+	public static function parse_related_result( mixed $result ): array {
+		$items = is_array( $result ) ? (array) ( $result['semantic'] ?? array() ) : array();
+		$out   = array();
+		foreach ( self::parse_keyword_result( array_values( $items ) ) as $normalized => $entry ) {
+			$out[ $normalized ] = $entry + array( 'intent' => null );
+		}
+		foreach ( $items as $item ) {
+			if ( is_array( $item ) && isset( $item['keyword'], $item['intent'] ) && is_scalar( $item['intent'] ) ) {
+				$key = KeywordNormalizer::normalize( (string) $item['keyword'] );
+				if ( isset( $out[ $key ] ) ) {
+					$out[ $key ]['intent'] = KeywordImporter::intent( (string) $item['intent'] );
+				}
+			}
 		}
 		return $out;
 	}

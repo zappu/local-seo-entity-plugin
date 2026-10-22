@@ -449,6 +449,24 @@ final class RunRepository {
 	}
 
 	/**
+	 * Letzter Ablauf eines Typs mit Schritten.
+	 *
+	 * @param string $type Ablauftyp.
+	 * @return array<string, mixed>|null
+	 */
+	public function latest_of_type( string $type ): ?array {
+		$row = $this->db->get_row(
+			$this->db->prepare( "SELECT id, type, status, current_step, error_code, error_message, context, created_at, updated_at, finished_at FROM {$this->t( 'runs' )} WHERE type = %s ORDER BY id DESC LIMIT 1", $type ),
+			ARRAY_A
+		);
+		if ( ! is_array( $row ) ) {
+			return null;
+		}
+		$row['steps'] = $this->steps( (int) $row['id'] );
+		return $row;
+	}
+
+	/**
 	 * Letzte Abläufe für die Statusseite.
 	 *
 	 * @param int    $limit  Anzahl.

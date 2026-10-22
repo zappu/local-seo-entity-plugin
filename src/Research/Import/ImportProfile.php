@@ -156,6 +156,32 @@ final class ImportProfile {
 	}
 
 	/**
+	 * Ersetzt die Zuordnung vollständig, z. B. aus der Vorschau im Backend. Leere Werte lassen das Feld weg.
+	 *
+	 * @param array<string, string> $mapping Feld => Spalte.
+	 * @param string[]              $header  Kopfzeile.
+	 * @throws \InvalidArgumentException Bei unbekanntem Feld oder fehlender Spalte.
+	 */
+	public function with_mapping( array $mapping, array $header ): self {
+		$clean = array();
+		foreach ( $mapping as $field => $column ) {
+			$column = (string) $column;
+			if ( '' === $column ) {
+				continue;
+			}
+			if ( ! in_array( $field, self::FIELDS, true ) ) {
+				throw new \InvalidArgumentException( 'Unbekanntes Feld: ' . $field ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+			$found = self::find_column( $header, $column );
+			if ( null === $found ) {
+				throw new \InvalidArgumentException( 'Spalte nicht gefunden: ' . $column ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			}
+			$clean[ (string) $field ] = $found;
+		}
+		return new self( $this->id, $this->label, $this->source, $clean, $this->all_zero_is_unknown, $this->zero_is_unknown );
+	}
+
+	/**
 	 * Kopie mit anderer Quellkennung.
 	 *
 	 * @param string $source Quelle, z. B. csv:sistrix.
