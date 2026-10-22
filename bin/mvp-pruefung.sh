@@ -297,7 +297,8 @@ contains "unbekannte Art abgelehnt" "Unbekannt: quatsch" "$($WP "${WP_ARGS[@]}" 
 
 # ---------------------------------------------------------------------------
 echo "B8 Entitäten bearbeiten, löschen, weitere Vorschläge"
-E1=$(wpj lsec entities add concept "LSECTEST Alter Name" | grep -oE 'ID [0-9]+|[0-9]+' | grep -oE '[0-9]+' | head -1)
+# Nur die ID aus „Angelegt: 12“; PHP-Hinweise anderer Plugins enthalten auch Zahlen.
+E1=$(wpc lsec entities add concept "LSECTEST Alter Name" | grep -oE '(Angelegt|vorhanden): [0-9]+' | grep -oE '[0-9]+$' | head -1)
 OUT=$(wpc lsec entities update "$E1" --name="LSECTEST Neuer Name" --type=service --status=confirmed --add-alias="LSECTEST Dritte Schreibweise" 2>&1)
 contains "geändert" "geändert" "$OUT"
 D=$(wpj lsec entities show "$E1" --format=json)
