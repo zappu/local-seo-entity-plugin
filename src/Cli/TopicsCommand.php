@@ -8,6 +8,7 @@
 namespace Lsec\Cli;
 
 use Lsec\Core\Plugin;
+use Lsec\Core\Settings;
 use Lsec\Integrations\AI\AiCallRepository;
 use Lsec\Topics\ClaimRepository;
 use Lsec\Topics\PriorityScorer;
@@ -44,6 +45,9 @@ final class TopicsCommand {
 	 * [--web-results=<n>]
 	 * : Treffer der Websuche (1–10) statt ai_web_max_results, z. B. für den Vergleich 3 gegen 5.
 	 *
+	 * [--web-engine=<engine>]
+	 * : Suchmaschine bei OpenRouter statt ai_web_engine: standard, native, exa, parallel oder perplexity.
+	 *
 	 * [--research-model=<modell>]
 	 * : Recherchemodell statt ai_research_model (Vergleich der Modelle).
 	 *
@@ -63,6 +67,7 @@ final class TopicsCommand {
 	 *
 	 *     wp lsec topics research --service=Pflasterreinigung --region=Lehrte --now
 	 *     wp lsec topics research --region=Uetze --web-results=5 --force --now
+	 *     wp lsec topics research --region=Uetze --web-engine=exa --force --now
 	 *
 	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
@@ -81,6 +86,13 @@ final class TopicsCommand {
 		}
 		if ( isset( $assoc_args['research-model'] ) ) {
 			$options['research_model'] = (string) $assoc_args['research-model'];
+		}
+		if ( isset( $assoc_args['web-engine'] ) ) {
+			$engine = strtolower( (string) $assoc_args['web-engine'] );
+			if ( ! in_array( $engine, Settings::CHOICES['ai_web_engine'], true ) ) {
+				WP_CLI::error( '--web-engine erlaubt: ' . implode( ', ', Settings::CHOICES['ai_web_engine'] ) );
+			}
+			$options['web_engine'] = $engine;
 		}
 		if ( ! empty( $assoc_args['stub'] ) ) {
 			$stub = (string) file_get_contents( (string) $assoc_args['stub'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
@@ -135,6 +147,9 @@ final class TopicsCommand {
 	 * default: table
 	 * ---
 	 *
+	 * [--research]
+	 * : Zeigt zusätzlich den Text der Websuche (zur Fehlersuche, wenn Quellen oder Tatsachen fehlen).
+	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
@@ -159,6 +174,9 @@ final class TopicsCommand {
 			'status'       => (string) $run['status'],
 			'focus'        => (array) ( $input['focus'] ?? array() ),
 			'web_results'  => $input['web_max_results'] ?? null,
+			'engine'       => (string) ( $research['engine'] ?? $input['web_engine'] ?? '' ),
+			'sources_from' => (string) ( $research['sources_from'] ?? '' ),
+			'research_len' => mb_strlen( (string) ( $research['research'] ?? '' ) ),
 			'model'        => (string) ( $research['model'] ?? '' ),
 			'cost_usd'     => round( ( new AiCallRepository() )->cost_of_run( $id ), 4 ),
 			'sources'      => count( (array) ( $research['sources'] ?? array() ) ),
@@ -177,10 +195,18 @@ final class TopicsCommand {
 			return;
 		}
 		$focus = trim( implode( ' / ', array_filter( $report['focus'] ) ) );
-		WP_CLI::log( sprintf( 'Ablauf %d · %s · Schwerpunkt: %s · Modell %s · Websuche %s Treffer', $id, $report['status'], '' !== $focus ? $focus : 'keiner', '' !== $report['model'] ? $report['model'] : '–', null === $report['web_results'] ? 'Standard' : (string) $report['web_results'] ) );
+		WP_CLI::log( sprintf( 'Ablauf %d · %s · Schwerpunkt: %s · Modell %s · Websuche %s Treffer, Suchmaschine %s', $id, $report['status'], '' !== $focus ? $focus : 'keiner', '' !== $report['model'] ? $report['model'] : '–', null === $report['web_results'] ? 'Standard' : (string) $report['web_results'], '' !== $report['engine'] ? $report['engine'] : 'standard' ) );
 		WP_CLI::log( sprintf( 'Kosten %s USD · %d Quellen · %d Tatsachen: %d geprüft, %d unklar, %d verworfen%s · %d Seiten nicht abrufbar', number_format( $report['cost_usd'], 4, ',', '' ), $report['sources'], $facts, $report['verified'], $report['disputed'], $report['rejected'], null === $report['verified_pct'] ? '' : ' (' . $report['verified_pct'] . ' % geprüft)', $report['pages_failed'] ) );
 		foreach ( $report['dropped'] as $line ) {
 			WP_CLI::log( '  verworfen: ' . $line );
+		}
+		if ( 'succeeded' === $report['status'] && 0 === $report['sources'] ) {
+			WP_CLI::warning( sprintf( 'Die Websuche lieferte keine Quellen (Recherchetext %d Zeichen, ohne Adressen). Ohne Quellen gibt es keine Tatsachen. Text ansehen: wp lsec topics report %d --research; anderer Versuch: --web-engine=exa', $report['research_len'], $id ) );
+		} elseif ( 'text' === $report['sources_from'] ) {
+			WP_CLI::log( '  Quellen aus dem Recherchetext gelesen (das Modell lieferte keine Quellenangaben).' );
+		}
+		if ( ! empty( $assoc_args['research'] ) ) {
+			WP_CLI::log( "--- Recherchetext ---\n" . $this->plugin->logger->redact( (string) ( $research['research'] ?? '' ) ) . "\n---" );
 		}
 		if ( array() !== $report['topics'] ) {
 			WP_CLI\Utils\format_items( 'table', $report['topics'], array( 'id', 'title', 'score', 'status' ) );

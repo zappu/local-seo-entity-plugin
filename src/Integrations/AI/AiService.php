@@ -28,6 +28,7 @@ final class AiService {
 	 * @param AiBudget|null $budget          Budget; null = ohne Prüfung.
 	 * @param AiClient|null $research_client Adapter für die Recherche mit Websuche; null = Hauptmodell.
 	 * @param int           $web_max_results Treffer der Websuche.
+	 * @param string        $web_engine      Suchmaschine bei OpenRouter; leer = Standard.
 	 */
 	public function __construct(
 		private readonly AiClient $client,
@@ -35,7 +36,8 @@ final class AiService {
 		private readonly PriceTable $prices = new PriceTable(),
 		private readonly ?AiBudget $budget = null,
 		private readonly ?AiClient $research_client = null,
-		private readonly int $web_max_results = 3
+		private readonly int $web_max_results = 3,
+		private readonly string $web_engine = ''
 	) {}
 
 	/**
@@ -111,15 +113,16 @@ final class AiService {
 	 * Nur der Rechercheschritt: Websuche mit dem Recherchemodell, Antwort als Text mit Quellen.
 	 * Die Strukturierung folgt getrennt, wenn sie zusätzlichen Kontext braucht (Themenrecherche).
 	 *
-	 * @param string   $task            Aufgabe.
-	 * @param string   $system          Systemanweisung.
-	 * @param string   $question        Rechercheauftrag.
-	 * @param int|null $run_id          Ablauf.
-	 * @param int|null $web_max_results Treffer der Websuche; null = Einstellung.
+	 * @param string      $task            Aufgabe.
+	 * @param string      $system          Systemanweisung.
+	 * @param string      $question        Rechercheauftrag.
+	 * @param int|null    $run_id          Ablauf.
+	 * @param int|null    $web_max_results Treffer der Websuche; null = Einstellung.
+	 * @param string|null $web_engine      Suchmaschine bei OpenRouter; null = Einstellung.
 	 */
-	public function search( string $task, string $system, string $question, ?int $run_id = null, ?int $web_max_results = null ): AiResponse {
+	public function search( string $task, string $system, string $question, ?int $run_id = null, ?int $web_max_results = null, ?string $web_engine = null ): AiResponse {
 		return $this->call(
-			new AiRequest( $task, $system, $question, null, 'result', true, 3000, 120, max( 1, min( 10, $web_max_results ?? $this->web_max_results ) ) ),
+			new AiRequest( $task, $system, $question, null, 'result', true, 3000, 120, max( 1, min( 10, $web_max_results ?? $this->web_max_results ) ), self::engine( $web_engine ?? $this->web_engine ) ),
 			$run_id,
 			null,
 			$this->research_client()
@@ -139,7 +142,7 @@ final class AiService {
 	 */
 	public function research( string $task, string $system, string $question, array $schema, string $schema_name = 'result', ?int $run_id = null ): array {
 		$research = $this->call(
-			new AiRequest( $task . '_research', $system, $question, null, $schema_name, true, 3000, 120, $this->web_max_results ),
+			new AiRequest( $task . '_research', $system, $question, null, $schema_name, true, 3000, 120, $this->web_max_results, self::engine( $this->web_engine ) ),
 			$run_id,
 			null,
 			$this->research_client()
@@ -232,5 +235,15 @@ final class AiService {
 	 */
 	private static function hash( AiRequest $request ): string {
 		return hash( 'sha256', $request->task . "\0" . $request->system . "\0" . $request->user . "\0" . Json::encode( $request->json_schema ?? array() ) );
+	}
+
+	/**
+	 * Suchmaschine für die Anfrage: „standard“ und Unbekanntes werden leer (Wahl des Anbieters).
+	 *
+	 * @param string $engine Einstellung oder Option.
+	 */
+	public static function engine( string $engine ): string {
+		$engine = strtolower( trim( $engine ) );
+		return in_array( $engine, array( 'native', 'exa', 'parallel', 'perplexity' ), true ) ? $engine : '';
 	}
 }

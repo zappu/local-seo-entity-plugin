@@ -393,4 +393,34 @@ final class AdaptersTest extends TestCase {
 		$this->expectException( \InvalidArgumentException::class );
 		new AiRequest( 'test', 'S', 'U', self::schema(), 'r', true );
 	}
+
+	public function test_openrouter_web_engine_and_citations(): void {
+		$http   = new FakeTransport( array() );
+		$client = new OpenRouterClient( $http, 'sk-or-v1-test', 'x/model', '' );
+		$plain  = $client->build_body( new AiRequest( 'search', 'S', 'Q', null, 'result', true, 3000, 120, 3 ) );
+		$exa    = $client->build_body( new AiRequest( 'search', 'S', 'Q', null, 'result', true, 3000, 120, 3, AiService::engine( 'exa' ) ) );
+		$this->assertArrayNotHasKey( 'engine', $plain['plugins'][0] );
+		$this->assertSame( 'exa', $exa['plugins'][0]['engine'] );
+		$this->assertSame( '', AiService::engine( 'standard' ) );
+		$this->assertSame( '', AiService::engine( 'unbekannt' ) );
+
+		$http     = new FakeTransport(
+			array(
+				FakeTransport::json(
+					array(
+						'model'     => 'x/model',
+						'choices'   => array(
+							array(
+								'finish_reason' => 'stop',
+								'message'       => array( 'content' => 'Text' ),
+							),
+						),
+						'citations' => array( 'https://www.uetze.de/', 'kein-link' ),
+					)
+				),
+			)
+		);
+		$response = ( new OpenRouterClient( $http, 'sk-or-v1-test', 'x/model', '' ) )->send( new AiRequest( 'search', 'S', 'Q', null, 'result', true ) );
+		$this->assertSame( array( 'https://www.uetze.de/' ), array_column( $response->sources, 'url' ) );
+	}
 }

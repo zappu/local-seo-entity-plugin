@@ -29,6 +29,7 @@ final class Settings {
 		'ai_monthly_budget'        => 20.0,
 		'ai_run_budget'            => 1.0,
 		'ai_web_max_results'       => 3,
+		'ai_web_engine'            => 'standard',
 		'entity_min_confidence'    => 0.6,
 		'entity_auto_extract'      => true,
 		'entity_extract_types'     => array( 'page', 'product', 'category', 'product_cat' ),
@@ -55,7 +56,8 @@ final class Settings {
 	 * @var array<string, list<string>>
 	 */
 	public const CHOICES = array(
-		'ai_provider' => array( 'openrouter', 'anthropic', 'openai' ),
+		'ai_provider'   => array( 'openrouter', 'anthropic', 'openai' ),
+		'ai_web_engine' => array( 'standard', 'native', 'exa', 'parallel', 'perplexity' ),
 	);
 
 	/**

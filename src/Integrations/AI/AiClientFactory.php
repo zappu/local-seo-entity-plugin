@@ -81,7 +81,8 @@ final class AiClientFactory {
 			new PriceTable( is_array( $prices ) ? $prices : array() ),
 			self::budget(),
 			$research,
-			max( 1, min( 10, (int) Settings::get( 'ai_web_max_results' ) ) )
+			max( 1, min( 10, (int) Settings::get( 'ai_web_max_results' ) ) ),
+			AiService::engine( (string) Settings::get( 'ai_web_engine' ) )
 		);
 	}
 

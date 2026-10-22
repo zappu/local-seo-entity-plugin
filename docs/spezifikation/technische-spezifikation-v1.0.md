@@ -542,6 +542,11 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
   - Zweiter Durchgang: Strukturierung ohne Werkzeuge, mit Kontext und dem Ergebnis der Websuche (bis 8000 Token).
   - Ein Fehler in der Strukturierung wiederholt die bezahlte Websuche nicht (`StepResult::more`).
   - **Nachtrag 22.10. (0.6.1):** Auf der Testwebsite lieferte das Recherchemodell (`openai/gpt-6-luna` über OpenRouter) trotz bezahlter Websuche keine Quellenangaben (Annotationen); die Recherche endete mit 0 Quellen. Fehlen die Annotationen, liest das Plugin die Adressen aus dem Text der Recherche (Markdown-Links mit ihrem Text als Titel, sonst nackte Adressen; doppelte einmal, höchstens 10). Im Zustand des Schritts steht `sources_from` (`annotations` oder `text`). OpenRouter-Antworten mit einer Liste `citations` (z. B. Perplexity) werden ebenfalls als Quellen gelesen. Der Auftrag an das Recherchemodell verlangt die vollständige Adresse je Tatsache.
+  - **Nachtrag 22.10. (0.6.2), Suchmaschine wählbar:** Auch mit 0.6.1 endeten drei weitere Läufe (113–115) mit 0 Quellen; der Recherchetext enthielt keine einzige Adresse. Nur Lauf 112 hatte Quellen. Bei OpenAI-Modellen wählt OpenRouter ohne Angabe die Websuche des Modells (`native`); ob dabei jedes Mal gesucht und zitiert wird, ist nicht dokumentiert. Exa und Parallel suchen dagegen bei jeder Anfrage und hängen die Treffer als `url_citation` an. Deshalb:
+    - Neue Einstellung `ai_web_engine` (`standard`, `native`, `exa`, `parallel`, `perplexity`; Standard `standard` = Wahl von OpenRouter). Sie wird als `engine` im Plugin `web` gesendet und gilt nur für OpenRouter.
+    - `wp lsec topics research --web-engine=<engine>` für den Vergleich, gespeichert im Ablauf.
+    - `wp lsec topics report` nennt die Suchmaschine, warnt bei 0 Quellen und zeigt mit `--research` den Text der Websuche.
+    - Kosten laut OpenRouter (Oktober 2026): Exa 7 USD je 1000 Anfragen, Parallel (basic) 5 USD je 1000, also unter einem Cent je Recherche zusätzlich zu den Token.
 - **`verify_facts`:** 8.4a, vier Quellen je Durchgang.
 - **`propose_topics`:** setzt `off_topic`, berechnet Überschneidung und Priorität und speichert die Themen.
 - **Freigabe:**
@@ -550,6 +555,7 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 - **Start:** über „Recherche starten“ (Leistung, Ort, Anzahl), `POST lsec/v1/topics/research` oder `wp lsec topics research [--service] [--region] [--count] [--web-results] [--research-model] [--force] [--now]`.
 - **Zwischenspeicher (8.1b):** Ein gleicher Schwerpunkt aus Leistung und Ort wird innerhalb von 14 Tagen nur mit „trotzdem“ bzw. `--force` neu recherchiert.
 - **Vergleich der Trefferzahl und der Recherchemodelle:** `wp lsec topics report <ablauf>` zeigt Kosten, Modell, Treffer, Quellen und den Anteil geprüfter Tatsachen. Vergleichen lassen sich so z. B. zwei Recherchen mit `--web-results=3` und `--web-results=5` oder mit `--research-model=…` und `--force`. Das Ergebnis wird hier nachgetragen, wenn es auf der Testwebsite vorliegt.
+  - **Zwischenstand 22.10.:** 3 Treffer (Lauf 114) und 5 Treffer (Lauf 115) kosteten 0,149 bzw. 0,129 USD. Beide lieferten 0 Quellen, ein Vergleich der geprüften Tatsachen ist so nicht möglich. Er wird mit `--web-engine=exa` wiederholt.
 - **`off_topic`:** Der Keyword-Abgleich hebt diesen Grund nicht wieder auf. Er setzt nur einen anderen Grund davor, z. B. `competitor`.
 
 **`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.

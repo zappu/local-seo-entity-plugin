@@ -98,7 +98,7 @@ final class TopicResearchWorkflow {
 	 * Startet eine Recherche.
 	 *
 	 * @param Plugin               $plugin  Plugin.
-	 * @param array<string, mixed> $options service, region, count, web_max_results, research_model, force; für Tests stub_research, offline.
+	 * @param array<string, mixed> $options service, region, count, web_max_results, web_engine, research_model, force; für Tests stub_research, offline.
 	 * @return array{run_id: int, created: bool}
 	 * @throws \RuntimeException Wenn derselbe Schwerpunkt vor kurzem recherchiert wurde (ohne force).
 	 */
@@ -118,6 +118,7 @@ final class TopicResearchWorkflow {
 			'count'           => max( 1, min( 10, (int) ( $options['count'] ?? Settings::get( 'topic_count' ) ) ) ),
 			'web_max_results' => isset( $options['web_max_results'] ) ? max( 1, min( 10, (int) $options['web_max_results'] ) ) : null,
 			'research_model'  => isset( $options['research_model'] ) && '' !== (string) $options['research_model'] ? (string) $options['research_model'] : null,
+			'web_engine'      => isset( $options['web_engine'] ) && '' !== (string) $options['web_engine'] ? (string) $options['web_engine'] : null,
 		);
 		foreach ( array( 'stub_research', 'offline' ) as $key ) {
 			if ( ! empty( $options[ $key ] ) ) {
@@ -258,7 +259,7 @@ final class TopicResearchWorkflow {
 				$state['sources']  = (array) ( $stub['sources'] ?? array() );
 				$state['cost']     = 0.0;
 			} else {
-				$response          = self::ai( $plugin, $context->input )->search( 'topic_research_search', TopicResearcher::system(), TopicResearcher::question( $collected ), $context->run_id, $context->input['web_max_results'] ?? null );
+				$response          = self::ai( $plugin, $context->input )->search( 'topic_research_search', TopicResearcher::system(), TopicResearcher::question( $collected ), $context->run_id, $context->input['web_max_results'] ?? null, $context->input['web_engine'] ?? null );
 				$state['research'] = $response->text;
 				$state['sources']  = array() !== $response->sources ? $response->sources : TopicResearcher::sources_from_text( $response->text );
 				$state['cost']     = $response->cost;
@@ -283,10 +284,12 @@ final class TopicResearchWorkflow {
 		$valid = TopicResearcher::validate( $data, $collected, (array) $state['sources'] );
 		return StepResult::done(
 			array(
-				'research'   => mb_substr( (string) $state['research'], 0, 20000 ),
-				'sources'    => (array) $state['sources'],
-				'source_ids' => (array) ( $state['source_ids'] ?? array() ),
-				'model'      => (string) ( $state['model'] ?? '' ),
+				'research'     => mb_substr( (string) $state['research'], 0, 20000 ),
+				'sources'      => (array) $state['sources'],
+				'source_ids'   => (array) ( $state['source_ids'] ?? array() ),
+				'model'        => (string) ( $state['model'] ?? '' ),
+				'sources_from' => (string) ( $state['sources_from'] ?? '' ),
+				'engine'       => (string) ( $context->input['web_engine'] ?? Settings::get( 'ai_web_engine' ) ),
 			) + $valid
 		);
 	}

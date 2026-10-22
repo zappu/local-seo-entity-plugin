@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.6.2 – 22.10.2026
+
+- **Suchmaschine der Websuche wählbar** (nur OpenRouter): Einstellung „Suchmaschine“ (`ai_web_engine`: standard, native, exa, parallel, perplexity) und `wp lsec topics research --web-engine=…`. Hintergrund: Die Websuche des Modells lieferte in drei von vier echten Recherchen keine Quellen und damit keine Tatsachen.
+- **Bericht** `wp lsec topics report`: nennt die Suchmaschine, warnt bei 0 Quellen und zeigt mit `--research` den Text der Websuche.
+
 ## 0.6.1 – 22.10.2026
 
 Korrekturen nach den ersten echten Themenrecherchen auf der Testwebsite.

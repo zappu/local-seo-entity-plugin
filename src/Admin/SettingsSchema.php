@@ -46,6 +46,11 @@ final class SettingsSchema {
 					'step'  => 1,
 					'help'  => 'Weniger Treffer senken die Kosten der Recherche deutlich. OpenAI: bis 3 = geringer Suchumfang.',
 				),
+				'ai_web_engine'      => array(
+					'label' => 'Suchmaschine (OpenRouter)',
+					'type'  => 'select',
+					'help'  => 'standard = Websuche des Modells, wenn es eine hat, sonst Exa. Liefert die Recherche keine Quellen, exa oder parallel wählen: Diese suchen bei jeder Anfrage und geben immer Quellen zurück.',
+				),
 				'ai_monthly_budget'  => array(
 					'label' => 'Monatsbudget',
 					'type'  => 'number',

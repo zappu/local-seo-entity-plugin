@@ -87,12 +87,15 @@ final class OpenRouterClient implements AiClient {
 			);
 		}
 		if ( $request->web_search ) {
-			$body['plugins'] = array(
-				array(
-					'id'          => 'web',
-					'max_results' => max( 1, $request->web_max_results ),
-				),
+			$plugin = array(
+				'id'          => 'web',
+				'max_results' => max( 1, $request->web_max_results ),
 			);
+			// Nachtrag 22.10. (0.6.2): Mit der Websuche des Modells (native) kamen oft keine Quellen zurück.
+			if ( '' !== $request->web_engine ) {
+				$plugin['engine'] = $request->web_engine;
+			}
+			$body['plugins'] = array( $plugin );
 		}
 		return $body;
 	}
