@@ -165,6 +165,9 @@ final class QualityChecker {
 		$allowed = array();
 		$profile = array( (string) ( $company['phone'] ?? '' ), (string) ( $company['name'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $company['services'] ?? array() ) ) ), (string) ( $company['area'] ?? '' ), implode( ' ', array_map( static fn( $d ): string => (string) ( $d['description'] ?? '' ), (array) ( $company['service_details'] ?? array() ) ) ) );
 		$phones  = array_filter( array_map( array( self::class, 'phone_digits' ), array_merge( array( (string) ( $company['phone'] ?? '' ) ), array_map( static fn( $l ): string => (string) ( $l['phone'] ?? '' ), (array) ( $company['locations'] ?? array() ) ) ) ) );
+		// Lauf 123: Die Zahlen „89, 22, 101, 72“ standen im Hostnamen der E-Mail-Adresse (Staging). Ziffern in
+		// E-Mail-Adressen, Internetadressen und Domainnamen sind keine Tatsachen.
+		$text = (string) preg_replace( '/[\w.+-]+@[\w-]+(?:\.[\w-]+)+|https?:\/\/\S+|\bwww\.\S+|\b(?:[a-z0-9-]+\.)+(?:de|com|net|org|eu|info|page|io)\b\S*/iu', ' ', $text );
 		// Telefonnummern aus dem Profil, auch anders gruppiert oder mit +49 (Lauf 121: „89 22 101 72“).
 		$text = (string) preg_replace_callback(
 			'/(?<![\d.,])(?:\+|00)?\d[\d\s\p{Zs}\/\-–().]{4,}\d(?![\d])/u',

@@ -560,6 +560,14 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
   - **Entwurf:** einheitliche Wir-Form des Unternehmens, jeder interne Link höchstens einmal, keine Zusagen zu Dauer, Ergebnis, Schonung oder Garantie.
   - **Zahlenprüfung:** Telefonnummern auch mit geschützten Leerzeichen und Gedankenstrichen; der Bericht zeigt zu jeder unbelegten Zahl die Textstelle.
   - **Cronjob:** Themen, die übersprungen werden (z. B. Dublette eines geschriebenen Themas), verbrauchen keinen Platz im Tageslimit; `wp lsec production schedule` nennt den Grund.
+- **Modellvergleich auf Thema 39 (Läufe 123 und 124, Nachtrag 22.10., 0.7.3):**
+
+  | Lauf | Hauptmodell | Kosten | Wörter | Bewertung | Mehrwert | Lokale Relevanz | Blockiert |
+  |---|---|---|---|---|---|---|---|
+  | 123 | `anthropic/claude-sonnet-5.5` | 0,195 USD | 852 | 86,5 | 0,80 | 0,85 | nur Zahlen (Prüfungsfehler) |
+  | 124 | `openai/gpt-6-luna` | 0,0047 USD | 974 | 86,8 | 0,73 | 0,95 | Zahlen (Prüfungsfehler) und unbelegter Ablauf |
+
+  Beide blockierten wegen „89, 22, 101, 72“: Die Ziffern stehen im Hostnamen der E-Mail-Adresse der Staging-Website. Ziffern in E-Mail-Adressen, Internetadressen und Domainnamen prüft die Zahlenprüfung seit 0.7.3 nicht mehr. Die KI-Bewertung erhält einen Hinweis, dass die Textfassung vereinfacht ist (sie bemängelte die Tabellendarstellung), und Tabellen mit Trennzeile. Der Bericht warnt, wenn KI-Aufrufe ohne Kostenangabe sind. Die Entscheidung über das Hauptmodell folgt, wenn Thomas beide Texte gelesen hat.
 - **Bericht:** `wp lsec production report <ablauf>` bzw. `GET lsec/v1/production/<ablauf>` mit Modell, Kosten je KI-Aufruf, Wörtern, Bewertung, Mängeln und Hinweisen; `wp lsec production list` zeigt freigegebene und erstellte Themen mit Prüfergebnis. Grundlage für die Messung „Kosten je Beitrag“ und den Modellvergleich (`--model`).
 
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.

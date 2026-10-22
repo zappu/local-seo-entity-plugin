@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.7.3 – 22.10.2026
+
+- **Zahlenprüfung:** Ziffern in E-Mail-Adressen, Internetadressen und Domainnamen gelten nicht als Zahlen (auf Staging stehen sie im Hostnamen, z. B. „89-22-101-72“).
+- **KI-Bewertung:** bewertet nicht die Formatierung der vereinfachten Textfassung; Tabellen mit Trennzeile.
+- **Bericht:** Warnung, wenn KI-Aufrufe ohne Kostenangabe die Summe unvollständig machen.
+
 ## 0.7.2 – 22.10.2026
 
 - **Leistungsbeschreibungen aus dem Unternehmensprofil** gelten als Angaben des Unternehmens: Der Entwurf darf Abläufe und Verfahren daraus übernehmen, die Prüfung akzeptiert sie. Ohne Beschreibung schreibt die KI Verfahren nur allgemein, nicht als Zusage des Betriebs.

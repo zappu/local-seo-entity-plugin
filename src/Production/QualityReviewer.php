@@ -47,7 +47,8 @@ final class QualityReviewer {
 	 */
 	public static function prompt( array $context, array $draft ): string {
 		return Context::text( $context, true )
-			. "\nInterne Links auf Adressen aus der Liste „Linkziele“ sind geprüft und kein Mangel. Externe Links sind nur auf Quellen der geprüften Tatsachen erlaubt.\n"
+			. "\nDer Beitrag steht unten als vereinfachte Textfassung; im Beitrag sind es Gutenberg-Blöcke (Tabellen, Listen, FAQ). Bewerte nicht die Formatierung dieser Fassung.\n"
+			. "Interne Links auf Adressen aus der Liste „Linkziele“ sind geprüft und kein Mangel. Externe Links sind nur auf Quellen der geprüften Tatsachen erlaubt.\n"
 			. "Kontaktdaten aus dem Profil, Angaben zum Servicegebiet und die Angaben des Unternehmens zu seinen Leistungen sind belegt.\n"
 			. "Allgemeines Fachwissen, wie ein Verfahren funktioniert, ist kein Mangel, solange es nicht als feste Zusage oder konkretes Vorgehen dieses Unternehmens formuliert ist. blocking_issues mit UNSUPPORTED_FACT nur für konkrete unbelegte Angaben: Zahlen, Preise, Dauern, Garantien, Zertifikate, eigene Geräte, Ablaufzusagen des Unternehmens oder Tatsachen über Orte.\n"
 			. "\nBeitrag (Titel als #, Überschriften als ##, Listen mit -, Tabellen mit |, FAQ als F:/A:):\n<<<\n# " . $draft['title'] . "\n\n" . DraftGenerator::outline_text( (array) $draft['content'] ) . "\n>>>\n\n"

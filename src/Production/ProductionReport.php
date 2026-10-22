@@ -48,6 +48,7 @@ final class ProductionReport {
 			'created_at' => gmdate( 'c', (int) strtotime( (string) $run['created_at'] . ' UTC' ) ),
 			'model'      => implode( ', ', array_values( array_unique( array_map( static fn( array $c ): string => (string) $c['model'], $calls ) ) ) ),
 			'cost_usd'   => round( $repo->cost_of_run( $id ), 4 ),
+			'unpriced'   => count( array_filter( $calls, static fn( array $c ): bool => null === $c['cost_estimate'] && 'ok' === (string) $c['status'] ) ),
 			'post_id'    => $post_id,
 			'edit_url'   => $post_id > 0 ? (string) get_edit_post_link( $post_id, 'raw' ) : '',
 			'preview'    => $post_id > 0 ? (string) get_preview_post_link( $post_id ) : '',

@@ -322,4 +322,9 @@ final class QualityCheckerTest extends TestCase {
 		$result                                      = QualityChecker::check( self::draft( "Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Wir reinigen mit Heißwasser bis 150 Grad. Mobil: 05147\u{00A0}89\u{00A0}22\u{00A0}101\u{00A0}72." ), $context, self::site() );
 		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
 	}
+
+	public function test_digits_in_mail_and_web_addresses_are_ignored(): void {
+		$result = QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Schreiben Sie an anfrage@heuristic-bhabha.89-22-101-72.plesk.page oder besuchen Sie https://heuristic-bhabha.89-22-101-72.plesk.page/kontakt/.' ), self::context(), self::site() );
+		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
+	}
 }

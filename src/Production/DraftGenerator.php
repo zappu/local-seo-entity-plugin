@@ -288,6 +288,7 @@ final class DraftGenerator {
 					break;
 				case 'table':
 					$out[] = '| ' . implode( ' | ', array_map( $inline, array_map( 'strval', (array) ( $node['head'] ?? array() ) ) ) ) . ' |';
+					$out[] = '|' . str_repeat( ' --- |', max( 1, count( (array) ( $node['head'] ?? array() ) ) ) );
 					foreach ( (array) ( $node['rows'] ?? array() ) as $row ) {
 						$out[] = '| ' . implode( ' | ', array_map( $inline, array_map( 'strval', (array) $row ) ) ) . ' |';
 					}
