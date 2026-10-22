@@ -43,6 +43,12 @@ final class Settings {
 		'keyword_auto_volumes'     => true,
 		'topic_count'              => 5,
 		'topic_weights'            => array(),
+		'production_auto'          => true,
+		'drafts_per_day'           => 3,
+		'draft_author'             => 0,
+		'draft_lengths'            => array(),
+		'quality_min_score'        => 0.6,
+		'quality_min_average'      => 0.75,
 		'service_area'             => array(),
 		'profile_source_urls'      => array(),
 		'gsc_credentials_file'     => '',
@@ -69,6 +75,9 @@ final class Settings {
 		'ai_web_max_results'    => array( 1, 10 ),
 		'entity_min_confidence' => array( 0.0, 1.0 ),
 		'topic_count'           => array( 1, 10 ),
+		'drafts_per_day'        => array( 0, 20 ),
+		'quality_min_score'     => array( 0.0, 1.0 ),
+		'quality_min_average'   => array( 0.0, 1.0 ),
 	);
 
 	/**

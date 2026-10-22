@@ -4,15 +4,18 @@
 /**
  * Themen: Recherche mit Websuche starten, Vorschläge mit Priorität, Begründung und geprüften Tatsachen,
  * Freigabe oder Ablehnung, Entscheidungen über einzelne Tatsachen, Überschneidungen mit bestehenden Seiten.
+ * Ab Stufe E: Beitrag schreiben, Entwurf mit Prüfbericht (Kosten, Bewertung, Mängel).
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
-import { decideClaim, decideTopic, getTopic, getTopics, startResearch } from './api';
+import { decideClaim, decideTopic, getTopic, getTopics, produceTopic, startResearch } from './api';
 import { CLAIM_STATUS, dateTime, number, RUN_STATUS, TOPIC_FORMATS, TOPIC_STATUS, usd } from './format';
 
 const FILTERS = [
 	{ label: 'offene Vorschläge', value: 'proposed' },
 	{ label: 'freigegeben', value: 'approved' },
+	{ label: 'in Arbeit', value: 'in_production' },
+	{ label: 'Entwurf erstellt', value: 'produced' },
 	{ label: 'abgelehnt', value: 'rejected' },
 	{ label: 'bestehende Seite verbessern', value: 'discarded' },
 	{ label: 'alle (ohne bestehende Seiten)', value: '' },
@@ -117,6 +120,89 @@ function Breakdown( { breakdown, labels } ) {
 	);
 }
 
+const SCORE_LABELS = {
+	intent: 'Suchintention',
+	local_relevance: 'Lokale Relevanz',
+	entity_integration: 'Entity-Integration',
+	value: 'Mehrwert',
+	readability: 'Lesbarkeit',
+	style_match: 'Stil',
+};
+
+const editUrl = ( postId ) => `post.php?post=${ postId }&action=edit`;
+
+function Production( { report } ) {
+	const running = [ 'queued', 'running', 'waiting' ].includes( report.status );
+	return (
+		<div className="lsec-production">
+			<h3>Beitrag</h3>
+			<p>
+				Ablauf { report.run } · { RUN_STATUS[ report.status ] || report.status }
+				{ running && report.step && ` (Schritt ${ report.step })` }
+				{ report.model && ` · ${ report.model }` }
+				{ ` · ${ usd( report.cost_usd ) }` }
+				{ report.error && <span className="lsec-muted"> · { report.error }</span> }
+			</p>
+			{ report.post_id > 0 && (
+				<p>
+					<a href={ editUrl( report.post_id ) }>Entwurf „{ report.title }“ bearbeiten</a>
+					{ report.preview && (
+						<>
+							{ ' · ' }
+							<a href={ report.preview } target="_blank" rel="noreferrer">Vorschau</a>
+						</>
+					) }
+					{ report.words !== null && <span className="lsec-muted"> · { number( report.words ) } Wörter</span> }
+				</p>
+			) }
+			{ report.score !== null && (
+				<>
+					<p>
+						<span className={ `lsec-badge lsec-badge--${ report.passed ? 'e-confirmed' : 'e-rejected' }` }>{ report.passed ? 'Prüfung bestanden' : 'blockiert' }</span>
+						{ ` Bewertung ${ Math.round( report.score ) }/100` }
+					</p>
+					{ report.scores && (
+						<table className="widefat lsec-table lsec-breakdown">
+							<tbody>
+								{ Object.entries( report.scores ).map( ( [ key, value ] ) => (
+									<tr key={ key }>
+										<td>{ SCORE_LABELS[ key ] || key }</td>
+										<td className="lsec-num">{ Math.round( value * 100 ) } %</td>
+									</tr>
+								) ) }
+							</tbody>
+						</table>
+					) }
+				</>
+			) }
+			{ report.blocking && report.blocking.length > 0 && (
+				<>
+					<h4>Mängel, die eine Veröffentlichung verhindern</h4>
+					<ul className="lsec-issues">
+						{ report.blocking.map( ( issue, i ) => (
+							<li key={ i }>
+								<code>{ issue.code }</code> { issue.detail }
+							</li>
+						) ) }
+					</ul>
+				</>
+			) }
+			{ report.warnings && report.warnings.length > 0 && (
+				<>
+					<h4>Hinweise</h4>
+					<ul className="lsec-issues lsec-muted">
+						{ report.warnings.map( ( issue, i ) => (
+							<li key={ i }>
+								<code>{ issue.code }</code> { issue.detail }
+							</li>
+						) ) }
+					</ul>
+				</>
+			) }
+		</div>
+	);
+}
+
 function TopicDetail( { id, labels, setNotice } ) {
 	const [ topic, setTopic ] = useState( null );
 	const load = useCallback( () => {
@@ -133,6 +219,7 @@ function TopicDetail( { id, labels, setNotice } ) {
 	const breakdown = topic.score_breakdown || {};
 	return (
 		<div className="lsec-topic__detail">
+			{ topic.production && <Production report={ topic.production } /> }
 			<div className="lsec-topic__columns">
 				<div>
 					<h3>Priorität</h3>
@@ -201,8 +288,9 @@ function TopicDetail( { id, labels, setNotice } ) {
 	);
 }
 
-function TopicRow( { topic, labels, onDecide, busy, setNotice } ) {
+function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice } ) {
 	const [ open, setOpen ] = useState( false );
+	const producing = topic.status === 'in_production' || topic.status === 'produced';
 	return (
 		<div className={ `lsec-topic lsec-topic--${ topic.status }` }>
 			<div className="lsec-topic__head">
@@ -218,14 +306,24 @@ function TopicRow( { topic, labels, onDecide, busy, setNotice } ) {
 						{ topic.region && ` · ${ topic.region }` }
 						{ topic.primary_keywords && ` · ${ topic.primary_keywords }` }
 						{ ` · ${ TOPIC_STATUS[ topic.status ] || topic.status }` }
+						{ topic.quality && ` · ${ topic.quality.passed ? 'Prüfung bestanden' : 'blockiert' }${ topic.quality.score !== null ? ` (${ Math.round( topic.quality.score ) }/100)` : '' }` }
 					</p>
 					{ topic.rationale && <p>{ topic.rationale }</p> }
 				</div>
 				<div className="lsec-actions">
-					{ topic.status !== 'approved' && topic.status !== 'discarded' && (
+					{ topic.status === 'approved' && (
+						<Button variant="primary" size="small" disabled={ busy } onClick={ () => onProduce( topic.id, false ) }>Beitrag schreiben</Button>
+					) }
+					{ topic.post_id > 0 && (
+						<Button variant="secondary" size="small" href={ editUrl( topic.post_id ) }>Entwurf</Button>
+					) }
+					{ topic.status === 'produced' && (
+						<Button variant="tertiary" size="small" disabled={ busy } onClick={ () => onProduce( topic.id, true ) }>neu schreiben</Button>
+					) }
+					{ ! producing && topic.status !== 'approved' && topic.status !== 'discarded' && (
 						<Button variant="primary" size="small" disabled={ busy } onClick={ () => onDecide( topic.id, 'approved' ) }>Freigeben</Button>
 					) }
-					{ topic.status !== 'rejected' && (
+					{ ! producing && topic.status !== 'rejected' && (
 						<Button variant="tertiary" size="small" isDestructive disabled={ busy } onClick={ () => onDecide( topic.id, 'rejected' ) }>Ablehnen</Button>
 					) }
 					{ ( topic.status === 'approved' || topic.status === 'rejected' || topic.status === 'discarded' ) && (
@@ -257,6 +355,21 @@ export default function Topics() {
 		const timer = setInterval( load, 30000 );
 		return () => clearInterval( timer );
 	}, [ load ] );
+
+	const onProduce = ( id, again ) => {
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( `${ again ? 'Neuen Entwurf' : 'Entwurf' } schreiben? Briefing, Text und Prüfung kosten zusammen etwa 0,05 bis 0,30 USD (im Rahmen des KI-Budgets).` ) ) {
+			return;
+		}
+		setBusy( true );
+		produceTopic( id, again )
+			.then( ( run ) => {
+				setNotice( { status: 'success', text: `Entwurf eingeplant (Ablauf ${ run.run_id }). Er entsteht über den Cronjob in einigen Minuten.` } );
+				load();
+			} )
+			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
+			.finally( () => setBusy( false ) );
+	};
 
 	const onDecide = ( id, decision ) => {
 		setBusy( true );
@@ -292,9 +405,14 @@ export default function Topics() {
 						{ status === 'discarded' && (
 							<p className="lsec-muted">Diese Themen deckt schon eine eigene Seite ab, die für das Haupt-Keyword rankt oder es im Titel trägt. Statt eines neuen Beitrags lohnt es sich, die bestehende Seite zu verbessern (Ausbau 2).</p>
 						) }
+						{ status === 'approved' && data.production && (
+							<p className="lsec-muted">
+								{ data.production.auto ? `Der Cronjob schreibt freigegebene Themen automatisch, höchstens ${ data.production.per_day } am Tag (heute gestartet: ${ data.production.today }).` : 'Automatisches Schreiben ist ausgeschaltet (Einstellungen → Beiträge); „Beitrag schreiben“ startet einen Entwurf von Hand.' }
+							</p>
+						) }
 						{ data.topics.length === 0 && <p>Keine Themen für diese Auswahl.</p> }
 						{ data.topics.map( ( t ) => (
-							<TopicRow key={ t.id } topic={ t } labels={ data.labels } onDecide={ onDecide } busy={ busy } setNotice={ setNotice } />
+							<TopicRow key={ t.id } topic={ t } labels={ data.labels } onDecide={ onDecide } onProduce={ onProduce } busy={ busy } setNotice={ setNotice } />
 						) ) }
 					</CardBody>
 				</Card>

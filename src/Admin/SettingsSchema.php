@@ -23,7 +23,7 @@ final class SettingsSchema {
 	 * @var array<string, array{label: string, fields: array<string, array<string, mixed>>}>
 	 */
 	private const GROUPS = array(
-		'ai'        => array(
+		'ai'         => array(
 			'label'  => 'KI',
 			'fields' => array(
 				'ai_provider'        => array(
@@ -77,7 +77,7 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'textfocus' => array(
+		'textfocus'  => array(
 			'label'  => 'Textfocus',
 			'fields' => array(
 				'textfocus_lang'         => array(
@@ -104,7 +104,7 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'keywords'  => array(
+		'keywords'   => array(
 			'label'  => 'Keywords',
 			'fields' => array(
 				'keyword_analysis'     => array(
@@ -119,7 +119,7 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'topics'    => array(
+		'topics'     => array(
 			'label'  => 'Themen',
 			'fields' => array(
 				'topic_count'   => array(
@@ -135,7 +135,46 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'gsc'       => array(
+		'production' => array(
+			'label'  => 'Beiträge',
+			'fields' => array(
+				'production_auto'     => array(
+					'label' => 'Freigegebene Themen automatisch schreiben',
+					'type'  => 'toggle',
+					'help'  => 'Der Cronjob erstellt Entwürfe zu freigegebenen Themen, höchstens so viele am Tag wie unten eingestellt. Ein Entwurf kostet etwa 0,05 bis 0,30 USD.',
+				),
+				'drafts_per_day'      => array(
+					'label' => 'Entwürfe je Tag',
+					'type'  => 'number',
+					'step'  => 1,
+					'help'  => 'Obergrenze für automatisch gestartete Entwürfe (0 bis 20). Von Hand gestartete zählen mit.',
+				),
+				'draft_author'        => array(
+					'label' => 'Autor der Entwürfe (Benutzer-ID)',
+					'type'  => 'number',
+					'step'  => 1,
+					'help'  => '0 = wer das Thema freigegeben hat, sonst der erste Administrator.',
+				),
+				'draft_lengths'       => array(
+					'label' => 'Länge je Beitragstyp (Wörter)',
+					'type'  => 'json',
+					'help'  => 'Leer = Standard: {"local_landing":[700,1300],"article":[900,1600],"guide":[1200,2200],"seasonal":[700,1300],"other":[700,1500]}',
+				),
+				'quality_min_score'   => array(
+					'label' => 'Mindestwert je Merkmal der KI-Bewertung',
+					'type'  => 'number',
+					'step'  => 0.05,
+					'help'  => 'Darunter ist der Entwurf blockiert (Spezifikation 10.2, Vorschlag 0,6).',
+				),
+				'quality_min_average' => array(
+					'label' => 'Mindestdurchschnitt der KI-Bewertung',
+					'type'  => 'number',
+					'step'  => 0.05,
+					'help'  => 'Vorschlag 0,75. Wird in der Testphase anhand Ihrer Korrekturen angepasst.',
+				),
+			),
+		),
+		'gsc'        => array(
 			'label'  => 'Search Console',
 			'fields' => array(
 				'gsc_property'         => array(
@@ -155,7 +194,7 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'entities'  => array(
+		'entities'   => array(
 			'label'  => 'Entitäten',
 			'fields' => array(
 				'entity_auto_extract'   => array(
@@ -176,7 +215,7 @@ final class SettingsSchema {
 				),
 			),
 		),
-		'general'   => array(
+		'general'    => array(
 			'label'  => 'Allgemein',
 			'fields' => array(
 				'max_parallel_runs'        => array(

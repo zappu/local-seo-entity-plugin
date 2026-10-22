@@ -60,6 +60,18 @@ final class AiCallRepository implements AiCallLog, AiSpend {
 	}
 
 	/**
+	 * Aufrufe eines Ablaufs (für Berichte und den Modellvergleich).
+	 *
+	 * @param int $run_id Ablauf.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function for_run( int $run_id ): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'ai_calls' );
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT task, provider, model, status, input_tokens, output_tokens, cost_estimate, duration_ms FROM {$table} WHERE run_id = %d ORDER BY id", $run_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * {@inheritDoc}
 	 *
 	 * @param int $run_id Ablauf.

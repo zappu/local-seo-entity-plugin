@@ -80,20 +80,42 @@ final class TopicsController {
 		$area = ServiceArea::from_settings();
 		return new \WP_REST_Response(
 			array(
-				'topics'   => $repo->list( (string) $request->get_param( 'status' ), 200 ),
-				'counts'   => $repo->counts(),
-				'latest'   => $latest,
-				'services' => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
-				'area'     => null === $area ? '' : $area->label,
-				'settings' => array(
+				'topics'     => array_map( array( self::class, 'with_quality' ), $repo->list( (string) $request->get_param( 'status' ), 200 ) ),
+				'counts'     => $repo->counts(),
+				'latest'     => $latest,
+				'services'   => array_values( array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ) ),
+				'area'       => null === $area ? '' : $area->label,
+				'settings'   => array(
 					'count'       => (int) Settings::get( 'topic_count' ),
 					'web_results' => (int) Settings::get( 'ai_web_max_results' ),
 					'model'       => (string) Settings::get( 'ai_model' ),
 					'research'    => (string) Settings::get( 'ai_research_model' ),
 				),
-				'labels'   => PriorityScorer::LABELS,
+				'labels'     => PriorityScorer::LABELS,
+				'production' => array(
+					'auto'    => (bool) Settings::get( 'production_auto' ),
+					'per_day' => (int) Settings::get( 'drafts_per_day' ),
+					'today'   => \Lsec\Production\ContentProductionWorkflow::started_today(),
+				),
 			)
 		);
+	}
+
+	/**
+	 * Ergänzt Beitrag und Prüfergebnis.
+	 *
+	 * @param array<string, mixed> $topic Thema.
+	 * @return array<string, mixed>
+	 */
+	private static function with_quality( array $topic ): array {
+		$post_id          = (int) ( $topic['post_id'] ?? 0 );
+		$report           = $post_id > 0 ? ( new \Lsec\Production\QualityReportRepository() )->latest_for_post( $post_id ) : null;
+		$topic['post_id'] = $post_id;
+		$topic['quality'] = null === $report ? null : array(
+			'passed' => $report['passed'],
+			'score'  => $report['score'],
+		);
+		return $topic;
 	}
 
 	/**
@@ -104,7 +126,12 @@ final class TopicsController {
 	 */
 	public function detail( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$topic = ( new TopicRepository() )->detail( (int) $request['id'] );
-		return null === $topic ? new \WP_Error( 'lsec_not_found', 'Thema nicht gefunden.', array( 'status' => 404 ) ) : new \WP_REST_Response( $topic );
+		if ( null === $topic ) {
+			return new \WP_Error( 'lsec_not_found', 'Thema nicht gefunden.', array( 'status' => 404 ) );
+		}
+		$run                 = \Lsec\Production\ProductionReport::latest_run_id( (int) $topic['id'] );
+		$topic['production'] = $run > 0 ? \Lsec\Production\ProductionReport::for_run( $this->plugin, $run ) : null;
+		return new \WP_REST_Response( $topic );
 	}
 
 	/**

@@ -121,3 +121,9 @@ export const decideTopic = ( id, decision ) =>
 export const startResearch = ( data ) => apiFetch( { path: `${ base }/topics/research`, method: 'POST', data } );
 export const decideClaim = ( id, decision ) =>
 	apiFetch( { path: `${ base }/claims/${ id }/decision`, method: 'POST', data: { decision } } );
+export const produceTopic = ( id, again = false ) => apiFetch( { path: `${ base }/topics/${ id }/produce`, method: 'POST', data: { again } } );
+export const getProduction = ( runId ) => apiFetch( { path: `${ base }/production/${ runId }` } );
+export const getStyle = () => apiFetch( { path: `${ base }/style` } );
+export const buildStyle = ( data ) => apiFetch( { path: `${ base }/style/build`, method: 'POST', data } );
+export const saveStyle = ( profile ) => apiFetch( { path: `${ base }/style`, method: 'POST', data: { profile } } );
+export const activateStyle = ( version ) => apiFetch( { path: `${ base }/style/${ version }/activate`, method: 'POST' } );

@@ -532,6 +532,26 @@ queued ──► running ──► succeeded
 
 Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfbericht und Status `blocked`. Er kommt für eine spätere automatische Veröffentlichung nie in Frage.
 
+**Umsetzung (Nachtrag 22.10., Stufe E, `ContentProductionWorkflow`, 0.7.0):**
+- **Start:**
+  - Von Hand: „Beitrag schreiben“ auf der Themen-Seite, `POST lsec/v1/topics/<id>/produce` oder `wp lsec production start <thema> [--model=…] [--again] [--now]`.
+  - Cronjob: `wp lsec cron` startet Entwürfe zu freigegebenen Themen nach Priorität, wenn `production_auto` an ist (Standard), höchstens `drafts_per_day` am Tag (Standard 3, Tag in der Zeitzone der Website; von Hand gestartete zählen mit). Ohne Cronjob: `wp lsec production schedule`.
+  - Idempotenz: ein Ablauf je Thema. `--again` bzw. „neu schreiben“ und `--model` erzeugen einen neuen Ablauf und einen neuen Entwurf; der alte Entwurf bleibt.
+  - Autor: Einstellung `draft_author`, sonst wer das Thema freigegeben hat, sonst der erste Administrator.
+- **`load_topic`:** nur `approved` (oder `in_production` beim Fortsetzen), setzt `in_production`.
+- **`gather_context`:**
+  - Profil mit Standorten und Telefon, Servicegebiet.
+  - Entitäten des Themas (mit Status und Rolle), Leistungen aus dem Profil, die Orts-Entität des Themas.
+  - Aussagen mit Status `verified` oder `confirmed`: die des Themas zuerst, dann weitere zu diesen Entitäten (höchstens 40), mit Typ der Entität, Zitat und Quelle (`ClaimRepository::usable`).
+  - Keywords des Themas, bis zu 12 Linkziele aus dem Inhaltsindex (veröffentlichte Inhalte nach gemeinsamen Wörtern mit Titel, Ort und Keywords), bis zu 60 Kategorien, aktiver Style Mimic, Länge des Beitragstyps (`draft_lengths`, Standard: lokale Seite 700–1300, Beitrag 900–1600, Ratgeber 1200–2200, saisonal 700–1300, sonst 700–1500 Wörter).
+- **`create_brief`** (8.5): KI mit JSON-Schema; unbekannte Aussagen, Entitäten und Linkziele werden entfernt und im Bericht genannt; die Länge wird auf den Rahmen des Beitragstyps begrenzt. Gespeichert in `lsec_briefs` mit Version je Thema.
+- **`generate_draft`** (8.6): KI mit JSON-Schema (bis 14.000 Token, 300 s). Jeder Block hat alle Felder (striktes Schema), das Plugin behält je Typ nur die passenden. Unbekannte Aussagen in `used_claim_ids` bleiben stehen, damit die Prüfung sie meldet.
+- **`enrich`:** ohne KI. Fehlende SEO-Angaben aus Thema, Titel und Auszug; Slug mit `sanitize_title`; fehlt im Text ein Kontaktweg (Telefon, E-Mail oder „Kontakt“), kommt die Handlungsaufforderung des Briefings ans Ende.
+- **`quality_check`:** Regeln (10.1) und KI-Bewertung (10.2); der Bericht steht in `lsec_quality_reports` und am Beitrag (`_lsec_quality_report_id`, `_lsec_quality_passed`).
+- **`create_post`:** `DraftWriter` (9.1, 9.2). Gibt es zum Ablauf schon einen Beitrag (`_lsec_run_id`), wird er verwendet. Weitere Metadaten: `_lsec_topic_id`, `_lsec_primary_entities`, `_lsec_used_claims`, `_lsec_brief_id`.
+- **`finalize`:** Thema auf `produced` mit `post_id`; Kosten des Ablaufs. Bei blockierenden Mängeln endet der Ablauf mit `blocked` (Code `quality_blocked`), der Entwurf bleibt.
+- **Bericht:** `wp lsec production report <ablauf>` bzw. `GET lsec/v1/production/<ablauf>` mit Modell, Kosten je KI-Aufruf, Wörtern, Bewertung, Mängeln und Hinweisen; `wp lsec production list` zeigt freigegebene und erstellte Themen mit Prüfergebnis. Grundlage für die Messung „Kosten je Beitrag“ und den Modellvergleich (`--model`).
+
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.
 
 **Umsetzung (Nachtrag 22.10., Stufe D, `TopicResearchWorkflow`):**
@@ -892,6 +912,8 @@ Das Plugin baut das Block-Markup selbst (umgesetzt, M12):
 
 Eingaben: ausgewählte eigene Beiträge (Text aus dem Inhaltsindex), Beispieltexte, feste Regeln. Das Profil ist im Backend bearbeitbar; jede Änderung erzeugt eine Version.
 
+**Umsetzung (Nachtrag 22.10., Stufe E):** Seite „Local SEO → Style Mimic“ mit Profil zum Bearbeiten (speichert eine neue Version), „Aus eigenen Texten erzeugen“ (bis zu zehn veröffentlichte Beiträge oder Seiten, je höchstens 4000 Zeichen, zusammen 20.000; Beispieltexte; feste Regeln) und Versionen mit „aktivieren“. Die festen Regeln stehen wörtlich vorn im Profil. Ohne Profil schreiben Entwürfe sachlich und freundlich mit „Sie“. WP-CLI: `wp lsec style build --posts=… --rules="…|…"`, `show`, `list`, `activate <version>`, `set --file=…`. REST: `GET|POST lsec/v1/style`, `POST lsec/v1/style/build`, `POST lsec/v1/style/<version>/activate`.
+
 ### 8.8 Qualitätsbewertung (`quality_review`)
 
 ```json
@@ -931,9 +953,10 @@ Eingaben: ausgewählte eigene Beiträge (Text aus dem Inhaltsindex), Beispieltex
 | Unternehmensprofil | Unternehmen, Standorte, Leistungen, Marken, Wettbewerber, Servicegebiet mit Ortssuche | neu |
 | Entitäten | Filter nach Typ, Status und Mindest-Sicherheit; Bestätigen, Ablehnen, Zusammenführen; Fundstellen; einfache Graphansicht | Bestätigen/Ablehnen vorhanden (PHP-Seite) |
 | Keywords | Search Console, Import mit Spaltenzuordnung, Textfocus mit Credit-Anzeige, Quelle je Kennzahl, Ausschlüsse | umgesetzt in Stufe C (0.5.0): Karten „Täglicher Abgleich“, „Verwandte Keywords“, „Import“; Tabelle mit Volumen und Quelle, Wettbewerb, CPC, Search-Console-Werten, rankender Seite und Ausschluss; Filter nach Suche, Quelle, Status und Grund; Sortierung |
-| Themen | Vorschläge mit Priorität, Begründung, geprüften Tatsachen; Freigabe; Einzel- und Sammelauftrag | umgesetzt in Stufe D (0.6.0): Recherche starten (Leistung, Ort, Anzahl), Vorschläge mit Prioritätskreis, Aufschlüsselung, Keywords, Entitäten, Tatsachen mit Status, Quelle und Zitat, Überschneidung; Freigeben, Ablehnen, Zurücksetzen; Tatsachen bestätigen oder verwerfen. Einzel- und Sammelauftrag folgen mit der Produktion (Stufe E) |
+| Themen | Vorschläge mit Priorität, Begründung, geprüften Tatsachen; Freigabe; Einzel- und Sammelauftrag | umgesetzt in Stufe D (0.6.0): Recherche starten (Leistung, Ort, Anzahl), Vorschläge mit Prioritätskreis, Aufschlüsselung, Keywords, Entitäten, Tatsachen mit Status, Quelle und Zitat, Überschneidung; Freigeben, Ablehnen, Zurücksetzen; Tatsachen bestätigen oder verwerfen. Stufe E (0.7.0): Einzelauftrag „Beitrag schreiben“ und „neu schreiben“, Filter „in Arbeit“ und „Entwurf erstellt“, je Thema Beitrag mit Prüfergebnis, im Detail Ablauf, Kosten, Bewertung, Mängel und Hinweise mit Link zum Entwurf. Der Sammelauftrag folgt in Stufe F |
+| Style Mimic | Eingaben, Profil, Versionen | umgesetzt in Stufe E (0.7.0), siehe 8.7 |
+| Einstellungen, Gruppe „Beiträge“ | | Stufe E: `production_auto`, `drafts_per_day`, `draft_author`, `draft_lengths`, `quality_min_score`, `quality_min_average` |
 | Abläufe | Status, Schritte, Kosten, Fehler, Fortsetzen/Abbrechen | neu |
-| Style Mimic | Eingaben, Profil, Versionen | neu |
 | Einstellungen | KI, Budget, Search Console, Textfocus, Grenzen, Längen je Beitragstyp, Gewichte | neu (WP-CLI vorhanden) |
 
 React über `@wordpress/scripts` und `@wordpress/components`, Daten über `lsec/v1`. Die vorhandene PHP-Seite „Entitäten“ wird in Stufe B ersetzt.
@@ -972,6 +995,18 @@ Die Zahlenprüfung vergleicht Ziffernfolgen und ausgeschriebene Jahreszahlen; Te
 Ergänzend bewertet die KI Suchintention, lokale Relevanz, Entity-Integration, Mehrwert, Lesbarkeit und Übereinstimmung mit dem Style Mimic (8.8). Sie meldet zusätzlich Aussagen, die wie Tatsachen klingen, aber keiner Aussage zugeordnet sind.
 
 **Vorschlag Mindestwerte:** kein Einzelwert unter 0,6, Durchschnitt mindestens 0,75. Kalibrierung in der Testphase anhand der Korrekturen des Administrators.
+
+**Umsetzung (Nachtrag 22.10., Stufe E, `QualityChecker`, `QualityReviewer`):**
+- Alle Prüfungen aus 10.1 laufen; der Bericht nennt je Prüfung Ergebnis und Einzelheiten. Codes: `LENGTH`, `BLOCKS`, `UNSUPPORTED_FACT`, `UNSUPPORTED_STATEMENT`, `UNSUPPORTED_NUMBER`, `PRIMARY_ENTITY`, `INTERNAL_LINKS`, `OVERLAP`, `SIMILAR_TITLE`, `LOCAL_FACTS`, `LOCAL_DUPLICATE`, `FOREIGN_PLACE`, `PLACEHOLDER`, `SEO_META`, `FOCUS_TAKEN`, `REPETITION`.
+- **Abweichungen und Festlegungen:**
+  - Zahlenprüfung: Zahlen werden ohne Tausenderpunkt verglichen („20.723“ = „20723“). Belegt sind Zahlen aus verwendeten Aussagen (Wert und Zitat) und aus dem Profil (Telefon auch als Ganzes, Hausnummer, Postleitzahl). Steht eine Zahl in einer geprüften Aussage des Kontexts, die nicht in `used_claim_ids` steht, wird die Aussage ergänzt statt blockiert. **Einstellige Zahlen ohne Einheit** („in 3 Schritten“) gelten nicht als Tatsache; mit €, %, Euro, m², km oder Jahr(en) werden sie immer geprüft. Ausgeschriebene Jahreszahlen prüft nur die KI-Bewertung.
+  - Interne Links: Links, die nicht auf ein Linkziel zeigen, entfernt `DraftWriter` beim Anlegen (Ankertext bleibt); die Prüfung nennt sie, blockiert aber nicht.
+  - Ähnlicher Titel: `similar_text` auf vereinheitlichten Titeln, ab 85 % blockierend; verglichen mit dem Inhaltsindex und anderen Entwürfen des Plugins.
+  - Lokale Beiträge: Ort im Text und mindestens zwei verwendete geprüfte Aussagen zu Orten; Übereinstimmung mit Plugin-Beiträgen desselben Typs für andere Orte über Folgen von fünf Wörtern, ab 50 % blockierend.
+  - Orte außerhalb: abgelehnte Orts-Entitäten, die im Text vorkommen.
+  - Platzhalter: eckige Klammern, `{{ }}`, „Lorem ipsum“, „Platzhalter“, TODO, XXX, TBD. Eine Fachbegriffsliste für Übersetzungsfehler gibt es noch nicht.
+  - Fokus-Keyword: erstes Keyword in `rank_math_focus_keyword` anderer Beiträge (Warnung).
+- **KI-Bewertung:** sechs Werte 0–1, blockierende Mängel (`AI_UNSUPPORTED_FACT`, `AI_WRONG_PLACE`, `AI_MISLEADING`, `AI_OFF_TOPIC`, `AI_COMPETITOR`, `AI_OTHER`) und Hinweise. Unter `quality_min_score` (0,6) bzw. `quality_min_average` (0,75) blockiert `QUALITY_SCORE` bzw. `QUALITY_AVERAGE`. Bewertung im Bericht = Durchschnitt × 100.
 
 ---
 
@@ -1034,7 +1069,8 @@ Die Prüfskripte bleiben Teil der CI und werden in MVP 1 um die neuen Abläufe e
 | Faktenprüfung gegen den Quelltext (8.4a) | festgelegt |
 | Filter für Wettbewerber und fremde Orte (6.4) | festgelegt |
 | Zusammenführen von Entitäten, Mindest-Sicherheit | festgelegt; Schwellenwert Vorschlag 0,6 |
-| Hauptmodell | **Entscheidung offen** – Vorschlag: Start mit `anthropic/claude-sonnet-5.5` über OpenRouter, Festlegung nach Vergleich in Stufe E |
+| Hauptmodell | **Entscheidung offen** – Vorschlag: Start mit `anthropic/claude-sonnet-5.5` über OpenRouter, Festlegung nach Vergleich in Stufe E mit `wp lsec production start <thema> --model=… --again --now` |
+| Recherchemodell | festgelegt (22.10.2026): `perplexity/sonar-pro` bei OpenRouter, Suchmaschine `standard` (7.3) |
 | KI-Budget im Plugin | festgelegt: 20 USD/Monat, 1 USD je Ablauf (18.10.2026) |
 | Treffer der Websuche | festgelegt: 3, Vergleich mit 5 in Stufe D (18.10.2026) |
 | Eigenes Modell für die Recherche | festgelegt: ja, `ai_research_model` (18.10.2026; Nachtrag zu Anforderung 14); **Modell offen** bis Stufe D |

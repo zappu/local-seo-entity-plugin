@@ -22,6 +22,7 @@ final class AppPage {
 	public const ENTITIES_SLUG = 'lsec-entities';
 	public const KEYWORDS_SLUG = 'lsec-keywords';
 	public const TOPICS_SLUG   = 'lsec-topics';
+	public const STYLE_SLUG    = 'lsec-style';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
@@ -32,6 +33,7 @@ final class AppPage {
 		self::ENTITIES_SLUG => 'entities',
 		self::KEYWORDS_SLUG => 'keywords',
 		self::TOPICS_SLUG   => 'topics',
+		self::STYLE_SLUG    => 'style',
 		self::SETTINGS_SLUG => 'settings',
 	);
 
@@ -97,6 +99,14 @@ final class AppPage {
 			__( 'Themen', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,
 			self::TOPICS_SLUG,
+			array( $this, 'render' )
+		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Style Mimic', 'local-seo-entity-plugin' ),
+			__( 'Style Mimic', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::STYLE_SLUG,
 			array( $this, 'render' )
 		);
 	}

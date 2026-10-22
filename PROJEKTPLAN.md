@@ -101,7 +101,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | B | Entitäten: Profil, Inhaltsindex, Erkennung als Ablauf, Zusammenführen | 0.4.0 | Prüfskript auf Staging am 22.10.2026 bestanden (`mvp-pruefung.sh --online` 44/44, Hemmingen `probable` mit Region Hannover); offen von Hand: Profil eintragen, Staats-Schreibweisen zusammenführen, Index mit Erkennung. 0.4.1: Profil aus Webseiten lesen; 0.4.2: Produkte und Kategorieseiten im Index, Erkennung standardmäßig ohne Blogbeiträge, Anhalten; 0.4.3: Entitäten bearbeiten und löschen, Erkennung nach erster Auswertung geschärft |
 | C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | abgenommen am 22.10.2026 auf Staging: `tf_related` für „flächenreinigung“ schließt fremde Firmen und Hamburg aus; Servicegebiet Uetze mit 60 km Umkreis; offen nur der Nachweis des täglichen Laufs (C4 mit `--online`) |
 | D | Themen: Recherche mit Websuche, Faktenprüfung, Priorität, Überschneidung, Freigabe | 0.6.0–0.6.5 | umgesetzt am 22.10.2026; lokal `mvp-pruefung.sh` 93/93; auf Staging nach den Korrekturen 0.6.1–0.6.5 mit `perplexity/sonar-pro` 70 % geprüfte Tatsachen (Lauf 120); offen: Abnahme durch Thomas, PDF-Quellen (Ausbau 2) |
-| E | Produktion | 0.7.0 | offen |
+| E | Produktion: Briefing, Style Mimic, Entwurf, Qualitätsprüfung, `content_production` über den Cronjob | 0.7.0 | umgesetzt am 22.10.2026; lokal `mvp-pruefung.sh` 113/113 (WP 7.1) und 112 (WP 6.4) mit E1–E4; offen: drei echte Entwürfe auf Staging, Kosten je Beitrag, Modellvergleich und Festlegung des Hauptmodells |
 | F | Abschluss, Abnahme | 1.0.0 | offen |
 
 ## Erkenntnisse aus Stufe A

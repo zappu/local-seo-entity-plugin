@@ -158,6 +158,37 @@ final class TopicRepository {
 	}
 
 	/**
+	 * Status der Produktion setzen (in_production, produced, zurück auf approved) und den Beitrag merken.
+	 *
+	 * @param int      $id      Thema.
+	 * @param string   $status  Status.
+	 * @param int|null $post_id Beitrag oder null (unverändert).
+	 */
+	public function set_production( int $id, string $status, ?int $post_id = null ): void {
+		global $wpdb;
+		$fields = array(
+			'status'     => $status,
+			'updated_at' => gmdate( 'Y-m-d H:i:s' ),
+		);
+		if ( null !== $post_id ) {
+			$fields['post_id'] = $post_id;
+		}
+		$wpdb->update( Schema::table( $wpdb->prefix, 'topics' ), $fields, array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	/**
+	 * Freigegebene Themen ohne Beitrag, nach Priorität.
+	 *
+	 * @param int $limit Höchstzahl.
+	 * @return int[]
+	 */
+	public function approved_ids( int $limit = 10 ): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'topics' );
+		return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE status = 'approved' ORDER BY priority_score DESC, id ASC LIMIT %d", $limit ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * Anzahl je Status.
 	 *
 	 * @return array<string, int>

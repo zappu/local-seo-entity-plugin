@@ -1,5 +1,20 @@
 # Änderungsprotokoll
 
+## 0.7.0 – 22.10.2026
+
+MVP 1, Stufe E (Spezifikation v1.0, Abschnitt 14): Aus freigegebenen Themen entstehen Beitragsentwürfe.
+
+- **Ablauf `content_production`:** Thema laden → Kontext (Profil, Entitäten, geprüfte Tatsachen, Keywords, Linkziele, Kategorien, Stil) → Briefing → Entwurf → Ergänzungen (SEO, Handlungsaufforderung) → Qualitätsprüfung → Entwurf in WordPress → Abschluss.
+  - Entwürfe als Gutenberg-Blöcke mit Rank-Math-Titel, -Beschreibung und -Fokus-Keyword, immer als Entwurf.
+  - Bei Mängeln entsteht der Entwurf trotzdem, mit Prüfbericht; der Ablauf endet dann mit „blockiert“.
+- **Automatisch über den Cronjob:** freigegebene Themen nach Priorität, höchstens 3 Entwürfe am Tag (Einstellungen → Beiträge). Von Hand: „Beitrag schreiben“ auf der Themen-Seite.
+- **Qualitätsprüfung:** 16 Regelprüfungen (u. a. jede Zahl mit Beleg, geprüfte Tatsachen, zwei lokale Tatsachen bei Ortsseiten, keine fremden Orte, kein ähnlicher Titel, keine Platzhalter, SEO-Längen) und eine KI-Bewertung (Suchintention, lokale Relevanz, Entitäten, Mehrwert, Lesbarkeit, Stil).
+- **Neue Seite „Style Mimic“:** Schreibstil aus eigenen Beiträgen erzeugen, von Hand bearbeiten, Versionen.
+- **Themen-Seite:** „Beitrag schreiben“, „neu schreiben“, Filter „in Arbeit“ und „Entwurf erstellt“, Prüfbericht mit Kosten, Bewertung und Mängeln, Link zum Entwurf.
+- **WP-CLI:** `wp lsec production start|report|list|schedule`, `wp lsec style build|show|list|activate|set`. Modellvergleich mit `--model`.
+- **Einstellungen:** neue Gruppe „Beiträge“ (`production_auto`, `drafts_per_day`, `draft_author`, `draft_lengths`, `quality_min_score`, `quality_min_average`).
+- **Prüfskript:** E1–E4 (Entwurf bestanden, unbelegte Zahl blockiert, Tageslimit, Style Mimic); Unit-Tests der Regelprüfung.
+
 ## 0.6.5 – 22.10.2026
 
 - **Widersprüche:** Nur Angaben mit einem Wert (Zahlen und Jahre wie Einwohner oder Ersterwähnung) können sich widersprechen. Zwei verschiedene Regeln oder Sehenswürdigkeiten zum selben Ort gelten nicht mehr als „unklar“.

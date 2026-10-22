@@ -1,6 +1,6 @@
 # Local SEO & Entity Content
 
-WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **MVP 1, Stufe B** (Unternehmensprofil, Inhaltsindex, Entity-Erkennung als Ablauf, Zusammenführen von Entitäten; davor Stufe A mit KI-Budget, Dashboard und Einstellungen) auf Grundlage des bestandenen Machbarkeitstests. Plan in Spezifikation v1.0, Abschnitt 14.
+WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **MVP 1, Stufe E** (Beitragsentwürfe aus freigegebenen Themen mit Briefing, Style Mimic und Qualitätsprüfung; davor Themenrecherche mit Faktenprüfung, Keywords, Entitäten und Grundlage) auf Grundlage des bestandenen Machbarkeitstests. Plan in Spezifikation v1.0, Abschnitt 14.
 
 Spezifikationen und Plan: [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md).
 
@@ -77,6 +77,10 @@ wp lsec keywords decide include <id>        # Ausschluss von Hand aufheben
 wp lsec topics research --service=Pflasterreinigung --region=Lehrte --now   # Themenrecherche (KI mit Websuche)
 wp lsec topics report <ablauf>              # Kosten, Quellen, Anteil geprüfter Tatsachen
 wp lsec topics list && wp lsec topics decide <id> approved
+wp lsec production start <thema> --now      # Entwurf zu einem freigegebenen Thema (Briefing, Text, Prüfung)
+wp lsec production report <ablauf>          # Beitrag, Kosten je KI-Aufruf, Bewertung, Mängel
+wp lsec production start <thema> --model=anthropic/claude-sonnet-5.5 --again --now   # Modellvergleich
+wp lsec style build --posts=12,48 --rules="Anrede Sie|keine Preise"                # Style Mimic
 ```
 
 Stufe B (gleiches Skript): Inhaltsindex mit den eigenen Testbeiträgen, Entity-Erkennung als Ablauf über eine KI-Attrappe, Zusammenführen mit Vorschlägen, Profil unverändert speichern, REST-Schutz; mit `--online` zusätzlich der Ortsabgleich für Hemmingen. Testdaten heißen `LSECTEST …` und werden danach entfernt.

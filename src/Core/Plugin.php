@@ -182,6 +182,7 @@ final class Plugin {
 		$this->workflows->register( EntityExtractionWorkflow::definition( $this ) );
 		$this->workflows->register( KeywordSyncWorkflow::definition( $this ) );
 		$this->workflows->register( TopicResearchWorkflow::definition( $this ) );
+		$this->workflows->register( \Lsec\Production\ContentProductionWorkflow::definition( $this ) );
 
 		/**
 		 * Weitere Ablauftypen registrieren.
@@ -237,6 +238,8 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec runs', new RunsCommand( $this ) );
 			\WP_CLI::add_command( 'lsec index', new IndexCommand( $this ) );
 			\WP_CLI::add_command( 'lsec profile', new ProfileCommand( $this ) );
+			\WP_CLI::add_command( 'lsec production', new \Lsec\Cli\ProductionCommand( $this ) );
+			\WP_CLI::add_command( 'lsec style', new \Lsec\Cli\StyleCommand( $this ) );
 		}
 	}
 

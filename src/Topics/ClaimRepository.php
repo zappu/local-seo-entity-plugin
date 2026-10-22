@@ -148,6 +148,65 @@ final class ClaimRepository {
 	}
 
 	/**
+	 * Verwendbare Aussagen für einen Beitrag (Status verified oder confirmed): die Aussagen des Themas und
+	 * weitere zu den genannten Entitäten, mit Typ der Entität, Zitat und Quelle (Spezifikation 7.3, gather_context).
+	 *
+	 * @param int[] $claim_ids  Aussagen des Themas.
+	 * @param int[] $entity_ids Entitäten.
+	 * @param int   $limit      Höchstzahl.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function usable( array $claim_ids, array $entity_ids, int $limit = 40 ): array {
+		global $wpdb;
+		$claim_ids  = array_values( array_filter( array_map( 'intval', $claim_ids ) ) );
+		$entity_ids = array_values( array_filter( array_map( 'intval', $entity_ids ) ) );
+		if ( array() === $claim_ids && array() === $entity_ids ) {
+			return array();
+		}
+		$t     = static fn( string $name ): string => Schema::table( $wpdb->prefix, $name );
+		$where = array();
+		if ( array() !== $claim_ids ) {
+			$where[] = 'c.id IN (' . implode( ',', $claim_ids ) . ')';
+		}
+		if ( array() !== $entity_ids ) {
+			$where[] = 'c.subject_id IN (' . implode( ',', $entity_ids ) . ')';
+		}
+		$first = array() === $claim_ids ? '0' : 'c.id IN (' . implode( ',', $claim_ids ) . ')';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT c.id, c.property, c.value, c.status, e.id AS entity_id, e.canonical_name AS entity, e.type AS entity_type,
+				(SELECT s.url FROM {$t( 'evidence' )} v JOIN {$t( 'sources' )} s ON s.id = v.source_id WHERE v.target_type = 'claim' AND v.target_id = c.id ORDER BY v.id DESC LIMIT 1) AS source_url,
+				(SELECT v.excerpt FROM {$t( 'evidence' )} v WHERE v.target_type = 'claim' AND v.target_id = c.id ORDER BY v.id DESC LIMIT 1) AS quote,
+				(SELECT v.quality FROM {$t( 'evidence' )} v WHERE v.target_type = 'claim' AND v.target_id = c.id ORDER BY v.id DESC LIMIT 1) AS quality
+				FROM {$t( 'claims' )} c JOIN {$t( 'entities' )} e ON e.id = c.subject_id
+				WHERE c.subject_type = 'entity' AND c.status IN ('verified', 'confirmed') AND ( " . implode( ' OR ', $where ) . " )
+				ORDER BY {$first} DESC, FIELD(c.status, 'confirmed', 'verified'), c.id DESC LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+		$out = array();
+		foreach ( $rows as $row ) {
+			$value = json_decode( (string) $row['value'], true );
+			$out[] = array(
+				'id'          => (int) $row['id'],
+				'entity_id'   => (int) $row['entity_id'],
+				'entity'      => (string) $row['entity'],
+				'entity_type' => (string) $row['entity_type'],
+				'property'    => (string) $row['property'],
+				'value'       => is_array( $value ) ? (string) ( $value['value'] ?? '' ) : (string) $row['value'],
+				'status'      => (string) $row['status'],
+				'quote'       => (string) $row['quote'],
+				'source_url'  => (string) $row['source_url'],
+				'quality'     => (string) $row['quality'],
+			);
+		}
+		return $out;
+	}
+
+	/**
 	 * Entscheidung des Administrators.
 	 *
 	 * @param int    $id       Aussage.

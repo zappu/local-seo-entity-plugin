@@ -140,6 +140,11 @@ final class LsecCommand {
 			WP_CLI::log( 'Täglicher Keyword-Abgleich gestartet: Ablauf ' . $sync );
 		}
 
+		$drafts = \Lsec\Production\ContentProductionWorkflow::maybe_start_scheduled( $this->plugin );
+		if ( array() !== $drafts ) {
+			WP_CLI::log( 'Entwürfe zu freigegebenen Themen gestartet: Abläufe ' . implode( ', ', $drafts ) );
+		}
+
 		$index = ContentIndexWorkflow::maybe_start_scheduled( $this->plugin );
 		if ( null !== $index ) {
 			WP_CLI::log( 'Inhaltsindex für neue oder geänderte Inhalte gestartet: Ablauf ' . $index );

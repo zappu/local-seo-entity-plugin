@@ -11,6 +11,9 @@
 #            C4 täglicher Abgleich (nur mit --online, liest den letzten Ablauf)
 #   Stufe D: D1 Faktenprüfung Eltze/Dollbergen, sinngemäße Zitate und Überschneidung (KI-Attrappe, Quelle aus dem Zwischenspeicher)
 #            D2 Freigabe, Ausschluss off_topic, REST-Routen
+#   Stufe E: E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe): Blöcke, SEO-Angaben, Prüfbericht bestanden
+#            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
+#            E4 Style Mimic von Hand, REST-Routen
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -59,6 +62,9 @@ cleanup_b() {
 	wpc db query "DELETE m FROM ${PREFIX}lsec_keyword_metrics m JOIN ${PREFIX}lsec_keywords k ON k.id = m.keyword_id WHERE k.normalized LIKE '%lsectest%'"
 	wpc db query "DELETE FROM ${PREFIX}lsec_keywords WHERE normalized LIKE '%lsectest%'"
 	wpc db query "DELETE FROM ${PREFIX}lsec_imports WHERE source = 'csv:lsec_c'"
+	wpc db query "DELETE q FROM ${PREFIX}lsec_quality_reports q JOIN ${PREFIX}lsec_runs r ON r.id = q.run_id JOIN ${PREFIX}lsec_topics t ON t.id = r.subject_id AND r.subject_type = 'topic' WHERE t.title LIKE 'LSECTEST%'"
+	wpc db query "DELETE b FROM ${PREFIX}lsec_briefs b JOIN ${PREFIX}lsec_topics t ON t.id = b.topic_id WHERE t.title LIKE 'LSECTEST%'"
+	wpc db query "UPDATE ${PREFIX}lsec_runs r JOIN ${PREFIX}lsec_topics t ON t.id = r.subject_id AND r.subject_type = 'topic' SET r.status = 'cancelled' WHERE t.title LIKE 'LSECTEST%' AND r.status IN ('queued', 'running', 'waiting')"
 	wpc db query "DELETE tk FROM ${PREFIX}lsec_topic_keywords tk JOIN ${PREFIX}lsec_topics t ON t.id = tk.topic_id WHERE t.title LIKE 'LSECTEST%'"
 	wpc db query "DELETE te FROM ${PREFIX}lsec_topic_entities te JOIN ${PREFIX}lsec_topics t ON t.id = te.topic_id WHERE t.title LIKE 'LSECTEST%'"
 	wpc db query "DELETE FROM ${PREFIX}lsec_topics WHERE title LIKE 'LSECTEST%'"
@@ -470,6 +476,83 @@ check "off_topic bleibt nach dem Keyword-Abgleich" "off_topic: LSECTEST kein Bez
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "alle Routen 403" "Routen geschützt" "$OUT"
 contains "Route Themen" "/lsec/v1/topics" "$OUT"
+
+# ===========================================================================
+echo "E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe)"
+wpc lsec settings set draft_lengths '{"local_landing":[20,3000]}' >/dev/null
+wpc lsec settings set production_auto false >/dev/null
+TF=$(wpj lsec topics show "$T1" --format=json | json facts)
+claim() { echo "$TF" | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["entity"]===$argv[1] && $r["property"]===$argv[2]){ echo $r["id"]; break; } }' "$1" "$2"; }
+C_YEAR=$(claim 'LSECTEST Eltze' first_mentioned)
+C_RIVER=$(claim 'LSECTEST Eltze' river)
+draft_stub() {
+	local extra="$1"
+	cat <<JSON
+{"brief":{"working_title":"LSECTEST Pflasterreinigung in Eltze","search_intent":"lokal","audience":"Eigentümer","outline":[{"heading":"Pflaster in Eltze","level":2,"purpose":"Einstieg","entity_ids":[]}],"required_facts":[{"claim_id":$C_YEAR,"use":"Ortsbezug"},{"claim_id":$C_RIVER,"use":"Lage"}],"facts_to_avoid":["Preise"],"internal_link_targets":[],"elements":["faq"],"length":{"min_words":20,"max_words":3000},"cta":"Rufen Sie uns an."},
+"draft":{"title":"LSECTEST Pflasterreinigung in LSECTEST Eltze","content":[
+{"type":"paragraph","level":0,"text":"LSECTEST Eltze wurde im Jahr 1226 erstmals urkundlich erwähnt und liegt an der Fuhse. Viele Höfe haben altes <strong>Pflaster</strong>.$extra","ordered":false,"items":[],"head":[],"rows":[],"cite":"","summary":""},
+{"type":"heading","level":2,"text":"So reinigen wir Pflaster","ordered":false,"items":[],"head":[],"rows":[],"cite":"","summary":""},
+{"type":"list","level":0,"text":"","ordered":false,"items":["Moos entfernen","Fugen säubern"],"head":[],"rows":[],"cite":"","summary":""},
+{"type":"details","level":0,"text":"Ja, auch Naturstein.","ordered":false,"items":[],"head":[],"rows":[],"cite":"","summary":"Reinigen Sie auch Naturstein?"},
+{"type":"paragraph","level":0,"text":"Nehmen Sie Kontakt mit uns auf.","ordered":false,"items":[],"head":[],"rows":[],"cite":"","summary":""}],
+"excerpt":"Pflasterreinigung in LSECTEST Eltze.","used_entity_ids":[],"used_claim_ids":[$C_YEAR,$C_RIVER],"unsupported_statements":[],"internal_links":[],
+"seo":{"title":"LSECTEST Pflasterreinigung in Eltze – sauber","description":"Pflasterreinigung in LSECTEST Eltze: Moos und Schmutz schonend entfernen. Wir reinigen Pflaster, Einfahrten und Höfe in Eltze und Umgebung.","focus_keyword":"lsectest pflasterreinigung eltze","secondary_keywords":[],"slug":""},
+"taxonomy":{"category_ids":[],"new_category_suggestions":[],"tags":["LSECTEST"]}},
+"review":{"scores":{"intent":0.9,"local_relevance":0.9,"entity_integration":0.8,"value":0.8,"readability":0.9,"style_match":0.8},"blocking_issues":[],"warnings":[]}}
+JSON
+}
+draft_stub "" > "$TMP/e1.json"
+OUT=$(wpc lsec production start "$T1" --stub="$TMP/e1.json" --now 2>&1)
+contains "Prüfung bestanden" "Prüfung: bestanden" "$OUT"
+R1=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
+REP=$(wpj lsec production report "$R1" --format=json)
+check "Ablauf fertig" "succeeded" "$(printf '%s' "$REP" | json status)"
+P1=$(printf '%s' "$REP" | json post_id)
+check "Beitrag ist ein Entwurf" "draft" "$(wpc post get "$P1" --field=post_status)"
+contains "Inhalt als Blöcke" "<!-- wp:details -->" "$(wpc post get "$P1" --field=post_content)"
+check "Thema auf produced mit Beitrag" "produced $P1" "$(wpj lsec topics show "$T1" --format=json | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["status"]," ",$d["post_id"];')"
+check "Prüfbericht am Beitrag" "1" "$(wpc post meta get "$P1" _lsec_quality_passed)"
+if [ "$(wpc eval 'echo did_action("rank_math/loaded") ? 1 : 0;')" = "1" ]; then
+	check "Rank Math: Fokus-Keyword" "lsectest pflasterreinigung eltze" "$(wpc post meta get "$P1" rank_math_focus_keyword)"
+else
+	contains "ohne Rank Math: SEO-Vorschlag gespeichert" "lsectest pflasterreinigung eltze" "$(wpc post meta get "$P1" _lsec_seo_suggestion)"
+fi
+
+echo "E2 Entwurf mit unbelegter Zahl wird blocked"
+draft_stub " Wir reinigen seit 25 Jahren Pflaster." > "$TMP/e2.json"
+OUT=$(wpc lsec production start "$T1" --again --stub="$TMP/e2.json" --now 2>&1)
+contains "Zahl ohne Beleg erkannt" "UNSUPPORTED_NUMBER – ohne Beleg: 25" "$OUT"
+R2=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
+check "Ablauf blocked" "blocked" "$(wpj lsec production report "$R2" --format=json | json status)"
+P2=$(wpj lsec production report "$R2" --format=json | json post_id)
+check "Entwurf trotzdem angelegt, als nicht bestanden markiert" "draft 0" "$(echo "$(wpc post get "$P2" --field=post_status) $(wpc post meta get "$P2" _lsec_quality_passed)")"
+check "neuer Entwurf, alter bleibt" "1" "$( [ -n "$P2" ] && [ "$P2" != "$P1" ] && echo 1 || echo 0 )"
+
+echo "E3 Tageslimit des Cronjobs"
+wpc lsec topics decide "$T1" approved >/dev/null
+contains "ausgeschaltet: nichts gestartet" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+TODAY=$(wpc lsec production list | sed -n 's/^Heute gestartet: \([0-9]*\).*/\1/p')
+wpc lsec settings set drafts_per_day "$TODAY" >/dev/null
+wpc lsec settings set production_auto true >/dev/null
+contains "Tageslimit erreicht: nichts gestartet" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+wpc lsec settings set drafts_per_day "$((TODAY + 1))" >/dev/null
+OUT=$(wpc lsec production schedule)
+contains "unter dem Limit: Entwurf gestartet" "Gestartet: Abläufe" "$OUT"
+R3=$(printf '%s' "$OUT" | sed -n 's/^Gestartet: Abläufe \([0-9]*\).*/\1/p')
+[ -n "$R3" ] && wpc lsec runs cancel "$R3" >/dev/null 2>&1
+contains "danach Limit erreicht" "Kein Entwurf gestartet" "$(wpc lsec production schedule)"
+
+echo "E4 Style Mimic von Hand, REST-Routen"
+printf '{"profile":{"tone":"LSECTEST sachlich","address":"Sie","rules":["Keine Preise nennen"]}}' > "$TMP/style.json"
+contains "Profil gespeichert" "gespeichert und aktiv" "$(wpc lsec style set --file="$TMP/style.json" 2>&1)"
+contains "Profil aktiv mit Regel" "Regel: Keine Preise nennen" "$(wpc lsec style show)"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "alle Routen 403" "Routen geschützt" "$OUT"
+contains "Route Entwurf starten" "/lsec/v1/topics/1/produce" "$OUT"
+contains "Route Style Mimic" "/lsec/v1/style" "$OUT"
+STYLE_V=$(wpc lsec style list --format=json | json 0.version)
+wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
+[ -n "$STYLE_V" ] && wpc db query "UPDATE ${PREFIX}lsec_style_profiles SET is_active = 1 WHERE version = (SELECT v FROM (SELECT MAX(version) AS v FROM ${PREFIX}lsec_style_profiles) x)" >/dev/null
 cleanup_b >/dev/null 2>&1
 
 echo

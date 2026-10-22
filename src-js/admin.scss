@@ -635,3 +635,34 @@
 .lsec-facts .components-button.is-link {
 	margin-left: 8px;
 }
+
+.lsec-production {
+	border-left: 4px solid #2271b1;
+	padding: 4px 12px 8px;
+	margin-bottom: 16px;
+	background: #f6f7f7;
+}
+
+.lsec-issues {
+	margin-left: 1.2em;
+	list-style: disc;
+}
+
+.lsec-issues code {
+	font-size: 11px;
+}
+
+.lsec-form-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.lsec-checklist {
+	max-height: 260px;
+	overflow-y: auto;
+	border: 1px solid #dcdcde;
+	padding: 8px;
+	margin: 8px 0 12px;
+}
