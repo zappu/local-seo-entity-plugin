@@ -126,4 +126,40 @@ final class FactCheckerTest extends TestCase {
 		);
 		$this->assertSame( array( 'disputed', 'disputed', 'verified' ), array_column( $facts, 'status' ) );
 	}
+
+	public function test_several_rules_are_no_contradiction(): void {
+		$facts = FactChecker::contradictions(
+			array(
+				array(
+					'subject'  => 'Uetze',
+					'property' => 'regulation',
+					'value'    => 'mindestens einmal wöchentlich',
+					'status'   => 'verified',
+					'note'     => '',
+				),
+				array(
+					'subject'  => 'Uetze',
+					'property' => 'regulation',
+					'value'    => 'Reinigungspflicht auch für Parkbuchten',
+					'status'   => 'verified',
+					'note'     => '',
+				),
+				array(
+					'subject'  => 'Uetze',
+					'property' => 'landmark',
+					'value'    => 'Junkernhof von 1635',
+					'status'   => 'verified',
+					'note'     => '',
+				),
+				array(
+					'subject'  => 'Uetze',
+					'property' => 'landmark',
+					'value'    => 'Kübbungshaus von 1596',
+					'status'   => 'verified',
+					'note'     => '',
+				),
+			)
+		);
+		$this->assertSame( array( 'verified', 'verified', 'verified', 'verified' ), array_column( $facts, 'status' ) );
+	}
 }

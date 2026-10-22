@@ -38,7 +38,7 @@ final class SettingsSchema {
 				'ai_research_model'  => array(
 					'label' => 'Recherchemodell',
 					'type'  => 'text',
-					'help'  => 'Nur für die Recherche mit Websuche, beim selben Anbieter. Leer = Hauptmodell.',
+					'help'  => 'Nur für die Recherche mit Websuche, beim selben Anbieter. Leer = Hauptmodell. Empfehlung bei OpenRouter: perplexity/sonar-pro (Suchmaschine dann „standard“).',
 				),
 				'ai_web_max_results' => array(
 					'label' => 'Treffer der Websuche',

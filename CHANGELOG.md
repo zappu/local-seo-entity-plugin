@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.6.5 – 22.10.2026
+
+- **Widersprüche:** Nur Angaben mit einem Wert (Zahlen und Jahre wie Einwohner oder Ersterwähnung) können sich widersprechen. Zwei verschiedene Regeln oder Sehenswürdigkeiten zum selben Ort gelten nicht mehr als „unklar“.
+- **Spezifikation:** Ergebnis des Vergleichs eingetragen; empfohlen ist `perplexity/sonar-pro` als Recherchemodell bei OpenRouter (70 % geprüfte Tatsachen).
+
 ## 0.6.4 – 22.10.2026
 
 - **Faktenprüfung praxistauglich** (nach der Recherche mit Perplexity, bei der alle 11 richtig zitierten Tatsachen verworfen wurden):

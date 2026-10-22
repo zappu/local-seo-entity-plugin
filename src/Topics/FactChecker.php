@@ -336,7 +336,9 @@ final class FactChecker {
 
 	/**
 	 * Widersprüche: geprüfte Aussagen zum selben Gegenstand und derselben Eigenschaft mit verschiedenen Werten
-	 * werden beide „disputed“.
+	 * werden beide „disputed“. Nachtrag 22.10. (0.6.5): Nur Eigenschaften mit einem Wert zählen, also Zahlen und
+	 * Jahre (Einwohner, Ersterwähnung); Regeln oder Sehenswürdigkeiten gibt es mehrere, ohne dass sie sich
+	 * widersprechen (Lauf 120: zwei Regeln der Straßenreinigung).
 	 *
 	 * @param array<int, array<string, mixed>> $facts Tatsachen mit Prüfergebnis (subject, property, value, status, note).
 	 * @return array<int, array<string, mixed>>
@@ -344,7 +346,7 @@ final class FactChecker {
 	public static function contradictions( array $facts ): array {
 		$groups = array();
 		foreach ( $facts as $index => $fact ) {
-			if ( 'verified' !== $fact['status'] ) {
+			if ( 'verified' !== $fact['status'] || ! self::single_valued( (string) $fact['property'], (string) $fact['value'] ) ) {
 				continue;
 			}
 			$key = KeywordFilter::fold( (string) $fact['subject'] ) . '|' . (string) $fact['property'];
@@ -362,6 +364,20 @@ final class FactChecker {
 			}
 		}
 		return $facts;
+	}
+
+	/**
+	 * Hat die Eigenschaft nur einen Wert? Der Wert enthält eine Zahl, und die Eigenschaft ist keine Liste
+	 * (Regel, Sehenswürdigkeit, Veranstaltung, Merkmal …).
+	 *
+	 * @param string $property Eigenschaft (Englisch, z. B. population).
+	 * @param string $value    Wert.
+	 */
+	public static function single_valued( string $property, string $value ): bool {
+		if ( ! preg_match( '/\d/', $value ) ) {
+			return false;
+		}
+		return ! preg_match( '/(regulation|rule|landmark|sight|attraction|event|feature|service|example|village|district|part|member|scope|exception)/i', $property );
 	}
 
 	/**

@@ -567,6 +567,9 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
     | 119 | `openai/gpt-6-luna`, Exa | 0,098 USD | 5 | 11: 1 geprüft, 5 unklar, 5 verworfen | überwiegend die eigene Website |
 
     Die Verwerfungen in Lauf 118 lagen an der Prüfung (Nachtrag 0.6.4 in 8.4a). Die Entscheidung über den Standard folgt nach einem Lauf mit 0.6.4.
+  - **Ergebnis mit 0.6.4 (Lauf 120, `perplexity/sonar-pro`):** 0,235 USD, 20 Quellen, 10 Tatsachen: 7 geprüft, 2 unklar, 1 verworfen (70 %). Die zwei unklaren waren zwei verschiedene Regeln der Straßenreinigung, die als Widerspruch galten (behoben in 0.6.5, siehe 8.4a); verworfen wurde eine Tatsache aus einer PDF-Datei.
+  - **Entscheidung (22.10.):** Bei OpenRouter ist `perplexity/sonar-pro` das empfohlene Recherchemodell (`ai_research_model`), mit `ai_web_engine = standard`, weil Perplexity selbst sucht. Die Strukturierung bleibt beim Hauptmodell. Die Trefferzahl wirkt bei Perplexity nicht (20 Quellen bei 5 Treffern); `ai_web_max_results` bleibt 3 für die anderen Anbieter. Für OpenAI-Modelle ohne Perplexity ist `exa` die Alternative, liefert aber oft Seiten der eigenen Website. Im Plugin bleibt `ai_research_model` ohne Vorgabe, weil das Modell vom Anbieter abhängt; der Einrichtungshinweis nennt die Empfehlung.
+  - **Offen:** Text aus PDF-Quellen (z. B. Satzungen der Gemeinde) wird nicht gelesen; solche Tatsachen werden „nicht abrufbar“ verworfen. Kandidat für Ausbau 2.
 - **`off_topic`:** Der Keyword-Abgleich hebt diesen Grund nicht wieder auf. Er setzt nur einen anderen Grund davor, z. B. `competitor`.
 
 **`entity_extraction`**: je Beitrag `extract` (8.3) → `match_places` (Wikidata) → `save`. Wird vom Inhaltsindex für neue oder geänderte Beiträge angestoßen. Umgesetzt in Stufe B: Idempotenz-Schlüssel aus Beitrag und Inhalts-Hash, derselbe Inhalt wird also nie zweimal bezahlt erkannt; von Hand `wp lsec entities extract <id> --queue`.
@@ -822,6 +825,7 @@ Seiten, die keinen Abruf erlauben (z. B. Anmeldung, Skript-Inhalte), führen zu 
     - **Eigene Website:** Tatsachen mit einer Quelle auf dem Host der Website oder der Search-Console-Property werden nicht geprüft, sondern als „Quelle ist die eigene Website“ verworfen; diese Angaben stehen im Profil. Mit Exa kamen zwei von fünf Quellen von der eigenen Website.
     - **Auftrag an die KI:** `value` ist nur die Angabe selbst, kurz und in den Worten der Quelle. Keine Tatsachen über das eigene Unternehmen.
     - Unit-Test `FactCheckerRealTest` mit den Fällen aus Lauf 118; Prüfskript D1 mit einer Tatsache von der eigenen Website.
+  - **Nachtrag 22.10. (0.6.5), Widersprüche:** Nur Eigenschaften mit einem Wert können sich widersprechen: Der Wert enthält eine Zahl, und die Eigenschaft ist keine Liste (Regel, Sehenswürdigkeit, Veranstaltung, Merkmal, Ortsteil …). In Lauf 120 galten zwei verschiedene Regeln der Straßenreinigung als Widerspruch.
 - **Speicherung:** Aussagen landen in `lsec_claims` (`value` = JSON aus Wert und Hinweis), Belege mit Zitat und Qualität in `lsec_evidence`. Eine bessere Prüfung ersetzt eine schwächere; eine bestätigte Aussage bleibt.
 - **Entscheidung von Hand:** auf der Themen-Seite, über `POST lsec/v1/claims/<id>/decision` oder `wp lsec topics fact <id> confirmed|rejected`.
 - **`fact_check_ai`** ist nicht umgesetzt; der Vorschlag lautete „in MVP 1 ausgeschaltet“.
