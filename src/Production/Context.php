@@ -25,10 +25,11 @@ final class Context {
 		foreach ( (array) ( $company['locations'] ?? array() ) as $location ) {
 			$out .= sprintf( "Standort: %s, %s %s, %s, Telefon %s\n", $location['name'], $location['street'], $location['postal_code'], $location['city'], $location['phone'] );
 		}
+		// Nachtrag 23.10. (0.8.2): Ohne die Adresse der eigenen Website; der Leser ist schon dort (Entwurf 1360 endete
+		// mit „Weitere Informationen finden Sie unter <eigene Adresse>“).
 		foreach ( array(
-			'phone'   => 'Telefon',
-			'email'   => 'E-Mail',
-			'website' => 'Website',
+			'phone' => 'Telefon',
+			'email' => 'E-Mail',
 		) as $key => $label ) {
 			if ( '' !== (string) ( $company[ $key ] ?? '' ) ) {
 				$out .= $label . ': ' . $company[ $key ] . "\n";

@@ -46,7 +46,7 @@ final class BriefWriter {
 			. '- elements: passende Elemente aus ' . implode( ', ', self::ELEMENTS ) . ".\n"
 			. "- cta: Handlungsaufforderung mit den Kontaktwegen aus dem Profil.\n"
 			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst erklärt der Beitrag das Verfahren als Fachwissen: was es ist, wie und warum es wirkt, wann es sinnvoll ist und wann nicht. Keine Abschnitte mit allgemeinen Tipps zur Auswahl eines Anbieters. facts_to_avoid nennt dann ausdrücklich: feste Arbeitsschritte, Geräte und Zusagen des Unternehmens. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine und Umfang nach Absprache) ist erlaubt, ebenso Arbeitsschritte, die nach allgemeinem Fachwissen zwingend zu einer Leistung aus dem Profil gehören.\n"
-			. "- Servicegebiet und Standort höchstens einmal im Text und einmal in der Handlungsaufforderung.\n";
+			. "- Servicegebiet und Standort höchstens einmal im Text und einmal in der Handlungsaufforderung. Bei lokalen Seiten planen, wie Ortsteile, Nachbarorte und das Einzugsgebiet aus den geprüften Tatsachen in den Text kommen.\n";
 	}
 
 	/**

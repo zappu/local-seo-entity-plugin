@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.8.2 – 23.10.2026
+
+- **Eigene Seiten über ihren Text:** Entwürfe finden eigene Leistungsseiten auch, wenn mehrere Leistungen auf einer Seite stehen (z. B. „Leistungen“).
+- **Weniger Vorbehalte, mehr Ortsbezug:** „individuell“ und „nicht pauschal“ höchstens einmal; Ortsteile, Nachbarorte und Einzugsgebiet im Text.
+- **Keine eigene Web-Adresse im Text.**
+- **Ortsrecherche** bevorzugt Webseiten statt PDF-Dateien.
+
 ## 0.8.1 – 23.10.2026
 
 - **Einrichtungsassistent:** KI-Einstellungen kommen vor „Website lesen“ (das Lesen braucht ein Modell).

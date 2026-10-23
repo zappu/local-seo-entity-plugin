@@ -1037,38 +1037,54 @@ final class ContentProductionWorkflow {
 	 * Blogbeiträgen), deren Titel oder Pfad die meisten Wörter aus Titel und Keywords des Themas enthält
 	 * (ohne den Ort), je bis 3000 Zeichen.
 	 *
+	 * Nachtrag 23.10. (0.8.2): Viele Websites beschreiben ihre Leistungen gemeinsam auf einer Seite „Leistungen“
+	 * (Zahnarztpraxis: Prophylaxe, Parodontologie und Implantologie auf einer Seite). Finden sich so nicht zwei
+	 * Seiten, werden Seiten und Produkte auch nach ihrem Text gewählt; der Ausschnitt beginnt dann kurz vor der
+	 * ersten passenden Stelle. Lange zusammengesetzte Wörter zählen auch mit ihrem Ende („Zahnprophylaxe“ findet
+	 * „Prophylaxe“).
+	 *
 	 * @param array<string, mixed> $topic Thema.
 	 * @return array<int, array{post_id: int, title: string, url: string, text: string}>
 	 */
 	private static function own_pages( array $topic ): array {
-		$region = explode( ' ', KeywordFilter::fold( (string) $topic['region'] ) );
-		$words  = array();
-		$text   = (string) $topic['title'] . ' ' . implode( ' ', array_map( static fn( array $k ): string => (string) $k['keyword'], (array) $topic['keywords'] ) );
-		foreach ( explode( ' ', KeywordFilter::fold( $text ) ) as $word ) {
-			if ( mb_strlen( $word ) >= 5 && ! in_array( $word, $region, true ) ) {
-				$words[ mb_substr( $word, 0, 7 ) ] = true;
-			}
-		}
+		$words  = self::topic_words( $topic );
 		$scored = array();
+		$rest   = array();
 		foreach ( ContentIndex::entries( 500 ) as $entry ) {
 			if ( (int) $entry['post_id'] <= 0 ) {
 				continue;
 			}
+			$page  = in_array( (string) $entry['kind'], array( 'page', 'product' ), true ) ? 1 : 0;
 			$hay   = ' ' . KeywordFilter::fold( $entry['title'] . ' ' . str_replace( array( '-', '/' ), ' ', (string) wp_parse_url( $entry['url'], PHP_URL_PATH ) ) );
-			$score = 0;
-			foreach ( array_keys( $words ) as $word ) {
-				if ( str_contains( $hay, ' ' . $word ) ) {
-					++$score;
-				}
-			}
+			$score = self::word_score( $hay, $words, false );
 			if ( $score > 0 ) {
 				$scored[] = $entry + array(
 					'score' => $score,
-					'page'  => in_array( (string) $entry['kind'], array( 'page', 'product' ), true ) ? 1 : 0,
+					'page'  => $page,
+					'body'  => 2,
 				);
+			} elseif ( 1 === $page ) {
+				$rest[] = $entry;
 			}
 		}
-		usort( $scored, static fn( array $a, array $b ): int => array( $b['page'], $b['score'] ) <=> array( $a['page'], $a['score'] ) );
+		$pages = count( array_filter( $scored, static fn( array $e ): bool => 1 === $e['page'] ) );
+		if ( $pages < 2 && array() !== $words ) {
+			foreach ( array_slice( $rest, 0, 60 ) as $entry ) {
+				$post = get_post( (int) $entry['post_id'] );
+				if ( ! $post instanceof \WP_Post ) {
+					continue;
+				}
+				$score = self::word_score( ' ' . KeywordFilter::fold( ContentReader::read( $post )['text'] ), $words, true );
+				if ( $score >= min( 2, count( $words ) ) ) {
+					$scored[] = $entry + array(
+						'score' => $score,
+						'page'  => 1,
+						'body'  => 1,
+					);
+				}
+			}
+		}
+		usort( $scored, static fn( array $a, array $b ): int => array( $b['page'], $b['body'], $b['score'] ) <=> array( $a['page'], $a['body'], $a['score'] ) );
 		$out = array();
 		foreach ( array_slice( $scored, 0, 2 ) as $entry ) {
 			$post = get_post( (int) $entry['post_id'] );
@@ -1083,10 +1099,78 @@ final class ContentProductionWorkflow {
 				'post_id' => (int) $entry['post_id'],
 				'title'   => (string) $entry['title'],
 				'url'     => (string) $entry['url'],
-				'text'    => mb_substr( $body, 0, 3000 ),
+				'text'    => self::excerpt_around( $body, $words, 3000 ),
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Suchwörter eines Themas: Wörter ab fünf Buchstaben aus Titel und Keywords ohne den Ort, gekürzt auf sieben
+	 * Buchstaben; bei Wörtern ab zehn Buchstaben zusätzlich die letzten acht (Wortende zusammengesetzter Wörter).
+	 *
+	 * @param array<string, mixed> $topic Thema.
+	 * @return array<int, string[]> Je Wort die Varianten.
+	 */
+	public static function topic_words( array $topic ): array {
+		$region = explode( ' ', KeywordFilter::fold( (string) ( $topic['region'] ?? '' ) ) );
+		$text   = (string) ( $topic['title'] ?? '' ) . ' ' . implode( ' ', array_map( static fn( array $k ): string => (string) $k['keyword'], (array) ( $topic['keywords'] ?? array() ) ) );
+		$words  = array();
+		foreach ( explode( ' ', (string) preg_replace( '/[^a-z0-9 ]+/', ' ', KeywordFilter::fold( $text ) ) ) as $word ) {
+			if ( mb_strlen( $word ) < 5 || in_array( $word, $region, true ) ) {
+				continue;
+			}
+			$variants = array( mb_substr( $word, 0, 7 ) );
+			if ( mb_strlen( $word ) >= 10 ) {
+				$variants[] = mb_substr( $word, -8 );
+			}
+			$words[ $variants[0] ] = $variants;
+		}
+		return array_values( $words );
+	}
+
+	/**
+	 * Wie viele Suchwörter kommen vor? Wortanfang, mit $tails auch Wortende zusammengesetzter Wörter (nur im Text,
+	 * nicht in Titeln: „…reinigung“ träfe dort jede Reinigungsseite).
+	 *
+	 * @param string               $hay   Gefalteter Text mit führendem Leerzeichen.
+	 * @param array<int, string[]> $words Suchwörter mit Varianten.
+	 * @param bool                 $tails Wortenden mitzählen.
+	 */
+	public static function word_score( string $hay, array $words, bool $tails ): int {
+		$score = 0;
+		foreach ( $words as $variants ) {
+			if ( str_contains( $hay, ' ' . $variants[0] ) || ( $tails && isset( $variants[1] ) && str_contains( $hay, $variants[1] ) ) ) {
+				++$score;
+			}
+		}
+		return $score;
+	}
+
+	/**
+	 * Ausschnitt ab kurz vor der ersten passenden Stelle.
+	 *
+	 * @param string               $body   Text.
+	 * @param array<int, string[]> $words  Suchwörter.
+	 * @param int                  $length Länge.
+	 */
+	public static function excerpt_around( string $body, array $words, int $length ): string {
+		if ( mb_strlen( $body ) <= $length ) {
+			return $body;
+		}
+		$folded = KeywordFilter::fold( $body );
+		$first  = null;
+		foreach ( $words as $variants ) {
+			foreach ( $variants as $variant ) {
+				$pos = mb_strpos( $folded, $variant );
+				if ( false !== $pos && ( null === $first || $pos < $first ) ) {
+					$first = $pos;
+				}
+			}
+		}
+		// Das Falten verlängert Umlaute (ä → ae); die Stelle liegt im Original höchstens etwas weiter vorn.
+		$start = null === $first ? 0 : max( 0, (int) ( $first * mb_strlen( $body ) / max( 1, mb_strlen( $folded ) ) ) - 300 );
+		return mb_substr( $body, $start, $length );
 	}
 
 	/**

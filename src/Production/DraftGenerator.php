@@ -61,7 +61,9 @@ final class DraftGenerator {
 			. "- Keine Behauptungen über Erfahrung, Ortskenntnis oder Kunden des Unternehmens („kennen die Verhältnisse“, „zu unseren Kunden gehören …“), wenn sie nicht belegt sind. Dass das Unternehmen eine Leistung für eine Zielgruppe anbietet, ist belegt, wenn die Leistung im Profil steht.\n"
 			. "- Keine Aussagen darüber, was am Ort häufig, typisch oder üblich ist („In diesem Ort sind das häufig …“), außer aus einer geprüften Tatsache.\n"
 			. "- Keywords natürlich einbinden: Haupt-Keyword im Titel, in der Einleitung und in einer Zwischenüberschrift; keine erzwungenen Wortfolgen aus Suchanfragen.\n"
-			. "- Servicegebiet und Standort höchstens einmal im Text, Kontaktdaten nur am Schluss.\n"
+			. "- Servicegebiet und Standort höchstens einmal im Text, Kontaktdaten nur am Schluss. Keine Adresse der eigenen Website im Text (der Leser ist schon dort); Verweise nur als interne Links.\n"
+			. "- Bei lokalen Seiten den Ort mit dem Alltag der Leser verbinden: Ortsteile und Nachbarorte aus den geprüften Tatsachen, aus denen Leser kommen, und das Servicegebiet als Einzugsgebiet. Lage und Verkehr nur, wenn sie für Leser etwas bedeuten (Anfahrt, Erreichbarkeit).\n"
+			. "- Vorbehalte wie „individuell“, „nicht pauschal“ oder „erst nach einer Untersuchung“ höchstens einmal im Text und einmal in den FAQ; sonst konkret erklären, wovon etwas abhängt.\n"
 			. "- excerpt: ein bis zwei Sätze.\n"
 			. "- seo: title 30 bis 60 Zeichen, description 120 bis 160 Zeichen, focus_keyword = Haupt-Keyword, secondary_keywords, slug (Kleinbuchstaben, Bindestriche).\n"
 			. "- taxonomy: category_ids nur aus der Liste der Kategorien; new_category_suggestions nur, wenn keine passt; tags bis fünf.\n";
