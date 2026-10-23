@@ -393,7 +393,7 @@ final class SetupWizard {
 		$messages = array();
 		foreach ( self::RECOMMENDED as $key => $value ) {
 			$current = Settings::get( $key );
-			$default = Settings::DEFAULTS[ $key ] ?? null;
+			$default = Settings::DEFAULTS[ $key ];
 			if ( (string) $current === (string) $value ) {
 				continue;
 			}
