@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.7.10 – 23.10.2026
+
+- **Lokale Tatsachen:** Die Regel „mindestens zwei geprüfte Tatsachen zum Ort“ blockiert nur noch lokale Seiten (`local_landing`); bei Ratgebern und Beiträgen mit Ort ist sie eine Warnung. Die Meldung nennt, wie viele Tatsachen vorhanden waren.
+- **Bericht:** zeigt Format, Ort und die geprüften Tatsachen im Kontext und im Text.
+- **KI-Bewertung:** Der Hinweis, dass Preis und Dauer vom Einzelfall abhängen, ist kein Mangel mehr.
+
 ## 0.7.9 – 23.10.2026
 
 - **Modelle je Aufgabe:** neue Einstellungen „Schreibmodell“ (`ai_writing_model`, nur für den Beitragstext) und „Prüfmodell“ (`ai_review_model`, nur für die KI-Bewertung); leer = Hauptmodell. Für einen einzelnen Entwurf: `wp lsec production start <thema> --writer=<modell>`.

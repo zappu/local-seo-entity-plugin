@@ -14,7 +14,7 @@
 #   Stufe E: E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe): Blöcke, SEO-Angaben, Prüfbericht bestanden
 #            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
 #            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
-#            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9)
+#            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9), Bericht mit Tatsachen (0.7.10)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -580,6 +580,7 @@ contains "neu geprüft über die Nummer des Entwurfs" "Entwurf $P2 (Ablauf $R2) 
 contains "bisheriges Ergebnis angezeigt" "Bisher: blockiert" "$OUT"
 contains "Regelprüfung findet die Zahl wieder" "UNSUPPORTED_NUMBER – ohne Beleg: 25" "$OUT"
 contains "bestandener Entwurf bleibt bestanden" "Prüfung: bestanden" "$(wpc lsec production review "$P1" --stub="$TMP/e1.json" 2>&1)"
+contains "Bericht nennt Format und Tatsachen (0.7.10)" "Format local_landing · Ort LSECTEST Eltze · Geprüfte Tatsachen:" "$(wpc lsec production report "$P1")"
 check "gespeichertes Prüfergebnis unverändert" "0 blocked" "$(wpc post meta get "$P2" _lsec_quality_passed) $(wpj lsec production report "$R2" --format=json | json status)"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)

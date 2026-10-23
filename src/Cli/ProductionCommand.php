@@ -145,6 +145,8 @@ final class ProductionCommand {
 		WP_CLI::log( 'Eigene Seiten als Angaben des Betriebs: ' . ( array() === $data['own_pages'] ? 'keine passende gefunden' : implode( ', ', $data['own_pages'] ) ) );
 		WP_CLI::log( 'Unternehmensbeschreibung im Profil: ' . ( $data['company_description'] ? 'ja' : 'nein' ) );
 		WP_CLI::log( array() === $data['services'] ? 'Leistungsbeschreibungen im Profil: keine – Abläufe des Betriebs darf der Entwurf nicht beschreiben (Seite „Unternehmen“, Leistungen, Kurzbeschreibung).' : 'Leistungsbeschreibungen im Profil: ' . implode( ', ', $data['services'] ) );
+		$facts = (array) $data['facts'];
+		WP_CLI::log( sprintf( 'Format %s · Ort %s · Geprüfte Tatsachen: %d im Kontext (%d zu Orten), im Text verwendet %d (%d zu Orten)', '' !== $facts['format'] ? $facts['format'] : '–', '' !== $facts['region'] ? $facts['region'] : '–', $facts['context'], $facts['local'], $facts['used'], $facts['used_local'] ) );
 		if ( (int) $data['unpriced'] > 0 ) {
 			WP_CLI::warning( sprintf( '%d KI-Aufrufe ohne Kostenangabe; die Summe ist unvollständig. Einzeln: wp lsec production report %d --format=json', $data['unpriced'], $id ) );
 		}

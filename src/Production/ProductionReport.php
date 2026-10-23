@@ -39,6 +39,10 @@ final class ProductionReport {
 		$repo    = new AiCallRepository();
 		$calls   = $repo->for_run( $id );
 		$post_id = (int) ( $outputs['create_post']['post_id'] ?? 0 );
+		$facts   = (array) ( $outputs['gather_context']['claims'] ?? array() );
+		$local   = static fn( array $c ): bool => in_array( (string) ( $c['entity_type'] ?? '' ), array( 'place', 'service_area' ), true );
+		$used    = array_map( 'intval', (array) ( $outputs['enrich']['draft']['used_claim_ids'] ?? array() ) );
+		$in_text = array_filter( $facts, static fn( array $c ): bool => in_array( (int) $c['id'], $used, true ) );
 		return array(
 			'run'                 => $id,
 			'status'              => (string) $run['status'],
@@ -51,6 +55,14 @@ final class ProductionReport {
 			'company_description' => '' !== (string) ( $outputs['gather_context']['company']['description'] ?? '' ),
 			'own_pages'           => array_values( array_map( static fn( array $p ): string => (string) $p['title'], (array) ( $outputs['gather_context']['own_pages'] ?? array() ) ) ),
 			'services'            => array_values( array_map( static fn( array $d ): string => (string) $d['name'], (array) ( $outputs['gather_context']['company']['service_details'] ?? array() ) ) ),
+			'facts'               => array(
+				'context'    => count( $facts ),
+				'local'      => count( array_filter( $facts, $local ) ),
+				'used'       => count( $in_text ),
+				'used_local' => count( array_filter( $in_text, $local ) ),
+				'region'     => (string) ( $outputs['gather_context']['topic']['region'] ?? '' ),
+				'format'     => (string) ( $outputs['gather_context']['topic']['format'] ?? '' ),
+			),
 			'unpriced'            => count( array_filter( $calls, static fn( array $c ): bool => null === $c['cost_estimate'] && 'ok' === (string) $c['status'] ) ),
 			'post_id'             => $post_id,
 			'edit_url'            => $post_id > 0 ? (string) get_edit_post_link( $post_id, 'raw' ) : '',

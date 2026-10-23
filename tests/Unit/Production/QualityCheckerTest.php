@@ -216,6 +216,14 @@ final class QualityCheckerTest extends TestCase {
 	public function test_local_rules(): void {
 		$one = QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner.', array( 10 ) ), self::context(), self::site() );
 		$this->assertContains( 'LOCAL_FACTS', self::codes( $one ) );
+		$this->assertStringContainsString( '1 lokale Tatsachen verwendet', (string) json_encode( $one['blocking'], JSON_UNESCAPED_UNICODE ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
+
+		// Ratgeber mit Ort: Warnung statt Blockade (0.7.10, Spezifikation 10.1 „lokale Beiträge“).
+		$guide                    = self::context();
+		$guide['topic']['format'] = 'guide';
+		$warn                     = QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner.', array( 10 ) ), $guide, self::site() );
+		$this->assertNotContains( 'LOCAL_FACTS', self::codes( $warn ) );
+		$this->assertContains( 'LOCAL_FACTS', array_column( $warn['warnings'], 'code' ) );
 
 		$site                = self::site();
 		$site['local_texts'] = array( 'Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Rufen Sie uns an: 05173 92 41 30. Unser Büro: Westerkampstr. 15, 31311 Uetze. Wir reinigen in 3 Schritten Pflaster.' );
