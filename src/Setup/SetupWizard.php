@@ -155,8 +155,8 @@ final class SetupWizard {
 	public static function cron_paths(): array {
 		$wordpress = untrailingslashit( ABSPATH );
 		return array(
-			'site'      => $wordpress,
-			'phar'      => dirname( $wordpress ) . '/private/wp-cli.phar',
+			'site' => $wordpress,
+			'phar' => dirname( $wordpress ) . '/private/wp-cli.phar',
 		);
 	}
 
