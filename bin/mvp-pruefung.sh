@@ -585,7 +585,7 @@ contains "Bericht nennt Format und Tatsachen (0.7.10)" "Format local_landing · 
 check "gespeichertes Prüfergebnis unverändert" "0 blocked" "$(wpc post meta get "$P2" _lsec_quality_passed) $(wpj lsec production report "$R2" --format=json | json status)"
 
 echo "E8 Automatische Nachbesserung (0.7.13)"
-contains "Ortsrecherche übersprungen, Ortsfakten vorhanden" "Ortsfakten vorhanden" "$(wpc lsec production report "$P1")"
+contains "Ortsrecherche übersprungen, Tatsachen zum Ort vorhanden" "Tatsachen zu LSECTEST Eltze vorhanden" "$(wpc lsec production report "$P1")"
 contains "ohne Nachbesserung im Prüfskript blockiert" "Nachbesserung: Prüfskript ohne Nachbesserung" "$(wpc lsec production report "$R2")"
 php -r '$d=json_decode(file_get_contents($argv[1]),true); $d["revision"]=["changes"=>[["find"=>"Wir reinigen seit 25 Jahren Pflaster.","replace"=>""]]]; file_put_contents($argv[2], json_encode($d, JSON_UNESCAPED_UNICODE));' "$TMP/e2.json" "$TMP/e8.json"
 wpc lsec topics decide "$T1" approved >/dev/null
@@ -620,7 +620,7 @@ else
 	contains "Ortsfakten recherchiert und geprüft" "Ortsfakten recherchiert: 2 geprüft" "$OUT"
 	printf '%s\n' "$OUT" | grep -q "Ortsfakten recherchiert" || printf '%s\n' "$OUT" | sed 's/^/    | /'
 	OUT=$(wpc lsec production start "$T9" --again --allow-duplicate --stub="$TMP/e9.json" --now 2>&1)
-	contains "zweiter Entwurf nutzt die gespeicherten Ortsfakten" "Ortsrecherche: 2 Ortsfakten vorhanden" "$OUT"
+	contains "zweiter Entwurf nutzt die gespeicherten Ortsfakten" "Ortsrecherche: 2 Tatsachen zu LSECTEST Neudorf vorhanden" "$OUT"
 fi
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)

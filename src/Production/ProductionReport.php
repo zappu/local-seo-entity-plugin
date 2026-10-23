@@ -41,7 +41,8 @@ final class ProductionReport {
 		$calls   = $repo->for_run( $id );
 		$post_id = (int) ( $outputs['create_post']['post_id'] ?? 0 );
 		$facts   = array_merge( (array) ( $outputs['gather_context']['claims'] ?? array() ), (array) ( $outputs['place_facts']['claims'] ?? array() ) );
-		$local   = static fn( array $c ): bool => in_array( (string) ( $c['entity_type'] ?? '' ), array( 'place', 'service_area' ), true );
+		$region  = (string) ( $outputs['gather_context']['topic']['region'] ?? '' );
+		$local   = static fn( array $c ): bool => '' !== $region && \Lsec\Entities\PlaceName::about( $c, $region );
 		$draft   = $revised ? (array) $outputs['revise']['draft'] : (array) ( $outputs['enrich']['draft'] ?? array() );
 		$used    = array_map( 'intval', (array) ( $draft['used_claim_ids'] ?? array() ) );
 		$in_text = array_filter( $facts, static fn( array $c ): bool => in_array( (int) $c['id'], $used, true ) );

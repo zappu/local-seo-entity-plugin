@@ -39,7 +39,8 @@ final class PlaceFacts {
 		return sprintf(
 			"Recherchiere überprüfbare Tatsachen über den Ort %s%s. Sie sollen auf einer lokalen Seite zum Thema „%s“ stehen.\n"
 			. "Gesucht sind zum Beispiel: Lage (Landkreis, Region, Nachbarorte, Flüsse), Ortsteile, Einwohnerzahl mit Stand, erste urkundliche Erwähnung, Verkehrsanbindung (Autobahn, Bahnhof), Gewerbegebiete, bekannte Plätze, Straßen oder Gebäude, Klima oder Boden, soweit für das Thema nützlich.\n"
-			. 'Nenne zu jeder Tatsache die Quelle (Adresse) und einen wörtlichen Satz aus der Quelle. Bevorzuge amtliche Seiten des Ortes, Wikipedia und Landesämter. Keine Bewertungen, keine Unternehmen.',
+			. "Ist der Ort klein oder ein Ortsteil, gehören auch Tatsachen dazu, in denen der Ort genannt wird, etwa zu welcher Gemeinde er gehört und was ihn dort auszeichnet.\n"
+			. 'Nenne zu jeder Tatsache die Quelle (Adresse) und einen wörtlichen Satz aus der Quelle, der den Ort nennt. Bevorzuge amtliche Seiten des Ortes, Wikipedia und Landesämter. Keine Bewertungen, keine Unternehmen.',
 			$place,
 			'' !== $area ? ' (Servicegebiet: ' . $area . ')' : '',
 			$topic

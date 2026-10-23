@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.7.14 – 23.10.2026
+
+- **Ortsfakten:** Es zählen nur Tatsachen zum Ort des Themas (bisher alle Orte, deshalb startete die Recherche für Lehrte nicht).
+- **Kleine Orte:** Findet die Ortsrecherche weniger als zwei Tatsachen, blockiert die Regel nicht mehr, sondern warnt.
+- **Mehr Fachwissen, weniger Füllstoff:** Briefing und Text erklären Fachbegriffe und Verfahren des Themas gründlich; keine Abschnitte mit allgemeinen Tipps zur Anbieterwahl.
+
 ## 0.7.13 – 23.10.2026
 
 - **Automatische Nachbesserung:** Scheitert ein Entwurf nur an einzelnen unbelegten Sätzen oder Zahlen, ersetzt das Schreibmodell genau diese Stellen, und der Entwurf wird einmal neu geprüft (Einstellung „Beanstandete Stellen automatisch nachbessern“).

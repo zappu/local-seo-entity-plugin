@@ -105,9 +105,11 @@ final class QualityChecker {
 		$region = trim( (string) $context['topic']['region'] );
 		if ( '' !== $region ) {
 			$named     = self::contains( $all, $region );
-			$is_local  = static fn( array $c ): bool => in_array( (string) ( $c['entity_type'] ?? '' ), array( 'place', 'service_area' ), true ) && in_array( (string) $c['status'], array( 'verified', 'confirmed' ), true );
+			$is_local  = static fn( array $c ): bool => \Lsec\Entities\PlaceName::about( $c, $region ) && in_array( (string) $c['status'], array( 'verified', 'confirmed' ), true );
 			$local     = array_filter( $used, static fn( int $id ): bool => isset( $claims[ $id ] ) && $is_local( $claims[ $id ] ) );
 			$available = count( array_filter( $claims, $is_local ) );
+			// Nachtrag 23.10. (0.7.14): Zu kleinen Orten findet die Ortsrecherche oft weniger als zwei Tatsachen
+			// (Hinweis von Thomas). Wurde recherchiert, blockiert die Regel deshalb nicht.
 			// Nachtrag 23.10. (0.7.10): Spezifikation 10.1 verlangt lokale Tatsachen für lokale Beiträge
 			// (local_landing). Ratgeber und Beiträge mit Ort (Abläufe 129 und 130) wurden bisher ebenfalls
 			// blockiert; dort ist es eine Warnung. Die Einzelheiten nennen, wie viele Tatsachen vorhanden waren.
@@ -115,8 +117,8 @@ final class QualityChecker {
 				'LOCAL_FACTS',
 				'Ort genannt und mit mindestens zwei geprüften lokalen Tatsachen',
 				$named && count( $local ) >= 2,
-				'local_landing' === (string) ( $context['topic']['format'] ?? '' ),
-				sprintf( 'Ort %s, %d lokale Tatsachen verwendet, %s', $named ? 'genannt' : 'fehlt', count( $local ), 0 === $available ? 'keine geprüften Tatsachen zu Orten vorhanden – Ort recherchieren (wp lsec topics research)' : $available . ' vorhanden' )
+				'local_landing' === (string) ( $context['topic']['format'] ?? '' ) && ! ( $available < 2 && ! empty( $context['place_searched'] ) ),
+				sprintf( 'Ort %s, %d Tatsachen zum Ort verwendet, %s', $named ? 'genannt' : 'fehlt', count( $local ), ( 0 === $available ? 'keine geprüften Tatsachen zu ' . $region . ' vorhanden' : $available . ' vorhanden' ) . ( $available < 2 && ! empty( $context['place_searched'] ) ? '; die Ortsrecherche hat nicht mehr gefunden (kleiner Ort), deshalb nur Warnung' : '' ) )
 			);
 			$max = 0.0;
 			foreach ( (array) ( $site['local_texts'] ?? array() ) as $other ) {

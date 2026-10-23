@@ -68,6 +68,25 @@ final class PlaceName {
 	}
 
 	/**
+	 * Gehört eine geprüfte Tatsache zu diesem Ort? Ja, wenn ihre Entität ein Ort dieses Namens ist oder das
+	 * Zitat den Ort nennt („Eltze ist ein Ortsteil der Gemeinde Uetze“). Nachtrag 23.10. (0.7.14): Für Lehrte
+	 * zählten vier Tatsachen zu anderen Orten als „Ortsfakten vorhanden“, die Ortsrecherche startete nicht.
+	 *
+	 * @param array<string, mixed> $claim  Tatsache mit entity, entity_type, quote.
+	 * @param string               $region Ort des Themas.
+	 */
+	public static function about( array $claim, string $region ): bool {
+		if ( ! in_array( (string) ( $claim['entity_type'] ?? '' ), array( 'place', 'service_area' ), true ) ) {
+			return false;
+		}
+		if ( self::same( $region, (string) ( $claim['entity'] ?? '' ) ) ) {
+			return true;
+		}
+		$key = self::key( $region );
+		return '' !== $key && str_contains( ' ' . implode( ' ', self::words( KeywordNormalizer::fold( (string) preg_replace( '/[^\p{L}\p{N}]+/u', ' ', (string) ( $claim['quote'] ?? '' ) ) ) ) ) . ' ', ' ' . $key . ' ' );
+	}
+
+	/**
 	 * Derselbe Ort?
 	 *
 	 * @param string $a Ortsname.

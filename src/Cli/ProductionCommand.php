@@ -146,7 +146,7 @@ final class ProductionCommand {
 		WP_CLI::log( 'Unternehmensbeschreibung im Profil: ' . ( $data['company_description'] ? 'ja' : 'nein' ) );
 		WP_CLI::log( array() === $data['services'] ? 'Leistungsbeschreibungen im Profil: keine – Abläufe des Betriebs darf der Entwurf nicht beschreiben (Seite „Unternehmen“, Leistungen, Kurzbeschreibung).' : 'Leistungsbeschreibungen im Profil: ' . implode( ', ', $data['services'] ) );
 		$facts = (array) $data['facts'];
-		WP_CLI::log( sprintf( 'Format %s · Ort %s · Geprüfte Tatsachen: %d im Kontext (%d zu Orten), im Text verwendet %d (%d zu Orten)', '' !== $facts['format'] ? $facts['format'] : '–', '' !== $facts['region'] ? $facts['region'] : '–', $facts['context'], $facts['local'], $facts['used'], $facts['used_local'] ) );
+		WP_CLI::log( sprintf( 'Format %s · Ort %s · Geprüfte Tatsachen: %d im Kontext (%d zum Ort), im Text verwendet %d (%d zum Ort)', '' !== $facts['format'] ? $facts['format'] : '–', '' !== $facts['region'] ? $facts['region'] : '–', $facts['context'], $facts['local'], $facts['used'], $facts['used_local'] ) );
 		$place = (array) $data['place_research'];
 		if ( $place['researched'] ) {
 			WP_CLI::log( sprintf( 'Ortsfakten recherchiert: %d geprüft, %d strittig, %d verworfen', (int) ( $place['counts']['verified'] ?? 0 ), (int) ( $place['counts']['disputed'] ?? 0 ), (int) ( $place['counts']['rejected'] ?? 0 ) ) );
@@ -242,10 +242,11 @@ final class ProductionCommand {
 			$stub = is_array( $decoded['review'] ?? null ) ? $decoded['review'] : array();
 		}
 		try {
-			$ctx           = $outputs['gather_context'];
-			$ctx['claims'] = array_merge( (array) $ctx['claims'], (array) ( $outputs['place_facts']['claims'] ?? array() ) );
-			$draft         = ! empty( $outputs['revise']['revised'] ) ? (array) $outputs['revise']['draft'] : (array) $outputs['enrich']['draft'];
-			$result        = ContentProductionWorkflow::assess( $this->plugin, $ctx, $draft, $input, $stub, null );
+			$ctx                   = $outputs['gather_context'];
+			$ctx['claims']         = array_merge( (array) $ctx['claims'], (array) ( $outputs['place_facts']['claims'] ?? array() ) );
+			$ctx['place_searched'] = ! empty( $outputs['place_facts']['researched'] ) || str_starts_with( (string) ( $outputs['place_facts']['reason'] ?? '' ), 'zuletzt recherchiert' );
+			$draft                 = ! empty( $outputs['revise']['revised'] ) ? (array) $outputs['revise']['draft'] : (array) $outputs['enrich']['draft'];
+			$result                = ContentProductionWorkflow::assess( $this->plugin, $ctx, $draft, $input, $stub, null );
 		} catch ( \Throwable $e ) {
 			WP_CLI::error( $this->plugin->logger->redact( $e->getMessage() ) );
 		}

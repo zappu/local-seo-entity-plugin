@@ -397,14 +397,14 @@ final class ContentProductionWorkflow {
 		$ctx    = $context->output_of( 'gather_context' );
 		$topic  = (array) $ctx['topic'];
 		$region = trim( (string) $topic['region'] );
-		$local  = count( array_filter( (array) $ctx['claims'], static fn( array $c ): bool => in_array( (string) $c['entity_type'], array( 'place', 'service_area' ), true ) ) );
+		$local  = count( array_filter( (array) $ctx['claims'], static fn( array $c ): bool => PlaceName::about( $c, $region ) ) );
 		$state  = $context->state;
 		if ( array() === $state ) {
 			$skip = null;
 			if ( 'local_landing' !== (string) $topic['format'] || '' === $region ) {
 				$skip = 'keine lokale Seite';
 			} elseif ( $local >= 2 ) {
-				$skip = $local . ' Ortsfakten vorhanden';
+				$skip = $local . ' Tatsachen zu ' . $region . ' vorhanden';
 			} elseif ( ! Settings::get( 'place_research' ) ) {
 				$skip = 'ausgeschaltet (Einstellung place_research)';
 			} elseif ( isset( $context->input['stub'] ) && array() === self::stub( $context, 'place' ) ) {
@@ -526,7 +526,7 @@ final class ContentProductionWorkflow {
 		update_option( 'lsec_place_research', $done, false );
 
 		$ids    = array_values( array_unique( array_merge( array( $place_id ), array_keys( $places ) ) ) );
-		$usable = array_values( array_filter( $claims->usable( array(), $ids, 20 ), static fn( array $c ): bool => in_array( (string) $c['entity_type'], array( 'place', 'service_area' ), true ) ) );
+		$usable = array_values( array_filter( $claims->usable( array(), $ids, 20 ), static fn( array $c ): bool => PlaceName::about( $c, $region ) ) );
 		return StepResult::done(
 			array(
 				'researched' => true,
@@ -547,7 +547,10 @@ final class ContentProductionWorkflow {
 	 */
 	private static function ctx( RunContext $context ): array {
 		$ctx   = $context->output_of( 'gather_context' );
-		$known = array_map( static fn( array $c ): int => (int) $c['id'], (array) ( $ctx['claims'] ?? array() ) );
+		$place = $context->output_of( 'place_facts' );
+		// Recherchiert (jetzt oder in den letzten 30 Tagen): zu wenige Tatsachen sind dann nur eine Warnung.
+		$ctx['place_searched'] = ! empty( $place['researched'] ) || str_starts_with( (string) ( $place['reason'] ?? '' ), 'zuletzt recherchiert' );
+		$known                 = array_map( static fn( array $c ): int => (int) $c['id'], (array) ( $ctx['claims'] ?? array() ) );
 		foreach ( (array) ( $context->output_of( 'place_facts' )['claims'] ?? array() ) as $claim ) {
 			if ( ! in_array( (int) $claim['id'], $known, true ) ) {
 				$ctx['claims'][] = $claim;

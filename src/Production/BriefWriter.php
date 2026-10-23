@@ -41,10 +41,11 @@ final class BriefWriter {
 			. "- outline: Überschriften (level 2 oder 3) mit Zweck; entity_ids aus der Liste der Entitäten.\n"
 			. "- required_facts: nur Tatsachen aus der Liste (claim_id) und wofür sie im Text stehen. Bei einem Beitrag mit Ort mindestens zwei Tatsachen zu diesem Ort, wenn vorhanden.\n"
 			. "- facts_to_avoid: was nicht belegt ist und deshalb nicht in den Text gehört (z. B. Preise, Dauer, Garantien).\n"
+			. "- Die Fachbegriffe und Verfahren aus Titel und Keywords bekommen eigene Abschnitte, die sie gründlich erklären; dafür ist allgemeines Fachwissen erlaubt und nötig, es braucht keinen Beleg.\n"
 			. "- internal_link_targets: zwei bis fünf passende Linkziele aus der Liste (post_id) mit Hinweis zum Ankertext.\n"
 			. '- elements: passende Elemente aus ' . implode( ', ', self::ELEMENTS ) . ".\n"
 			. "- cta: Handlungsaufforderung mit den Kontaktwegen aus dem Profil.\n"
-			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst einen Abschnitt, wie das Verfahren in der Branche üblicherweise funktioniert und worauf Leser bei der Auswahl eines Anbieters achten können. facts_to_avoid nennt dann ausdrücklich: feste Arbeitsschritte, Geräte und Zusagen des Unternehmens. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine und Umfang nach Absprache) ist erlaubt.\n"
+			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst erklärt der Beitrag das Verfahren als Fachwissen: was es ist, wie und warum es wirkt, wann es sinnvoll ist und wann nicht. Keine Abschnitte mit allgemeinen Tipps zur Auswahl eines Anbieters. facts_to_avoid nennt dann ausdrücklich: feste Arbeitsschritte, Geräte und Zusagen des Unternehmens. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine und Umfang nach Absprache) ist erlaubt.\n"
 			. "- Servicegebiet und Standort höchstens einmal im Text und einmal in der Handlungsaufforderung.\n";
 	}
 
