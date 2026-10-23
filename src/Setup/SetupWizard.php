@@ -135,10 +135,10 @@ final class SetupWizard {
 		$intro = '';
 		if ( ! file_exists( $paths['phar'] ) ) {
 			$intro   = 'Zuerst WP-CLI als root in den Ordner private legen (erster Block), dann ';
-			$paste[] = 'curl -sSL -o ' . $paths['phar'] . " https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\nchown --reference=" . $paths['wordpress'] . ' ' . $paths['phar'] . "\nchmod 644 " . $paths['phar'];
+			$paste[] = 'curl -sSL -o ' . $paths['phar'] . " https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\nchown --reference=" . $paths['site'] . ' ' . $paths['phar'] . "\nchmod 644 " . $paths['phar'];
 		}
 		$paste[] = $paths['phar'];
-		$paste[] = '--path=' . $paths['wordpress'] . ' lsec cron';
+		$paste[] = '--path=' . $paths['site'] . ' lsec cron';
 		return self::item(
 			'Cronjob alle 5 Minuten',
 			false,
@@ -150,12 +150,12 @@ final class SetupWizard {
 	/**
 	 * Pfade für den Cronjob.
 	 *
-	 * @return array{WordPress: string, phar: string}
+	 * @return array{site: string, phar: string}
 	 */
 	public static function cron_paths(): array {
 		$wordpress = untrailingslashit( ABSPATH );
 		return array(
-			'wordpress' => $wordpress,
+			'site'      => $wordpress,
 			'phar'      => dirname( $wordpress ) . '/private/wp-cli.phar',
 		);
 	}

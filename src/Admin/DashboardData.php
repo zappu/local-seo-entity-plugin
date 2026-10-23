@@ -139,7 +139,7 @@ final class DashboardData {
 		}
 		if ( ! $data['cron']['ok'] ) {
 			$paths = \Lsec\Setup\SetupWizard::cron_paths();
-			$add( 'warning', 'Der Cronjob des Plugins ist seit über 15 Minuten nicht gelaufen oder noch nicht eingerichtet. In Plesk unter „Geplante Aufgaben“ eine Aufgabe „PHP-Skript ausführen“ anlegen (alle 5 Minuten) mit Skriptpfad ' . $paths['phar'] . ' und den Argumenten unten; die Aufgabe für wp-cron.php allein reicht nicht. Anleitung auf der Seite „Einrichtung“.', '--path=' . $paths['wordpress'] . ' lsec cron', admin_url( 'admin.php?page=lsec-setup' ) );
+			$add( 'warning', 'Der Cronjob des Plugins ist seit über 15 Minuten nicht gelaufen oder noch nicht eingerichtet. In Plesk unter „Geplante Aufgaben“ eine Aufgabe „PHP-Skript ausführen“ anlegen (alle 5 Minuten) mit Skriptpfad ' . $paths['phar'] . ' und den Argumenten unten; die Aufgabe für wp-cron.php allein reicht nicht. Anleitung auf der Seite „Einrichtung“.', '--path=' . $paths['site'] . ' lsec cron', admin_url( 'admin.php?page=lsec-setup' ) );
 		}
 		if ( '' === $data['ai']['model'] ) {
 			$add( 'warning', 'Kein KI-Modell eingestellt.', 'wp lsec settings set ai_model <modell>' );
