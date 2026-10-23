@@ -25,6 +25,7 @@ final class Settings {
 		'ai_provider'              => 'openrouter',
 		'ai_model'                 => '',
 		'ai_research_model'        => '',
+		'ai_writing_model'         => '',
 		'ai_prices'                => array(),
 		'ai_monthly_budget'        => 20.0,
 		'ai_run_budget'            => 1.0,

@@ -35,7 +35,10 @@ final class ProductionCommand {
 	 * : Thema (freigegeben).
 	 *
 	 * [--model=<modell>]
-	 * : Hauptmodell nur für diesen Entwurf (Modellvergleich), z. B. anthropic/claude-sonnet-5.5.
+	 * : Modell für alle Aufrufe dieses Entwurfs (Modellvergleich), z. B. openai/gpt-6-luna.
+	 *
+	 * [--writer=<modell>]
+	 * : Modell nur für den Text dieses Entwurfs, z. B. anthropic/claude-sonnet-5.5 (sonst Einstellung ai_writing_model).
 	 *
 	 * [--again]
 	 * : Neuen Entwurf schreiben, auch wenn das Thema schon einen hat.
@@ -53,6 +56,7 @@ final class ProductionCommand {
 	 *
 	 *     wp lsec production start 48 --now
 	 *     wp lsec production start 48 --model=anthropic/claude-sonnet-5.5 --again --now
+	 *     wp lsec production start 48 --writer=anthropic/claude-sonnet-5.5 --again --now
 	 *
 	 * @param string[]                   $args       Argumente.
 	 * @param array<string, string|bool> $assoc_args Optionen.
@@ -65,6 +69,9 @@ final class ProductionCommand {
 		);
 		if ( isset( $assoc_args['model'] ) ) {
 			$options['model'] = (string) $assoc_args['model'];
+		}
+		if ( isset( $assoc_args['writer'] ) ) {
+			$options['writer'] = (string) $assoc_args['writer'];
 		}
 		if ( ! empty( $assoc_args['stub'] ) ) {
 			$stub = (string) file_get_contents( (string) $assoc_args['stub'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
@@ -84,6 +91,7 @@ final class ProductionCommand {
 				'run_id'   => $run['run_id'],
 				'topic_id' => (int) ( $args[0] ?? 0 ),
 				'model'    => $options['model'] ?? null,
+				'writer'   => $options['writer'] ?? null,
 				'via'      => 'cli',
 			)
 		);

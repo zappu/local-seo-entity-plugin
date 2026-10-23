@@ -131,13 +131,14 @@ final class ContentProductionWorkflow {
 		$input = array(
 			'topic_id' => $topic_id,
 			'model'    => isset( $options['model'] ) && '' !== (string) $options['model'] ? (string) $options['model'] : null,
+			'writer'   => isset( $options['writer'] ) && '' !== (string) $options['writer'] ? (string) $options['writer'] : null,
 			'reason'   => (string) ( $options['reason'] ?? 'manual' ),
 			'author'   => self::author( $topic ),
 		);
 		if ( ! empty( $options['stub'] ) ) {
 			$input['stub'] = (string) $options['stub'];
 		}
-		$extra = $again || null !== $input['model'] || isset( $input['stub'] ) ? array( 'at' => microtime( true ) ) : array();
+		$extra = $again || null !== $input['model'] || null !== $input['writer'] || isset( $input['stub'] ) ? array( 'at' => microtime( true ) ) : array();
 		return $plugin->engine->start( self::TYPE, 'topic', $topic_id, $input, $extra );
 	}
 
@@ -433,7 +434,7 @@ final class ContentProductionWorkflow {
 		if ( null !== $stub ) {
 			$data = $stub;
 		} else {
-			$response = self::ai( $plugin, $context->input )->structured( new AiRequest( 'generate_draft', DraftGenerator::system(), DraftGenerator::prompt( $ctx, $brief ), DraftGenerator::schema(), 'draft', false, 14000, 300 ), $context->run_id );
+			$response = self::ai( $plugin, $context->input, true )->structured( new AiRequest( 'generate_draft', DraftGenerator::system(), DraftGenerator::prompt( $ctx, $brief ), DraftGenerator::schema(), 'draft', false, 14000, 300 ), $context->run_id );
 			$data     = (array) $response->data;
 		}
 		$normalized = DraftGenerator::normalize( $data, $ctx );
@@ -877,10 +878,34 @@ final class ContentProductionWorkflow {
 	/**
 	 * KI-Dienst; mit model aus dem Start (Modellvergleich) gilt dieses Modell.
 	 *
-	 * @param Plugin               $plugin Plugin.
-	 * @param array<string, mixed> $input  Startkontext.
+	 * @param Plugin               $plugin  Plugin.
+	 * @param array<string, mixed> $input   Startkontext.
+	 * @param bool                 $writing Beitragstext (Schreibmodell).
 	 */
-	private static function ai( Plugin $plugin, array $input ): AiService {
-		return $plugin->ai->service( null, $input['model'] ?? null );
+	private static function ai( Plugin $plugin, array $input, bool $writing = false ): AiService {
+		return $plugin->ai->service( null, self::model_for( $writing, $input, (string) \Lsec\Core\Settings::get( 'ai_writing_model' ) ) );
+	}
+
+	/**
+	 * Modell eines Aufrufs; null = Hauptmodell.
+	 *
+	 * Nachtrag 23.10. (0.7.9): Der Text macht etwa die Hälfte der Kosten aus (Ablauf 127: Briefing 0,062,
+	 * Text 0,117, Bewertung 0,044 USD) und entscheidet, wie natürlich der Beitrag klingt. Das Schreibmodell
+	 * gilt deshalb nur für den Text; Briefing und Bewertung laufen mit dem Hauptmodell. Reihenfolge für den
+	 * Text: --writer, --model, Einstellung ai_writing_model, Hauptmodell. Die übrigen Aufrufe: --model, Hauptmodell.
+	 *
+	 * @param bool                 $writing Beitragstext.
+	 * @param array<string, mixed> $input   Startkontext mit model und writer.
+	 * @param string               $setting Einstellung ai_writing_model.
+	 */
+	public static function model_for( bool $writing, array $input, string $setting ): ?string {
+		$model = '' !== (string) ( $input['model'] ?? '' ) ? (string) $input['model'] : null;
+		if ( ! $writing ) {
+			return $model;
+		}
+		if ( '' !== (string) ( $input['writer'] ?? '' ) ) {
+			return (string) $input['writer'];
+		}
+		return $model ?? ( '' !== trim( $setting ) ? trim( $setting ) : null );
 	}
 }
