@@ -241,6 +241,12 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertContains( 'FOREIGN_PLACE', self::codes( QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Auch in Hamburg sind wir für Sie da.' ), self::context(), self::site() ) ) );
 	}
 
+	public function test_prompt_leaks(): void {
+		$text = 'Bei einer PZR werden Beläge entfernt. Die oben beschriebenen Abläufe einer PZR sind allgemeines Fachwissen. Laut Profil bieten wir Beratung an.';
+		$this->assertSame( array( 'Die oben beschriebenen Abläufe einer PZR sind allgemeines Fachwissen.', 'Laut Profil bieten wir Beratung an.' ), QualityChecker::prompt_leaks( $text ) );
+		$this->assertSame( array(), QualityChecker::prompt_leaks( 'Fachwissen und Erfahrung zählen. Unser Team berät Sie gern.' ) );
+	}
+
 	public function test_placeholders_titles_and_warnings(): void {
 		$this->assertSame( array( '[Ort]', 'Lorem ipsum' ), QualityChecker::placeholders( 'Pflaster in [Ort]. Lorem ipsum.' ) );
 		$this->assertNotNull( QualityChecker::similar_title( 'Pflasterreinigung in Uetze', array( 'Pflasterreinigung in Uetze!' ) ) );

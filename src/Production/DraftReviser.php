@@ -20,7 +20,7 @@ final class DraftReviser {
 	/**
 	 * Mängel, die sich durch Streichen oder Umformulieren einzelner Stellen beheben lassen.
 	 */
-	public const FIXABLE = array( 'UNSUPPORTED_NUMBER', 'UNSUPPORTED_STATEMENT', 'PLACEHOLDER', 'FOREIGN_PLACE', 'AI_UNSUPPORTED_FACT', 'AI_WRONG_PLACE', 'AI_MISLEADING' );
+	public const FIXABLE = array( 'UNSUPPORTED_NUMBER', 'UNSUPPORTED_STATEMENT', 'PLACEHOLDER', 'FOREIGN_PLACE', 'AI_UNSUPPORTED_FACT', 'AI_WRONG_PLACE', 'AI_MISLEADING', 'PROMPT_LEAK' );
 
 	/**
 	 * Lohnt die Nachbesserung? Nur wenn alle blockierenden Mängel behebbar sind.
@@ -68,7 +68,7 @@ final class DraftReviser {
 			. "Vorgaben:\n"
 			. "- changes: je Stelle find = der beanstandete Satz oder Satzteil, Zeichen für Zeichen aus den Texten oben kopiert (mit HTML), und replace = die neue Fassung oder leer zum Streichen.\n"
 			. "- Die neue Fassung enthält keine neuen Zahlen, Daten, Preise, Orte, Kunden, Geräte oder Zusagen. Sie formuliert allgemein als Fachwissen der Branche oder streicht den Satz. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine nach Absprache) ist erlaubt.\n"
-			. "- Bei UNSUPPORTED_NUMBER die Zahl streichen oder den Satz ohne Zahl formulieren. Bei UNSUPPORTED_STATEMENT die genannte Aussage streichen.\n"
+			. "- Bei UNSUPPORTED_NUMBER die Zahl streichen oder den Satz ohne Zahl formulieren. Bei UNSUPPORTED_STATEMENT die genannte Aussage streichen. Bei PROMPT_LEAK den genannten Satz streichen oder ohne den Hinweis auf Quellen, Belege oder Fachwissen formulieren.\n"
 			. "- Ton und Satzbau des Beitrags beibehalten. Links (<a href>) nicht entfernen, wenn der Satz bleibt.\n"
 			. "- Nur Stellen ändern, die beanstandet sind.\n";
 	}

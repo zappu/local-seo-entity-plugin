@@ -133,6 +133,12 @@ final class QualityChecker {
 		$placeholders = self::placeholders( $all );
 		$add( 'PLACEHOLDER', 'Keine Platzhalter', array() === $placeholders, true, implode( ', ', $placeholders ) );
 
+		// Nachtrag 23.10. (0.8.3): Entwurf 1362 enthielt „Die oben beschriebenen Abläufe einer PZR sind allgemeines
+		// Fachwissen.“ – eine Arbeitsanweisung aus dem Schreibauftrag. Solche Sätze blockieren; die Nachbesserung
+		// streicht sie.
+		$leaks = self::prompt_leaks( $all );
+		$add( 'PROMPT_LEAK', 'Keine Sätze über Quellen, Belege oder Arbeitsanweisungen', array() === $leaks, true, implode( ' | ', $leaks ) );
+
 		$seo   = (array) $draft['seo'];
 		$t_len = mb_strlen( (string) $seo['title'] );
 		$d_len = mb_strlen( (string) $seo['description'] );
@@ -403,6 +409,26 @@ final class QualityChecker {
 	public static function placeholders( string $text ): array {
 		preg_match_all( '/\[[^\]\n]{1,40}\]|\{\{[^}]*\}\}|\blorem ipsum\b|\bplatzhalter\b|\bTODO\b|\bXXX\b|\bTBD\b/iu', $text, $m );
 		return array_values( array_unique( $m[0] ) );
+	}
+
+	/**
+	 * Sätze, die über die Arbeitsweise sprechen statt über das Thema („allgemeines Fachwissen“, „laut Profil“).
+	 *
+	 * @param string $text Text.
+	 * @return string[] Die Sätze.
+	 */
+	public static function prompt_leaks( string $text ): array {
+		// Nur Wendungen, die in keiner Branche zum Thema gehören („Briefing“, „nicht belegt“ oder „Schreibstil“ können es).
+		$pattern = '/allgemeine[sn]? Fachwissen|Fachwissen der Branche|Angabe(n)? des (Unternehmens|Betriebs)|belegte Angabe|laut (Unternehmens)?profil|geprüfte[nr]? (Tatsache|Aussage)|Style Mimic/iu';
+		$out     = array();
+		$parts   = preg_split( '/(?<=[.!?])\s+|\n/u', $text );
+		foreach ( false === $parts ? array() : $parts as $sentence ) {
+			$sentence = trim( $sentence );
+			if ( '' !== $sentence && preg_match( $pattern, $sentence ) ) {
+				$out[] = $sentence;
+			}
+		}
+		return array_values( array_unique( $out ) );
 	}
 
 	/**

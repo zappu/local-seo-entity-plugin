@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.8.3 – 23.10.2026
+
+- **Keine Arbeitsanweisungen im Text:** Neue Regelprüfung `PROMPT_LEAK` für Sätze wie „Das ist allgemeines Fachwissen“ oder „laut Profil“; die automatische Nachbesserung streicht sie.
+
 ## 0.8.2 – 23.10.2026
 
 - **Eigene Seiten über ihren Text:** Entwürfe finden eigene Leistungsseiten auch, wenn mehrere Leistungen auf einer Seite stehen (z. B. „Leistungen“).
