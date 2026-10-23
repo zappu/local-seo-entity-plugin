@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.7.8 – 23.10.2026
+
+- **Ablehnen bricht laufende Entwürfe ab:** Wird ein Thema abgelehnt oder zurückgesetzt, endet sein laufender Entwurf, und es entsteht kein Beitrag mehr.
+- **Bericht:** `wp lsec production report` nimmt auch die Nummer des Entwurfs.
+- **Spezifikation:** Hauptmodell `anthropic/claude-sonnet-5.5` festgelegt, Stufe E abgenommen.
+
 ## 0.7.7 – 23.10.2026
 
 - **Doppelte Themen bei zusammengesetzten Leistungen:** „Gehweg- und Pflasterreinigung“ verhinderte die Erkennung von 39 und 43 als Dublette, weil Thema 39 kein „Gehweg“ enthält; der Cronjob schrieb deshalb einen zweiten Entwurf. Verglichen wird jetzt über einzelne Leistungswörter (hier „Pflaster“).

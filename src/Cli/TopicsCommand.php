@@ -356,6 +356,12 @@ final class TopicsCommand {
 				'via'      => 'cli',
 			)
 		);
+		if ( 'approved' !== (string) $args[1] ) {
+			$cancelled = \Lsec\Production\ContentProductionWorkflow::cancel_for_topic( $this->plugin, (int) $args[0] );
+			if ( array() !== $cancelled ) {
+				WP_CLI::log( 'Laufende Entwürfe abgebrochen: Abläufe ' . implode( ', ', $cancelled ) );
+			}
+		}
 		WP_CLI::success( 'Thema ' . (int) $args[0] . ': ' . $args[1] );
 	}
 

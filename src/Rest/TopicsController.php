@@ -164,6 +164,9 @@ final class TopicsController {
 		if ( ! $ok ) {
 			return new \WP_Error( 'lsec_not_found', 'Thema nicht gefunden.', array( 'status' => 404 ) );
 		}
+		if ( 'approved' !== $decision ) {
+			\Lsec\Production\ContentProductionWorkflow::cancel_for_topic( $this->plugin, (int) $request['id'] );
+		}
 		$this->plugin->logger->audit(
 			'Thema entschieden',
 			array(

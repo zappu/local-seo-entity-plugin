@@ -576,6 +576,16 @@ Bei blockierenden Mängeln entsteht trotzdem ein Entwurf mit sichtbarem Prüfber
 - **0.7.5:** Die Beschreibungen der Leistungen im Profil waren nur Aufzählungen („Gehwege, Plätze und Pflasterflächen …“), das Feld war einzeilig und schmal; Thomas trug den Ablauf deshalb in die Unternehmensbeschreibung ein, die bisher nicht an die KI ging. Geändert: Die Unternehmensbeschreibung geht als Angabe des Unternehmens in Briefing, Entwurf, Bewertung und Zahlenprüfung. Auf der Seite „Unternehmen“ ist die Beschreibung je Leistung ein breites mehrzeiliges Feld mit Hinweis, was hineingehört. Der Bericht nennt, ob eine Unternehmensbeschreibung vorlag.
 - **0.7.6, Angaben des Betriebs aus der eigenen Website (Wunsch von Thomas: „muss aus der Webseite selbst hervorgehen, kann später nicht immer angepasst werden“):** `gather_context` wählt höchstens zwei eigene veröffentlichte Seiten oder Produkte (vor Blogbeiträgen), deren Titel oder Pfad die meisten Wörter aus Titel und Keywords des Themas enthält (ohne Ort), und gibt ihren Text (je bis 3000 Zeichen, Elementor eingeschlossen) als belegte Angaben des Unternehmens an Briefing, Entwurf, Bewertung und Zahlenprüfung. Ändert sich die Website, ändern sich die Angaben mit; Beschreibungen im Profil sind nur noch Ergänzung. Der Bericht nennt die verwendeten Seiten.
 - **Erster bestandener Entwurf (Lauf 126, 22.10., 0.7.6):** Thema 39, `anthropic/claude-sonnet-5.5`, 875 Wörter, 0,217 USD, Bewertung 90,3 (Mehrwert 0,88, Lesbarkeit 0,92), keine blockierenden Mängel; eigene Seiten „Gehweg- und Pflasterreinigung“ und „Baustellenbodenreinigung“ als Angaben des Betriebs. Offen für die Abnahme von Stufe E: Urteil von Thomas über den Text, Vergleichslauf mit `openai/gpt-6-luna` unter gleichen Bedingungen, drei Entwürfe über den Cronjob.
+- **Modellvergleich unter gleichen Bedingungen (23.10., 0.7.6, Thema 39):**
+
+  | Ablauf | Hauptmodell | Entwurf | Kosten | Bewertung | Lokale Relevanz | Mehrwert |
+  |---|---|---|---|---|---|---|
+  | 127 | `anthropic/claude-sonnet-5.5` | 2760 | 0,223 USD | 87,3 | 0,80 | 0,86 |
+  | 128 | `openai/gpt-6-luna` | 2759 | 0,005 USD | 90,5 | 0,90 | 0,85 |
+
+  **Entscheidung von Thomas (23.10.):** „Menschlicher ist die Version 2760“ – Hauptmodell `anthropic/claude-sonnet-5.5`. Die KI-Bewertung hatte Luna höher eingestuft; sie misst Natürlichkeit des Textes offenbar nicht gut. Das ist bei der Kalibrierung der Mindestwerte in der Testphase zu berücksichtigen. Kosten je Entwurf mit Sonnet rund 0,20–0,22 USD (20 Beiträge in der Testphase etwa 4,40 USD, im Monatsbudget von 20 USD). Möglicher Ausbau: günstigeres Modell nur für Briefing und Bewertung.
+- **Abnahme Stufe E (23.10.):** Drei Entwürfe entstanden über den Cronjob (Abläufe 129–131); ein Entwurf mit unbelegter Zahl wird `blocked` (Prüfskript E2 und echte Läufe 121–124); Kosten je Beitrag gemessen (siehe oben); Modellvergleich mit Entscheidung.
+- **0.7.8:** Ablehnen oder Zurücksetzen eines Themas bricht dessen laufende Entwürfe ab (Ablauf 131 schrieb Thema 43 nach der Ablehnung zu Ende); `create_post` und `finalize` enden ohne Entwurf, wenn das Thema nicht mehr freigegeben ist (`topic_withdrawn`). `wp lsec production report` nimmt auch die Nummer des Entwurfs.
 - **Bericht:** `wp lsec production report <ablauf>` bzw. `GET lsec/v1/production/<ablauf>` mit Modell, Kosten je KI-Aufruf, Wörtern, Bewertung, Mängeln und Hinweisen; `wp lsec production list` zeigt freigegebene und erstellte Themen mit Prüfergebnis. Grundlage für die Messung „Kosten je Beitrag“ und den Modellvergleich (`--model`).
 
 **`topic_research`**: `collect_keywords` (Quellen abgleichen, Filter 6.4) → `research` (Websuche, 8.4) → `verify_facts` (8.4a) → `propose_topics` (Priorität, Überschneidung) → Status `waiting` bis zur Freigabe.
@@ -1102,7 +1112,7 @@ Die Prüfskripte bleiben Teil der CI und werden in MVP 1 um die neuen Abläufe e
 | Faktenprüfung gegen den Quelltext (8.4a) | festgelegt |
 | Filter für Wettbewerber und fremde Orte (6.4) | festgelegt |
 | Zusammenführen von Entitäten, Mindest-Sicherheit | festgelegt; Schwellenwert Vorschlag 0,6 |
-| Hauptmodell | **Entscheidung offen** – Vorschlag: Start mit `anthropic/claude-sonnet-5.5` über OpenRouter, Festlegung nach Vergleich in Stufe E mit `wp lsec production start <thema> --model=… --again --now` |
+| Hauptmodell | festgelegt (23.10.2026): `anthropic/claude-sonnet-5.5` über OpenRouter; im Vergleich mit `openai/gpt-6-luna` las sich der Text menschlicher (Thomas), Kosten rund 0,21 USD je Entwurf (7.3) |
 | Recherchemodell | festgelegt (22.10.2026): `perplexity/sonar-pro` bei OpenRouter, Suchmaschine `standard` (7.3) |
 | KI-Budget im Plugin | festgelegt: 20 USD/Monat, 1 USD je Ablauf (18.10.2026) |
 | Treffer der Websuche | festgelegt: 3, Vergleich mit 5 in Stufe D (18.10.2026) |

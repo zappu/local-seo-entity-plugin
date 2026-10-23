@@ -14,6 +14,7 @@
 #   Stufe E: E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe): Blöcke, SEO-Angaben, Prüfbericht bestanden
 #            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
 #            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
+#            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -564,6 +565,14 @@ OUT=$(wpc lsec topics research --service=lsectest2 --stub="$TMP/dublette.json" -
 contains "Dublette mit dem freigegebenen Thema zusammengeführt" "zusammengeführt mit #$T1" "$OUT"
 check "kein neues Thema angelegt" "0" "$(wpj lsec topics list --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); $n=0; foreach((array)$d as $r){ if(str_contains($r["thema"],"Firma in der Nähe") && str_starts_with($r["thema"],"LSECTEST")) $n++; } echo $n;')"
 check "keine Dubletten unter den Testthemen" "0" "$(wpc lsec topics duplicates | grep -c LSECTEST)"
+
+echo "E6 Ablehnen bricht laufende Entwürfe ab, Bericht über die Nummer des Entwurfs (0.7.8)"
+contains "Bericht über die Nummer des Entwurfs" "Ablauf $R1 " "$(wpc lsec production report "$P1")"
+wpc lsec topics decide "$T1" approved >/dev/null
+OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e1.json" 2>&1)
+R6=$(printf '%s' "$OUT" | sed -n 's/^Success: Ablauf \([0-9]*\) eingeplant.*/\1/p')
+contains "Ablehnen bricht den Entwurf ab" "Laufende Entwürfe abgebrochen: Abläufe $R6" "$(wpc lsec topics decide "$T1" rejected)"
+check "Ablauf abgebrochen" "cancelled" "$(wpj lsec production report "$R6" --format=json | json status)"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

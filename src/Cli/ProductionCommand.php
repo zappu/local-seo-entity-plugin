@@ -110,7 +110,7 @@ final class ProductionCommand {
 	 * ## OPTIONS
 	 *
 	 * <run>
-	 * : Ablauf-ID.
+	 * : Ablauf-ID oder Nummer des Entwurfs.
 	 *
 	 * [--format=<format>]
 	 * : table oder json.
@@ -124,6 +124,11 @@ final class ProductionCommand {
 	public function report( array $args, array $assoc_args ): void {
 		$id   = (int) ( $args[0] ?? 0 );
 		$data = ProductionReport::for_run( $this->plugin, $id );
+		// Auch mit der Nummer des Entwurfs (Beitrags-ID).
+		if ( null === $data && (int) get_post_meta( $id, '_lsec_run_id', true ) > 0 ) {
+			$id   = (int) get_post_meta( $id, '_lsec_run_id', true );
+			$data = ProductionReport::for_run( $this->plugin, $id );
+		}
 		if ( null === $data ) {
 			WP_CLI::error( 'Kein Ablauf content_production: ' . $id );
 		}

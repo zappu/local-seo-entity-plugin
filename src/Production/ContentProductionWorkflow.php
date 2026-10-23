@@ -178,6 +178,43 @@ final class ContentProductionWorkflow {
 	}
 
 	/**
+	 * Bricht offene Entwürfe eines Themas ab (Nachtrag 23.10., 0.7.8): Wird ein Thema abgelehnt oder zurückgesetzt,
+	 * soll kein laufender Ablauf noch einen Entwurf schreiben (Lauf 131 zu Thema 43).
+	 *
+	 * @param Plugin $plugin   Plugin.
+	 * @param int    $topic_id Thema.
+	 * @return int[] Abgebrochene Abläufe.
+	 */
+	public static function cancel_for_topic( Plugin $plugin, int $topic_id ): array {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'runs' );
+		$ids   = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND subject_type = 'topic' AND subject_id = %d AND status IN ('queued', 'running', 'waiting')", self::TYPE, $topic_id ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		foreach ( $ids as $id ) {
+			$plugin->runs->update_run(
+				$id,
+				array(
+					'status'      => 'cancelled',
+					'finished_at' => gmdate( 'Y-m-d H:i:s' ),
+				)
+			);
+		}
+		return $ids;
+	}
+
+	/**
+	 * Ist das Thema noch in Arbeit? Sonst (abgelehnt, zurückgesetzt) endet der Ablauf ohne Entwurf.
+	 *
+	 * @param RunContext $context Kontext.
+	 */
+	private static function topic_withdrawn( RunContext $context ): ?StepResult {
+		$topic = ( new TopicRepository() )->detail( (int) $context->input['topic_id'] );
+		if ( null === $topic || ! in_array( (string) $topic['status'], array( 'approved', 'in_production', 'produced' ), true ) ) {
+			return StepResult::fail( 'topic_withdrawn', 'Das Thema ist nicht mehr freigegeben (Status ' . ( $topic['status'] ?? 'gelöscht' ) . ').' );
+		}
+		return null;
+	}
+
+	/**
 	 * Heute (Zeitzone der Website) gestartete Produktionen.
 	 */
 	public static function started_today(): int {
@@ -518,6 +555,10 @@ final class ContentProductionWorkflow {
 		$ctx     = $context->output_of( 'gather_context' );
 		$draft   = (array) $context->output_of( 'enrich' )['draft'];
 		$quality = $context->output_of( 'quality_check' );
+		$stop    = self::topic_withdrawn( $context );
+		if ( null !== $stop ) {
+			return $stop;
+		}
 
 		$existing = get_posts(
 			array(
@@ -566,6 +607,10 @@ final class ContentProductionWorkflow {
 		$post    = $context->output_of( 'create_post' );
 		$quality = $context->output_of( 'quality_check' );
 		$post_id = (int) $post['post_id'];
+		$stop    = self::topic_withdrawn( $context );
+		if ( null !== $stop ) {
+			return $stop;
+		}
 		( new TopicRepository() )->set_production( (int) $ctx['topic']['id'], 'produced', $post_id );
 		$output = array(
 			'post_id'  => $post_id,
