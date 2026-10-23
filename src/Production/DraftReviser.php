@@ -124,8 +124,8 @@ final class DraftReviser {
 	/**
 	 * Wendet die Änderungen an.
 	 *
-	 * @param array<string, mixed>                             $draft   Entwurf.
-	 * @param array<int, array{find: string, replace: string}> $changes Änderungen.
+	 * @param array<string, mixed>             $draft   Entwurf.
+	 * @param array<int, array<string, mixed>> $changes Änderungen (find, replace).
 	 * @return array{draft: array<string, mixed>, applied: string[], missed: string[]}
 	 */
 	public static function apply( array $draft, array $changes ): array {
