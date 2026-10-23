@@ -46,6 +46,8 @@ final class DraftGenerator {
 			. "- Der erste Absatz wiederholt nicht den Titel, sondern steigt mit einem konkreten Anlass ein.\n"
 			. "- Kontaktdaten (Telefon, E-Mail, Adresse) nur einmal, in der Handlungsaufforderung am Schluss; keine Kontaktdaten in FAQ oder Fließtext.\n"
 			. "- Tatsachen nur dort, wo sie dem Leser nützen; keine bloßen Ortslisten.\n"
+			. "- Ortsfakten mit dem Thema verbinden, statt sie in einem eigenen Abschnitt aufzuzählen: Was folgt daraus für die Flächen, Gebäude oder Menschen vor Ort (z. B. Lage, Boden, Verkehr, Ortsteile)? Schreibe nie, dass ein Ortsfakt für das Thema keine Rolle spielt; dann lass ihn weg.\n"
+			. "- Überschriften sagen dem Leser etwas über das Thema; keine Überschriften über den Text selbst („lokale Bezüge“, „was dieser Beitrag zeigt“).\n"
 			. "- Die Beispiele im Schreibstil zeigen den Ton; nicht wörtlich übernehmen.\n"
 			. "- Perspektive einheitlich: Das Unternehmen spricht von sich als „wir“, die Leser mit der Anrede aus dem Schreibstil.\n"
 			. "- Was das Unternehmen selbst tut (Ablauf, Verfahren, Geräte, Zusagen), nur aus den Angaben des Unternehmens zu seinen Leistungen. Fehlen sie, beschreibe Verfahren allgemein als Fachwissen der Branche („Üblich ist …“, „In der Regel wird …“), nicht als feste Schritte oder Zusage des Unternehmens.\n"

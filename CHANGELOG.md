@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.7.16 – 23.10.2026
+
+- **Ortsfakten im Text:** Ortsfakten werden mit dem Thema verbunden (z. B. Ortsteile als Einsatzorte) statt in einem eigenen Abschnitt aufgezählt; keine Sätze, dass ein Fakt keine Rolle spielt, keine Überschriften über den Text selbst.
+
 ## 0.7.15 – 23.10.2026
 
 - **Fachlich notwendige Teilschritte:** Arbeitsschritte, die zwingend zu einer Leistung aus dem Profil gehören (z. B. Einsanden der Fugen nach der Pflasterreinigung), gelten beim Schreiben und in der Prüfung als Teil dieser Leistung.
