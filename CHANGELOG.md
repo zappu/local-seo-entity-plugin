@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.7.15 – 23.10.2026
+
+- **Fachlich notwendige Teilschritte:** Arbeitsschritte, die zwingend zu einer Leistung aus dem Profil gehören (z. B. Einsanden der Fugen nach der Pflasterreinigung), gelten beim Schreiben und in der Prüfung als Teil dieser Leistung.
+
 ## 0.7.14 – 23.10.2026
 
 - **Ortsfakten:** Es zählen nur Tatsachen zum Ort des Themas (bisher alle Orte, deshalb startete die Recherche für Lehrte nicht).

@@ -50,6 +50,7 @@ final class DraftGenerator {
 			. "- Perspektive einheitlich: Das Unternehmen spricht von sich als „wir“, die Leser mit der Anrede aus dem Schreibstil.\n"
 			. "- Was das Unternehmen selbst tut (Ablauf, Verfahren, Geräte, Zusagen), nur aus den Angaben des Unternehmens zu seinen Leistungen. Fehlen sie, beschreibe Verfahren allgemein als Fachwissen der Branche („Üblich ist …“, „In der Regel wird …“), nicht als feste Schritte oder Zusage des Unternehmens.\n"
 			. "- Erkläre die Fachbegriffe und Verfahren des Themas gründlich und konkret (was es ist, wie und warum es wirkt, Vor- und Nachteile, wann es sinnvoll ist). Allgemeines Fachwissen braucht keinen Beleg; nur Zahlen, Zusagen und Angaben über das Unternehmen oder den Ort brauchen einen.\n"
+			. "- Arbeitsschritte, die nach allgemeinem Fachwissen zwingend zu einer Leistung aus dem Profil gehören (z. B. das neue Einsanden der Fugen nach einer Pflasterreinigung), darfst du dieser Leistung zuordnen, als fachlich notwendigen Teil, nicht als Garantie.\n"
 			. "- Keine Versprechen zu Dauer, Ergebnis, Schonung oder Garantie.\n"
 			. "- Jeden internen Link höchstens einmal setzen.\n"
 			. "- Angaben des Unternehmens sind die Beschreibung „Über das Unternehmen“, die Beschreibungen der Leistungen und die Texte der eigenen Website. Was dort über Vorgehen, Verfahren und Leistungen steht, darfst du als Vorgehen des Unternehmens schreiben, in eigenen Worten.\n"
