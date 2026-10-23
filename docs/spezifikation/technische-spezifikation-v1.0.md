@@ -1187,4 +1187,12 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 - Prüfskript F1 (Stand, unbekannter Schritt, REST-Route); die Aktionen ändern Einstellungen und kosten Geld und laufen deshalb nicht im Prüfskript.
 - Nebenbei behoben: Die Seite „Style Mimic“ hatte seit 0.7.0 keinen Seitentitel (PHP-Warnung).
 
+**Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
+- **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.
+- **Cronjob bei Plesk:** Auf der ersten Testwebsite stand nur die Aufgabe des WP Toolkits für `wp-cron.php`; der Cronjob des Plugins fehlte. Eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements. Zuverlässig ist: WP-CLI als `private/wp-cli.phar` neben dem Webroot (Befehle für root zum Kopieren, solange die Datei fehlt) und eine Aufgabe „PHP-Skript ausführen“ mit Skriptpfad (voller Pfad, ohne Leerzeichen davor) und Argumenten `--path=<WordPress> lsec cron`, Zeitplan `*/5 * * * *`. Assistent und Dashboard zeigen diese Anleitung; Einträge zum Kopieren können mehrere Blöcke haben.
+- **Search Console:** Fehlt `private/gsc-service-account.json`, gilt die einzige JSON-Datei im Ordner `private` mit `client_email` und `private_key` (`GscCommand::pick_credentials`). Ohne Property zeigt der Assistent die Adresse des Dienstkontos zum Eintragen in der Search Console (der Schlüssel wird nie ausgegeben) und warnt, wenn die Schlüsseldatei für andere lesbar ist (`chmod 600`).
+- **Textfocus:** neuer empfohlener Punkt im Schritt Technik (Schlüssel und Sprachcode).
+- **Leistungen ohne Seite:** gesucht wird jetzt in Titel und Inhalt veröffentlichter Seiten, Beiträge und Produkte nach den Wortstämmen der Leistung (erste sechs Buchstaben, auch mit Umlaut). Auf der Zahnarzt-Seite wurden alle fünf Leistungen gemeldet, obwohl eine Seite „Leistungen“ sie beschreibt.
+- **Laufende Abläufe:** Index und Keyword-Abgleich heißen „läuft (Ablauf N)“, solange ein Ablauf offen ist, und „gelaufen“ bzw. „vorhanden“ erst danach.
+
 **Entschieden am 18.10.2026:** KI-Budget, Treffer der Websuche, eigenes Recherchemodell, Testphase (20 Beiträge in 60 Tagen). **Noch offen:** Recherchemodell (Auswahl in Stufe D), Hauptmodell (Stufe E), KI-Sichtbarkeit (vor Ausbau 3).

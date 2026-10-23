@@ -753,6 +753,11 @@
 	align-items: center;
 	margin-top: 4px;
 	flex-wrap: wrap;
+
+	.lsec-command {
+		white-space: pre-wrap;
+		word-break: break-all;
+	}
 }
 
 .lsec-setup-action {

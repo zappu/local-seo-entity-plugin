@@ -629,6 +629,7 @@ OUT=$(wpc lsec setup 2>&1)
 contains "Stand der Einrichtung" "Schritten erledigt" "$OUT"
 contains "Schritt Technik" "1. Technik prüfen" "$OUT"
 contains "Schritt Entscheidungen" "6. Entscheidungen" "$OUT"
+contains "KI-Einstellungen vor Website lesen (0.8.1)" "2. KI-Einstellungen" "$OUT"
 check "sechs Schritte als JSON" "6" "$(wpj lsec setup --format=json | json total)"
 contains "unbekannter Schritt abgelehnt" "Unbekannter Schritt" "$($WP "${WP_ARGS[@]}" lsec setup unbekannt 2>&1)"
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)

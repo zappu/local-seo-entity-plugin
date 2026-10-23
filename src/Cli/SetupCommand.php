@@ -115,8 +115,10 @@ final class SetupCommand {
 			WP_CLI::log( sprintf( '%d. %s – %s', $number, $step['title'], $step['done'] ? 'erledigt' : 'offen' ) );
 			foreach ( (array) $step['items'] as $item ) {
 				WP_CLI::log( sprintf( '   [%s] %s: %s', $item['ok'] ? 'x' : ( $item['optional'] ? '-' : ' ' ), $item['label'], $item['detail'] ) );
-				if ( '' !== $item['paste'] ) {
-					WP_CLI::log( '       ' . $item['paste'] );
+				foreach ( (array) $item['paste'] as $paste ) {
+					foreach ( explode( "\n", (string) $paste ) as $line ) {
+						WP_CLI::log( '       ' . $line );
+					}
 				}
 			}
 			$gaps = array() !== array_filter( (array) $step['items'], static fn( array $i ): bool => ! $i['ok'] );

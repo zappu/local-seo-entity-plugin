@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.8.1 – 23.10.2026
+
+- **Einrichtungsassistent:** KI-Einstellungen kommen vor „Website lesen“ (das Lesen braucht ein Modell).
+- **Cronjob-Anleitung für Plesk:** WP-CLI in `private` und eine Aufgabe „PHP-Skript ausführen“ mit den Pfaden der Website; die Aufgabe für `wp-cron.php` allein reicht nicht.
+- **Search Console:** Schlüsseldatei auch unter anderem Namen, Adresse des Dienstkontos zum Eintragen, Warnung bei zu offenen Dateirechten.
+- **Textfocus** als empfohlener Punkt; **Leistungen ohne Seite** werden auch im Seiteninhalt gesucht; laufende Abläufe heißen „läuft“ statt „gelaufen“.
+
 ## 0.8.0 – 23.10.2026
 
 - **Einrichtungsassistent** (Stufe F): neue Seite „Einrichtung“ und `wp lsec setup` mit sechs Schritten – Technik prüfen, Website lesen (Profil und Servicegebiet automatisch), erprobte KI-Einstellungen mit einem Klick, Schreibstil aus den eigenen Seiten oder aus einem Freitext (z. B. ZimmWriter-Prompt, mit Konfliktprüfung), alles starten, Entscheidungen. Das Dashboard zeigt offene Schritte.

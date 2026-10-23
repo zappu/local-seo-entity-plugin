@@ -33,11 +33,14 @@ use Lsec\Topics\TopicSimilarity;
  * Cronjob), ist der Schritt wieder offen.
  *
  * 1. Technik prüfen (Schlüssel, Cronjob, Search Console, Rank Math)
- * 2. Website lesen (Profil aus den eigenen Seiten, Servicegebiet aus der Firmenadresse)
- * 3. KI-Einstellungen mit erprobten Werten
+ * 2. KI-Einstellungen mit erprobten Werten
+ * 3. Website lesen (Profil aus den eigenen Seiten, Servicegebiet aus der Firmenadresse)
  * 4. Schreibstil (aus einem Freitext oder aus den eigenen Seiten)
  * 5. Alles starten (Index, Entity-Erkennung, Keyword-Abgleich, erste Themenrecherche)
  * 6. Entscheidungen (unsichere Entitäten, Themen freigeben)
+ *
+ * Nachtrag 23.10. (0.8.1, Test auf der Website einer Zahnarztpraxis): Die KI-Einstellungen stehen vor
+ * „Website lesen“, weil das Lesen schon ein Modell braucht.
  */
 final class SetupWizard {
 
@@ -46,8 +49,8 @@ final class SetupWizard {
 	 */
 	public const STEPS = array(
 		'technik'        => 'Technik prüfen',
-		'website'        => 'Website lesen',
 		'ki'             => 'KI-Einstellungen',
+		'website'        => 'Website lesen',
 		'stil'           => 'Schreibstil',
 		'start'          => 'Alles starten',
 		'entscheidungen' => 'Entscheidungen',
@@ -81,8 +84,8 @@ final class SetupWizard {
 		$profile = ( new BusinessProfile() )->get();
 		$steps   = array(
 			self::technik( $data ),
-			self::website( $profile ),
 			self::ki(),
+			self::website( $profile ),
 			self::stil(),
 			self::start( $data, $profile ),
 			self::entscheidungen( $data ),
@@ -106,8 +109,9 @@ final class SetupWizard {
 		$key      = 'none' !== (string) $data['ai']['key_source'];
 		$items    = array(
 			self::item( 'Schlüssel für ' . $provider, $key, $key ? 'hinterlegt (' . $data['ai']['key_source'] . ')' : 'in wp-config.php eintragen', $key ? '' : "define( 'LSEC_" . strtoupper( $provider ) . "_API_KEY', 'hier-den-Schlüssel-einsetzen' );" ),
-			self::item( 'Cronjob alle 5 Minuten', (bool) $data['cron']['ok'], $data['cron']['ok'] ? 'läuft' : 'in Plesk unter „Geplante Aufgaben“ einrichten, als Benutzer des Abonnements', $data['cron']['ok'] ? '' : '*/5 * * * * ' . $data['cron']['command'] ),
-			self::item( 'Search Console', ! empty( $data['gsc']['credentials'] ) && '' !== (string) $data['gsc']['property'], empty( $data['gsc']['credentials'] ) ? 'Schlüsseldatei des Dienstkontos fehlt (Ordner private neben dem Webroot); empfohlen, nicht zwingend' : ( '' === (string) $data['gsc']['property'] ? 'Property festlegen: wp lsec gsc sites' : 'verbunden: ' . $data['gsc']['property'] ), '', true ),
+			self::cron_item( (bool) $data['cron']['ok'] ),
+			self::gsc_item( ! empty( $data['gsc']['credentials'] ), (string) $data['gsc']['property'] ),
+			self::textfocus_item( 'none' !== (string) $data['textfocus']['key_source'], '' !== (string) $data['textfocus']['lang'] ),
 			self::item( 'Rank Math', ! empty( $data['integrations']['rank_math'] ), ! empty( $data['integrations']['rank_math'] ) ? 'aktiv' : 'nicht aktiv; SEO-Angaben landen dann als Vorschlag am Entwurf', '', true ),
 			self::item( 'Datenbank', ! empty( $data['plugin']['schema_ok'] ), ! empty( $data['plugin']['schema_ok'] ) ? 'auf dem Stand' : 'wp lsec migrate', '' ),
 		);
@@ -115,7 +119,98 @@ final class SetupWizard {
 	}
 
 	/**
-	 * Schritt 2: Website lesen.
+	 * Cronjob: So wie es bei Plesk zuverlässig läuft (Nachtrag 23.10., 0.8.1). Die Aufgabe des WP Toolkits für
+	 * wp-cron.php reicht nicht; eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements.
+	 * Zuverlässig ist WP-CLI im Ordner private und eine Aufgabe „PHP-Skript ausführen“ mit vollem Pfad.
+	 *
+	 * @param bool $ok Cronjob läuft.
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 */
+	private static function cron_item( bool $ok ): array {
+		if ( $ok ) {
+			return self::item( 'Cronjob alle 5 Minuten', true, 'läuft' );
+		}
+		$paths = self::cron_paths();
+		$paste = array();
+		$intro = '';
+		if ( ! file_exists( $paths['phar'] ) ) {
+			$intro   = 'Zuerst WP-CLI als root in den Ordner private legen (erster Block), dann ';
+			$paste[] = 'curl -sSL -o ' . $paths['phar'] . " https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\nchown --reference=" . $paths['wordpress'] . ' ' . $paths['phar'] . "\nchmod 644 " . $paths['phar'];
+		}
+		$paste[] = $paths['phar'];
+		$paste[] = '--path=' . $paths['wordpress'] . ' lsec cron';
+		return self::item(
+			'Cronjob alle 5 Minuten',
+			false,
+			$intro . 'in Plesk unter „Geplante Aufgaben“ des Abonnements eine Aufgabe „PHP-Skript ausführen“ anlegen: Skriptpfad und Argumente wie unten, ohne Leerzeichen davor; Zeitplan Cron-Stil */5 * * * *; Benachrichtigen „Nur Fehler“. Die Aufgabe des WP Toolkits für wp-cron.php allein reicht nicht.',
+			$paste
+		);
+	}
+
+	/**
+	 * Pfade für den Cronjob.
+	 *
+	 * @return array{WordPress: string, phar: string}
+	 */
+	public static function cron_paths(): array {
+		$wordpress = untrailingslashit( ABSPATH );
+		return array(
+			'wordpress' => $wordpress,
+			'phar'      => dirname( $wordpress ) . '/private/wp-cli.phar',
+		);
+	}
+
+	/**
+	 * Search Console: Schlüsseldatei, Rechte, Adresse des Dienstkontos, Property.
+	 *
+	 * @param bool   $readable Schlüsseldatei lesbar.
+	 * @param string $property Property.
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 */
+	private static function gsc_item( bool $readable, string $property ): array {
+		if ( ! $readable ) {
+			return self::item( 'Search Console', false, 'Schlüsseldatei des Dienstkontos fehlt (JSON-Datei im Ordner private neben dem Webroot); empfohlen, nicht zwingend', array(), true );
+		}
+		$file   = \Lsec\Cli\GscCommand::credentials_file();
+		$detail = '' === $property ? 'Schlüsseldatei gefunden (' . basename( $file ) . '). Property festlegen: wp lsec gsc sites' : 'verbunden: ' . $property;
+		$paste  = array();
+		$open   = false;
+		if ( '' === $property ) {
+			$email = \Lsec\Cli\GscCommand::client_email( $file );
+			if ( '' !== $email ) {
+				$detail .= '. Diese Adresse in der Search Console bei der Property als Nutzer („Eingeschränkt“) eintragen:';
+				$paste[] = $email;
+			}
+		}
+		$mode = @fileperms( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( false !== $mode && 0 !== ( $mode & 0044 ) ) {
+			$open    = true;
+			$detail .= ' Achtung: Die Schlüsseldatei ist für andere lesbar; nur der Eigentümer sollte sie lesen dürfen:';
+			$paste[] = 'chmod 600 ' . $file;
+		}
+		return self::item( 'Search Console', '' !== $property && ! $open, $detail, $paste, true );
+	}
+
+	/**
+	 * Textfocus für Suchvolumen und verwandte Keywords (empfohlen). Nachtrag 23.10. (0.8.1): Die zweite
+	 * Testseite hatte keinen Schlüssel, der Assistent erwähnte das nicht.
+	 *
+	 * @param bool $key  Schlüssel vorhanden.
+	 * @param bool $lang Sprachcode gespeichert.
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 */
+	private static function textfocus_item( bool $key, bool $lang ): array {
+		if ( ! $key ) {
+			return self::item( 'Textfocus (Suchvolumen)', false, 'empfohlen: Schlüssel in wp-config.php eintragen; ohne ihn fehlen Suchvolumen und verwandte Keywords', "define( 'LSEC_TEXTFOCUS_API_KEY', 'hier-den-Schlüssel-einsetzen' );", true );
+		}
+		if ( ! $lang ) {
+			return self::item( 'Textfocus (Suchvolumen)', false, 'Schlüssel hinterlegt; Sprachcode noch nicht gespeichert', 'wp lsec textfocus langs --search=german --save=de', true );
+		}
+		return self::item( 'Textfocus (Suchvolumen)', true, 'eingerichtet', array(), true );
+	}
+
+	/**
+	 * Schritt 3: Website lesen.
 	 *
 	 * @param array<string, mixed> $profile Profil.
 	 * @return array<string, mixed>
@@ -131,7 +226,7 @@ final class SetupWizard {
 			self::item( 'Servicegebiet', $has_area, $has_area ? (string) $area['label'] . ( (float) ( $area['radius_km'] ?? 0 ) > 0 ? ' und ' . (float) $area['radius_km'] . ' km Umkreis' : '' ) : 'aus der Firmenadresse mit Umkreis' ),
 		);
 		if ( array() !== $missing ) {
-			$items[] = self::item( 'Leistungen ohne eigene Seite', false, implode( ', ', $missing ) . ' – Entwürfe zu diesen Leistungen beschreiben nur allgemeines Fachwissen', '', true );
+			$items[] = self::item( 'Leistungen ohne eigene Seite', false, implode( ', ', $missing ) . ': ohne Seite, die sie beschreibt – Entwürfe zu diesen Leistungen beschreiben nur allgemeines Fachwissen', array(), true );
 		}
 		return self::step(
 			'website',
@@ -141,12 +236,12 @@ final class SetupWizard {
 				'label' => $has_org ? 'Website erneut lesen und Profil ergänzen' : 'Website lesen',
 				'cost'  => 'etwa 0,01–0,03 USD',
 			),
-			'Liest Startseite, Impressum, Kontakt und Leistungsseiten. Vorhandene Angaben bleiben, fehlende werden ergänzt.'
+			'' === (string) Settings::get( 'ai_model' ) ? 'Zuerst die KI-Einstellungen übernehmen (Schritt 2): Das Lesen braucht ein Modell.' : 'Liest Startseite, Impressum, Kontakt und Leistungsseiten. Vorhandene Angaben bleiben, fehlende werden ergänzt.'
 		);
 	}
 
 	/**
-	 * Schritt 3: KI-Einstellungen.
+	 * Schritt 2: KI-Einstellungen.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -203,18 +298,20 @@ final class SetupWizard {
 	 * @return array<string, mixed>
 	 */
 	private static function start( array $data, array $profile ): array {
-		$index    = (array) $data['content']['index'];
-		$indexed  = (int) ( $index['indexed'] ?? 0 ) > 0;
-		$entities = array_sum( (array) $data['content']['entities'] ) > 0;
-		$keywords = self::ran( KeywordSyncWorkflow::TYPE );
-		$topics   = array_sum( ( new TopicRepository() )->counts() ) > 0;
-		$items    = array(
-			self::item( 'Inhaltsindex', $indexed, sprintf( '%d von %d Inhalten gelesen', (int) ( $index['indexed'] ?? 0 ), (int) ( $index['published'] ?? 0 ) ) ),
+		$index     = (array) $data['content']['index'];
+		$indexed   = (int) ( $index['indexed'] ?? 0 ) > 0;
+		$entities  = array_sum( (array) $data['content']['entities'] ) > 0;
+		$sync_run  = self::open_run( KeywordSyncWorkflow::TYPE );
+		$index_run = self::open_run( ContentIndexWorkflow::TYPE );
+		$keywords  = $sync_run > 0 || self::ran( KeywordSyncWorkflow::TYPE );
+		$topics    = array_sum( ( new TopicRepository() )->counts() ) > 0;
+		$items     = array(
+			self::item( 'Inhaltsindex', $indexed || $index_run > 0, sprintf( '%d von %d Inhalten gelesen', (int) ( $index['indexed'] ?? 0 ), (int) ( $index['published'] ?? 0 ) ) . ( $index_run > 0 ? sprintf( '; läuft (Ablauf %d)', $index_run ) : '' ) ),
 			self::item( 'Entity-Erkennung', $entities, $entities ? 'Entitäten vorhanden' : 'startet nach dem Index über den Cronjob' ),
-			self::item( 'Keyword-Abgleich', $keywords, $keywords ? 'gelaufen; danach täglich' : 'Search Console und Suchvolumen' ),
+			self::item( 'Keyword-Abgleich', $keywords, $sync_run > 0 ? sprintf( 'läuft (Ablauf %d); danach täglich', $sync_run ) : ( $keywords ? 'gelaufen; danach täglich' : 'Search Console und Suchvolumen' ) ),
 			self::item( 'Erste Themenrecherche', $topics, $topics ? 'Themen vorhanden' : 'mit Websuche und Faktenprüfung' ),
 		);
-		$ready    = null !== $profile['organization']['id'];
+		$ready     = null !== $profile['organization']['id'];
 		return self::step(
 			'start',
 			$indexed && $keywords && $topics,
@@ -223,7 +320,7 @@ final class SetupWizard {
 				'label' => 'Fehlendes starten',
 				'cost'  => 'Index und Abgleich kostenlos bzw. wenige Cent, Entity-Erkennung etwa 0,001 USD je Inhalt, Themenrecherche etwa 0,05–0,15 USD',
 			) : null,
-			$ready ? 'Die Abläufe arbeitet der Cronjob ab; der Stand erscheint im Dashboard.' : 'Zuerst die Website lesen (Schritt 2).'
+			$ready ? 'Die Abläufe arbeitet der Cronjob ab; der Stand erscheint im Dashboard.' : 'Zuerst die Website lesen (Schritt 3).'
 		);
 	}
 
@@ -258,9 +355,13 @@ final class SetupWizard {
 	 * @param string               $step    website, ki, stil oder start.
 	 * @param array<string, mixed> $options radius (km), text (Stilvorgabe), force (vorhandene Werte ersetzen).
 	 * @return array{messages: list<string>, cost: float}
-	 * @throws \InvalidArgumentException Bei unbekanntem Schritt; die Schritte werfen \RuntimeException.
+	 * @throws \InvalidArgumentException Bei unbekanntem Schritt.
+	 * @throws \RuntimeException Ohne KI-Modell oder wenn der Schritt scheitert.
 	 */
 	public static function run( Plugin $plugin, string $step, array $options = array() ): array {
+		if ( in_array( $step, array( 'website', 'stil', 'start' ), true ) && '' === (string) Settings::get( 'ai_model' ) ) {
+			throw new \RuntimeException( 'Zuerst die KI-Einstellungen übernehmen (Schritt 2).' );
+		}
 		return match ( $step ) {
 			'website' => self::read_website( $plugin, (float) ( $options['radius'] ?? self::DEFAULT_RADIUS_KM ) ),
 			'ki'      => self::apply_ai( ! empty( $options['force'] ) ),
@@ -334,7 +435,7 @@ final class SetupWizard {
 		}
 		$missing = self::services_without_page( array_map( static fn( array $s ): string => (string) $s['name'], (array) $merged['profile']['services'] ) );
 		if ( array() !== $missing ) {
-			$messages[] = 'Leistungen ohne eigene Seite: ' . implode( ', ', $missing );
+			$messages[] = 'Leistungen ohne Seite, die sie beschreibt: ' . implode( ', ', $missing );
 		}
 		return array(
 			'messages' => array_values( $messages ),
@@ -456,17 +557,23 @@ final class SetupWizard {
 	 */
 	private static function start_all( Plugin $plugin ): array {
 		if ( null === ( new BusinessProfile() )->organization_row() ) {
-			throw new \RuntimeException( 'Zuerst die Website lesen (Schritt 2): Ohne Unternehmensprofil gibt es keine Themen.' );
+			throw new \RuntimeException( 'Zuerst die Website lesen (Schritt 3): Ohne Unternehmensprofil gibt es keine Themen.' );
 		}
 		$messages = array();
 		$stats    = ContentIndex::stats();
-		if ( 0 === (int) $stats['indexed'] ) {
+		$open     = self::open_run( ContentIndexWorkflow::TYPE );
+		if ( $open > 0 ) {
+			$messages[] = sprintf( 'Inhaltsindex läuft (Ablauf %d).', $open );
+		} elseif ( 0 === (int) $stats['indexed'] ) {
 			$run        = ContentIndexWorkflow::start( $plugin, false, array() );
-			$messages[] = null === $run ? 'Inhaltsindex läuft schon.' : sprintf( 'Inhaltsindex gestartet (Ablauf %d, %d Inhalte); die Entity-Erkennung folgt.', $run['run_id'], (int) $stats['pending'] );
+			$messages[] = null === $run ? 'Inhaltsindex läuft.' : sprintf( 'Inhaltsindex gestartet (Ablauf %d, %d Inhalte); die Entity-Erkennung folgt.', $run['run_id'], (int) $stats['pending'] );
 		} else {
 			$messages[] = sprintf( 'Inhaltsindex vorhanden (%d Inhalte).', (int) $stats['indexed'] );
 		}
-		if ( ! self::ran( KeywordSyncWorkflow::TYPE ) ) {
+		$open = self::open_run( KeywordSyncWorkflow::TYPE );
+		if ( $open > 0 ) {
+			$messages[] = sprintf( 'Keyword-Abgleich läuft (Ablauf %d).', $open );
+		} elseif ( ! self::ran( KeywordSyncWorkflow::TYPE ) ) {
 			$gsc        = '' !== (string) Settings::get( 'gsc_property' );
 			$run        = KeywordSyncWorkflow::start(
 				$plugin,
@@ -476,7 +583,7 @@ final class SetupWizard {
 					'reason'  => 'setup',
 				)
 			);
-			$messages[] = null === $run ? 'Keyword-Abgleich läuft schon.' : sprintf( 'Keyword-Abgleich gestartet (Ablauf %d%s).', $run['run_id'], $gsc ? '' : ', ohne Search Console' );
+			$messages[] = null === $run ? 'Keyword-Abgleich läuft.' : sprintf( 'Keyword-Abgleich gestartet (Ablauf %d%s).', $run['run_id'], $gsc ? '' : ', ohne Search Console' );
 		} else {
 			$messages[] = 'Keyword-Abgleich ist schon gelaufen; er wiederholt sich täglich.';
 		}
@@ -556,31 +663,48 @@ final class SetupWizard {
 		global $wpdb;
 		$missing = array();
 		foreach ( $services as $service ) {
-			$words = TopicSimilarity::vocabulary( array( $service ) );
+			$stems = self::service_stems( $service );
 			$found = false;
-			foreach ( array_slice( $words, 0, 2 ) as $word ) {
-				// Leistungswörter sind gefaltet und gekürzt („pflaster“, „flaechen“); gesucht wird im Titel, auch mit Umlaut.
-				$plain  = '%' . $wpdb->esc_like( $word ) . '%';
-				$umlaut = '%' . $wpdb->esc_like(
-					strtr(
-						$word,
-						array(
-							'ae' => 'ä',
-							'oe' => 'ö',
-							'ue' => 'ü',
-						)
-					)
-				) . '%';
-				$found  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ('page', 'post', 'product') AND ( post_title LIKE %s OR post_title LIKE %s )", $plain, $umlaut ) ) > 0; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			foreach ( $stems as $stem ) {
+				// Titel oder Inhalt: Leistungen stehen oft gemeinsam auf einer Seite „Leistungen“ (Zahnarztpraxis, 0.8.1).
+				$like  = '%' . $wpdb->esc_like( $stem ) . '%';
+				$found = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ('page', 'post', 'product') AND ( post_title LIKE %s OR post_content LIKE %s )", $like, $like ) ) > 0; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				if ( $found ) {
 					break;
 				}
 			}
-			if ( ! $found && array() !== $words ) {
+			if ( ! $found && array() !== $stems ) {
 				$missing[] = $service;
 			}
 		}
 		return $missing;
+	}
+
+	/**
+	 * Wortstämme einer Leistung für die Suche: die ersten sechs Buchstaben der ersten beiden Leistungswörter,
+	 * gefaltet und mit Umlaut („zahnae“ und „zahnä“).
+	 *
+	 * @param string $service Leistung.
+	 * @return list<string>
+	 */
+	public static function service_stems( string $service ): array {
+		$out = array();
+		foreach ( array_slice( TopicSimilarity::vocabulary( array( $service ) ), 0, 2 ) as $word ) {
+			$stem   = mb_substr( $word, 0, 6 );
+			$out[]  = $stem;
+			$umlaut = strtr(
+				$stem,
+				array(
+					'ae' => 'ä',
+					'oe' => 'ö',
+					'ue' => 'ü',
+				)
+			);
+			if ( $umlaut !== $stem ) {
+				$out[] = $umlaut;
+			}
+		}
+		return array_values( array_unique( $out ) );
 	}
 
 	/**
@@ -634,25 +758,37 @@ final class SetupWizard {
 	private static function ran( string $type ): bool {
 		global $wpdb;
 		$table = Schema::table( $wpdb->prefix, 'runs' );
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE type = %s AND status IN ('succeeded', 'running', 'queued', 'waiting')", $type ) ) > 0; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE type = %s AND status = 'succeeded'", $type ) ) > 0; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * Offener Ablauf dieses Typs (eingeplant, läuft oder wartet); 0 = keiner. Nachtrag 23.10. (0.8.1): Der
+	 * Assistent meldete „schon gelaufen“, obwohl der Abgleich nur eingeplant war.
+	 *
+	 * @param string $type Ablauftyp.
+	 */
+	private static function open_run( string $type ): int {
+		global $wpdb;
+		$table = Schema::table( $wpdb->prefix, 'runs' );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND status IN ('queued', 'running', 'waiting') ORDER BY id DESC LIMIT 1", $type ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
 	 * Punkt eines Schritts.
 	 *
-	 * @param string $label    Bezeichnung.
-	 * @param bool   $ok       Erledigt.
-	 * @param string $detail   Stand oder Hinweis.
-	 * @param string $paste    Text zum Einfügen (Befehl, Zeile für wp-config.php).
-	 * @param bool   $optional Empfohlen, aber für den Schritt nicht nötig.
-	 * @return array{label: string, ok: bool, detail: string, paste: string, optional: bool}
+	 * @param string          $label    Bezeichnung.
+	 * @param bool            $ok       Erledigt.
+	 * @param string          $detail   Stand oder Hinweis.
+	 * @param string|string[] $paste    Texte zum Einfügen (Befehl, Zeile für wp-config.php), je Eintrag ein Block.
+	 * @param bool            $optional Empfohlen, aber für den Schritt nicht nötig.
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
 	 */
-	private static function item( string $label, bool $ok, string $detail, string $paste = '', bool $optional = false ): array {
+	private static function item( string $label, bool $ok, string $detail, string|array $paste = array(), bool $optional = false ): array {
 		return array(
 			'label'    => $label,
 			'ok'       => $ok,
 			'detail'   => $detail,
-			'paste'    => $paste,
+			'paste'    => array_values( array_filter( array_map( 'strval', (array) $paste ), static fn( string $p ): bool => '' !== $p ) ),
 			'optional' => $optional,
 		);
 	}

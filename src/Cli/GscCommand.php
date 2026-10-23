@@ -41,7 +41,53 @@ final class GscCommand {
 		if ( '' !== $setting ) {
 			return $setting;
 		}
-		return dirname( untrailingslashit( ABSPATH ) ) . '/private/gsc-service-account.json';
+		$dir     = dirname( untrailingslashit( ABSPATH ) ) . '/private';
+		$default = $dir . '/gsc-service-account.json';
+		if ( file_exists( $default ) ) {
+			return $default;
+		}
+		// Nachtrag 23.10. (0.8.1): Die Schlüsseldatei hieß bei der zweiten Testseite
+		// „lsec-search-console-….json“. Liegt im Ordner private genau eine Schlüsseldatei eines Dienstkontos,
+		// gilt sie.
+		$files = array();
+		foreach ( (array) glob( $dir . '/*.json' ) as $path ) {
+			$path = (string) $path;
+			if ( is_readable( $path ) && filesize( $path ) < 20000 ) {
+				$files[ $path ] = (string) file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			}
+		}
+		return self::pick_credentials( $files ) ?? $default;
+	}
+
+	/**
+	 * Wählt die Schlüsseldatei eines Dienstkontos: genau eine Datei mit client_email und private_key.
+	 *
+	 * @param array<string, string> $files Pfad => Inhalt.
+	 * @return string|null Pfad oder null (keine oder mehrere).
+	 */
+	public static function pick_credentials( array $files ): ?string {
+		$found = array();
+		foreach ( $files as $path => $content ) {
+			$data = json_decode( $content, true );
+			if ( is_array( $data ) && '' !== (string) ( $data['client_email'] ?? '' ) && '' !== (string) ( $data['private_key'] ?? '' ) ) {
+				$found[] = (string) $path;
+			}
+		}
+		return 1 === count( $found ) ? $found[0] : null;
+	}
+
+	/**
+	 * Adresse des Dienstkontos (nicht geheim; der Schlüssel wird nie ausgegeben).
+	 *
+	 * @param string $file Schlüsseldatei.
+	 */
+	public static function client_email( string $file ): string {
+		if ( ! is_readable( $file ) ) {
+			return '';
+		}
+		$data = json_decode( (string) file_get_contents( $file ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$mail = is_array( $data ) ? (string) ( $data['client_email'] ?? '' ) : '';
+		return is_email( $mail ) ? $mail : '';
 	}
 
 	/**

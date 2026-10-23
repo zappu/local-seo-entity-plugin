@@ -60,7 +60,11 @@ function Item( { item } ) {
 			</span>
 			<div>
 				<strong>{ item.label }</strong>: { item.detail }
-				{ item.paste && <Paste text={ item.paste } /> }
+				{ ( Array.isArray( item.paste ) ? item.paste : [ item.paste ] )
+					.filter( Boolean )
+					.map( ( text, index ) => (
+						<Paste key={ index } text={ text } />
+					) ) }
 			</div>
 		</li>
 	);
