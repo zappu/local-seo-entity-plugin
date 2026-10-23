@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Local SEO & Entity Content
  * Description:       Recherchiert lokale SEO-Themen, erkennt Entitäten und erstellt daraus Beitragsentwürfe.
- * Version:           0.7.8
+ * Version:           0.7.9
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            ThoKa
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'LSEC_VERSION', '0.7.8' );
+define( 'LSEC_VERSION', '0.7.9' );
 define( 'LSEC_FILE', __FILE__ );
 define( 'LSEC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LSEC_URL', plugin_dir_url( __FILE__ ) );
