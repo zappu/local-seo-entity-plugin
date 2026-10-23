@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.7.12 – 23.10.2026
+
+- **Übliche Geschäftspraxis erlaubt:** „nach Absprache“, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall und Ähnliches gelten beim Schreiben und in der KI-Bewertung nicht mehr als unbelegt.
+
 ## 0.7.11 – 23.10.2026
 
 - **Ortsfakten:** Der Entwurf nutzt Tatsachen aller Entitäten desselben Ortes („Uetze“, „Gemeinde Uetze“, Servicegebiet Uetze), nicht nur der ersten gefundenen.

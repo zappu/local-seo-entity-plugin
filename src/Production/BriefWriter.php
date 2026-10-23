@@ -44,7 +44,7 @@ final class BriefWriter {
 			. "- internal_link_targets: zwei bis fünf passende Linkziele aus der Liste (post_id) mit Hinweis zum Ankertext.\n"
 			. '- elements: passende Elemente aus ' . implode( ', ', self::ELEMENTS ) . ".\n"
 			. "- cta: Handlungsaufforderung mit den Kontaktwegen aus dem Profil.\n"
-			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst einen Abschnitt, wie das Verfahren in der Branche üblicherweise funktioniert und worauf Leser bei der Auswahl eines Anbieters achten können. facts_to_avoid nennt dann ausdrücklich: Ablauf und Absprachen des Unternehmens.\n"
+			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst einen Abschnitt, wie das Verfahren in der Branche üblicherweise funktioniert und worauf Leser bei der Auswahl eines Anbieters achten können. facts_to_avoid nennt dann ausdrücklich: feste Arbeitsschritte, Geräte und Zusagen des Unternehmens. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine und Umfang nach Absprache) ist erlaubt.\n"
 			. "- Servicegebiet und Standort höchstens einmal im Text und einmal in der Handlungsaufforderung.\n";
 	}
 
