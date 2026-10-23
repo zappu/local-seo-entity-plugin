@@ -330,6 +330,58 @@ final class ProductionCommand {
 	}
 
 	/**
+	 * Sammelauftrag: schreibt mehrere freigegebene Themen auf einmal (höchstens 20). Ohne --yes nur die Schätzung.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<topic>...]
+	 * : Themen.
+	 *
+	 * [--approved]
+	 * : Alle freigegebenen Themen nach Priorität.
+	 *
+	 * [--yes]
+	 * : Starten; die Abläufe arbeitet der Cronjob ab.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec production batch --approved
+	 *     wp lsec production batch 4 17 22 --yes
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function batch( array $args, array $assoc_args ): void {
+		$ids = array_map( 'intval', $args );
+		if ( ! empty( $assoc_args['approved'] ) ) {
+			$ids = array_merge( $ids, ( new TopicRepository() )->approved_ids( ContentProductionWorkflow::BATCH_MAX ) );
+		}
+		if ( array() === array_filter( $ids ) ) {
+			WP_CLI::error( 'Keine Themen angegeben. Beispiel: wp lsec production batch --approved' );
+		}
+		$start  = ! empty( $assoc_args['yes'] );
+		$result = ContentProductionWorkflow::batch( $this->plugin, $ids, $start );
+		foreach ( $result['items'] as $item ) {
+			WP_CLI::log( sprintf( '%s Thema %d: %s – %s%s', $item['ok'] ? '+' : '-', $item['topic_id'], mb_substr( $item['title'], 0, 70 ), $item['note'], $item['run_id'] > 0 ? ' (Ablauf ' . $item['run_id'] . ')' : '' ) );
+		}
+		$summary = sprintf( '%d Entwürfe, etwa %s USD (je Entwurf etwa %s USD)%s.', $result['count'], number_format( $result['estimate'], 2, ',', '' ), number_format( $result['per_draft'], 2, ',', '' ), null === $result['budget_left'] ? '' : ', im Monatsbudget noch ' . number_format( $result['budget_left'], 2, ',', '' ) . ' USD' );
+		if ( ! $start ) {
+			WP_CLI::log( $summary );
+			WP_CLI::log( 'Starten mit --yes.' );
+			return;
+		}
+		$this->plugin->logger->audit(
+			'Sammelauftrag gestartet',
+			array(
+				'runs'     => $result['started'],
+				'estimate' => $result['estimate'],
+				'via'      => 'cli',
+			)
+		);
+		WP_CLI::success( $summary . ' Der Cronjob arbeitet die Abläufe ab.' );
+	}
+
+	/**
 	 * Startet Entwürfe zu freigegebenen Themen wie der Cronjob (Einstellungen production_auto, drafts_per_day).
 	 *
 	 * @param string[]              $args       Argumente.

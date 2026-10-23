@@ -17,6 +17,7 @@
 #            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9), Bericht mit Tatsachen (0.7.10)
 #            E8 automatische Nachbesserung · E9 Ortsfakten werden recherchiert, einmal je Ort (0.7.13)
 #   Stufe F: F1 Einrichtungsassistent: Stand der sechs Schritte, unbekannter Schritt, REST-Routen (0.8.0)
+#            F2 Sammelauftrag mit Kostenschätzung, Seite „Abläufe“ (REST) (0.9.0)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -634,6 +635,21 @@ check "sechs Schritte als JSON" "6" "$(wpj lsec setup --format=json | json total
 contains "unbekannter Schritt abgelehnt" "Unbekannter Schritt" "$($WP "${WP_ARGS[@]}" lsec setup unbekannt 2>&1)"
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Einrichtung" "/lsec/v1/setup" "$OUT"
+
+echo "F2 Sammelauftrag und Seite „Abläufe“ (0.9.0)"
+wpc lsec topics decide "$T1" approved >/dev/null
+OUT=$(wpc lsec production batch "$T1" 999999 2>&1)
+contains "Schätzung ohne Start" "Starten mit --yes" "$OUT"
+contains "freigegebenes Thema wird geschrieben" "+ Thema $T1" "$OUT"
+contains "unbekanntes Thema übersprungen" "- Thema 999999" "$OUT"
+OUT=$(wpc lsec production batch "$T1" --yes 2>&1)
+contains "Sammelauftrag gestartet" "Der Cronjob arbeitet die Abläufe ab" "$OUT"
+RB=$(printf '%s' "$OUT" | sed -n 's/.*(Ablauf \([0-9]*\)).*/\1/p' | head -1)
+check "Ablauf eingeplant" "queued" "$(wpj lsec production report "$RB" --format=json | json status)"
+[ -n "$RB" ] && wpc lsec runs cancel "$RB" >/dev/null 2>&1
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "Route Abläufe" "/lsec/v1/runs" "$OUT"
+contains "Route Sammelauftrag" "/lsec/v1/production/batch" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

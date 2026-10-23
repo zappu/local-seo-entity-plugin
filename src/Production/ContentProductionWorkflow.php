@@ -149,6 +149,87 @@ final class ContentProductionWorkflow {
 	}
 
 	/**
+	 * Höchstzahl der Themen je Sammelauftrag.
+	 */
+	public const BATCH_MAX = 20;
+
+	/**
+	 * Sammelauftrag (Stufe F): mehrere freigegebene Themen auf einmal schreiben. Ohne $start nur die Schätzung
+	 * (Spezifikation 8.1b: Schätzung vor dem Start eines Sammelauftrags). Die Abläufe arbeitet der Cronjob ab,
+	 * höchstens max_parallel_runs gleichzeitig; das Tageslimit drafts_per_day gilt nur für den Cronjob.
+	 *
+	 * @param Plugin $plugin    Plugin.
+	 * @param int[]  $topic_ids Themen.
+	 * @param bool   $start     Starten statt nur schätzen.
+	 * @return array{items: list<array{topic_id: int, title: string, ok: bool, note: string, run_id: int}>, count: int, per_draft: float, estimate: float, budget_left: float|null, started: list<int>}
+	 */
+	public static function batch( Plugin $plugin, array $topic_ids, bool $start ): array {
+		$repo    = new TopicRepository();
+		$items   = array();
+		$started = array();
+		$ids     = array_slice( array_values( array_unique( array_filter( array_map( 'intval', $topic_ids ) ) ) ), 0, self::BATCH_MAX );
+		foreach ( $ids as $id ) {
+			$topic = $repo->detail( $id );
+			$item  = array(
+				'topic_id' => $id,
+				'title'    => null === $topic ? '' : (string) $topic['title'],
+				'ok'       => false,
+				'note'     => '',
+				'run_id'   => 0,
+			);
+			if ( null === $topic ) {
+				$item['note'] = 'nicht gefunden';
+			} elseif ( 'approved' !== (string) $topic['status'] ) {
+				$item['note'] = 'nicht freigegeben (' . $topic['status'] . ')';
+			} elseif ( ! $start ) {
+				$item['ok']   = true;
+				$item['note'] = 'wird geschrieben';
+			} else {
+				try {
+					$run            = self::start(
+						$plugin,
+						$id,
+						array( 'reason' => 'batch' )
+					);
+					$item['run_id'] = (int) $run['run_id'];
+					$item['ok']     = (bool) $run['created'];
+					$item['note']   = $run['created'] ? 'eingeplant' : 'läuft schon';
+					if ( $run['created'] ) {
+						$started[] = (int) $run['run_id'];
+					}
+				} catch ( \RuntimeException $e ) {
+					$item['note'] = $e->getMessage();
+				}
+			}
+			$items[] = $item;
+		}
+		$count  = count( array_filter( $items, static fn( array $i ): bool => $i['ok'] ) );
+		$per    = self::cost_per_draft();
+		$budget = \Lsec\Integrations\AI\AiClientFactory::budget()->status();
+		$limit  = (float) $budget['month_limit'];
+		return array(
+			'items'       => $items,
+			'count'       => $count,
+			'per_draft'   => $per,
+			'estimate'    => round( $count * $per, 2 ),
+			'budget_left' => $limit > 0 ? round( max( 0.0, $limit - (float) $budget['month_spent'] ), 2 ) : null,
+			'started'     => $started,
+		);
+	}
+
+	/**
+	 * Durchschnittliche Kosten der letzten zehn fertigen Entwürfe; ohne solche 0,20 USD (Messung in Stufe E).
+	 */
+	public static function cost_per_draft(): float {
+		global $wpdb;
+		$runs  = Schema::table( $wpdb->prefix, 'runs' );
+		$calls = Schema::table( $wpdb->prefix, 'ai_calls' );
+		$costs = (array) $wpdb->get_col( $wpdb->prepare( "SELECT (SELECT COALESCE(SUM(c.cost_estimate),0) FROM {$calls} c WHERE c.run_id = r.id) AS cost FROM {$runs} r WHERE r.type = %s AND r.status IN ('succeeded', 'blocked') ORDER BY r.id DESC LIMIT 10", self::TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$costs = array_values( array_filter( array_map( 'floatval', $costs ), static fn( float $c ): bool => $c > 0 ) );
+		return array() === $costs ? 0.20 : round( array_sum( $costs ) / count( $costs ), 3 );
+	}
+
+	/**
 	 * Cronjob: freigegebene Themen schreiben, höchstens drafts_per_day je Tag (Spezifikation 7.4).
 	 *
 	 * @param Plugin        $plugin  Plugin.

@@ -46,6 +46,7 @@ final class ProductionController {
 		};
 		$route( '/topics/(?P<id>\d+)/produce', 'POST', array( $this, 'produce' ) );
 		$route( '/production/(?P<id>\d+)', 'GET', array( $this, 'report' ) );
+		$route( '/production/batch', 'POST', array( $this, 'batch' ) );
 		$route( '/style', 'GET', array( $this, 'style' ) );
 		$route( '/style', 'POST', array( $this, 'save_style' ) );
 		$route( '/style/build', 'POST', array( $this, 'build_style' ) );
@@ -197,5 +198,31 @@ final class ProductionController {
 			return new \WP_Error( 'lsec_not_found', 'Version nicht gefunden.', array( 'status' => 404 ) );
 		}
 		return new \WP_REST_Response( array( 'ok' => true ) );
+	}
+
+	/**
+	 * Sammelauftrag: mit start = false nur die Schätzung.
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit topic_ids und start.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function batch( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$ids = array_map( 'intval', (array) $request->get_param( 'topic_ids' ) );
+		if ( array() === array_filter( $ids ) ) {
+			return new \WP_Error( 'lsec_invalid', 'Keine Themen ausgewählt.', array( 'status' => 400 ) );
+		}
+		$start  = (bool) $request->get_param( 'start' );
+		$result = ContentProductionWorkflow::batch( $this->plugin, $ids, $start );
+		if ( $start ) {
+			$this->plugin->logger->audit(
+				'Sammelauftrag gestartet',
+				array(
+					'runs'     => $result['started'],
+					'estimate' => $result['estimate'],
+					'user_id'  => get_current_user_id(),
+				)
+			);
+		}
+		return new \WP_REST_Response( $result );
 	}
 }

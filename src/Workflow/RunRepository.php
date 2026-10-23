@@ -486,4 +486,46 @@ final class RunRepository {
 		);
 		return is_array( $rows ) ? array_values( $rows ) : array();
 	}
+
+	/**
+	 * Abläufe für die Seite „Abläufe“, neueste zuerst, mit Filter und Seiten.
+	 *
+	 * @param string $status Status; leer = alle.
+	 * @param string $type   Typ; leer = alle.
+	 * @param int    $limit  Anzahl.
+	 * @param int    $offset Versatz.
+	 * @return array{rows: list<array<string, mixed>>, total: int, types: array<string, int>}
+	 */
+	public function search( string $status, string $type, int $limit, int $offset ): array {
+		$where  = array();
+		$params = array();
+		if ( '' !== $status ) {
+			$where[]  = 'status = %s';
+			$params[] = $status;
+		}
+		if ( '' !== $type ) {
+			$where[]  = 'type = %s';
+			$params[] = $type;
+		}
+		$sql_where = array() === $where ? '' : 'WHERE ' . implode( ' AND ', $where );
+		$count_sql = "SELECT COUNT(*) FROM {$this->t( 'runs' )} {$sql_where}";
+		$total     = (int) $this->db->get_var( array() === $params ? $count_sql : $this->db->prepare( $count_sql, $params ) );
+		$rows      = $this->db->get_results(
+			$this->db->prepare(
+				"SELECT id, uuid, type, subject_type, subject_id, status, current_step, error_code, error_message, created_at, updated_at, finished_at
+				FROM {$this->t( 'runs' )} {$sql_where} ORDER BY id DESC LIMIT %d OFFSET %d",
+				array_merge( $params, array( max( 1, $limit ), max( 0, $offset ) ) )
+			),
+			ARRAY_A
+		);
+		$types     = array();
+		foreach ( (array) $this->db->get_results( "SELECT type, COUNT(*) AS n FROM {$this->t( 'runs' )} GROUP BY type", ARRAY_A ) as $row ) {
+			$types[ (string) $row['type'] ] = (int) $row['n'];
+		}
+		return array(
+			'rows'  => is_array( $rows ) ? array_values( $rows ) : array(),
+			'total' => $total,
+			'types' => $types,
+		);
+	}
 }

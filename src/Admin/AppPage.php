@@ -24,6 +24,7 @@ final class AppPage {
 	public const TOPICS_SLUG   = 'lsec-topics';
 	public const STYLE_SLUG    = 'lsec-style';
 	public const SETUP_SLUG    = 'lsec-setup';
+	public const RUNS_SLUG     = 'lsec-runs';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
@@ -36,6 +37,7 @@ final class AppPage {
 		self::KEYWORDS_SLUG => 'keywords',
 		self::TOPICS_SLUG   => 'topics',
 		self::STYLE_SLUG    => 'style',
+		self::RUNS_SLUG     => 'runs',
 		self::SETTINGS_SLUG => 'settings',
 	);
 
@@ -119,6 +121,14 @@ final class AppPage {
 			self::STYLE_SLUG,
 			array( $this, 'render' )
 		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Abläufe', 'local-seo-entity-plugin' ),
+			__( 'Abläufe', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::RUNS_SLUG,
+			array( $this, 'render' )
+		);
 	}
 
 	/**
@@ -161,6 +171,7 @@ final class AppPage {
 						'settings' => admin_url( 'admin.php?page=' . self::SETTINGS_SLUG ),
 						'setup'    => admin_url( 'admin.php?page=' . self::SETUP_SLUG ),
 						'style'    => admin_url( 'admin.php?page=' . self::STYLE_SLUG ),
+						'runs'     => admin_url( 'admin.php?page=' . self::RUNS_SLUG ),
 					),
 				)
 			) . ';',
@@ -188,6 +199,7 @@ final class AppPage {
 			'settings'  => __( 'Local SEO – Einstellungen', 'local-seo-entity-plugin' ),
 			'setup'     => __( 'Local SEO – Einrichtung', 'local-seo-entity-plugin' ),
 			'style'     => __( 'Local SEO – Style Mimic', 'local-seo-entity-plugin' ),
+			'runs'      => __( 'Local SEO – Abläufe', 'local-seo-entity-plugin' ),
 		);
 		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ?? __( 'Local SEO', 'local-seo-entity-plugin' ) ) . '</h1>';
 		if ( ! is_readable( LSEC_DIR . 'assets/dist/admin.asset.php' ) ) {

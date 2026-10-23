@@ -294,6 +294,12 @@ function RunsCard( { runs, onAction, busyId } ) {
 				<h2>Letzte Abläufe</h2>
 				<span className="lsec-muted">
 					{ counts.length ? counts.map( ( [ s, n ] ) => `${ RUN_STATUS[ s ] || s }: ${ n }` ).join( ' · ' ) : 'Noch keine' }
+					{ window.lsecAdmin && window.lsecAdmin.pages && window.lsecAdmin.pages.runs && (
+						<>
+							{ ' · ' }
+							<a href={ window.lsecAdmin.pages.runs }>Alle Abläufe</a>
+						</>
+					) }
 				</span>
 			</CardHeader>
 			<CardBody>

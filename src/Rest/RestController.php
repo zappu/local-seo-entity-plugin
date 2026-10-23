@@ -163,6 +163,7 @@ final class RestController {
 		( new TopicsController( $this->plugin ) )->register( $permission );
 		( new ProductionController( $this->plugin ) )->register( $permission );
 		( new SetupController( $this->plugin ) )->register( $permission );
+		( new RunsController( $this->plugin ) )->register( $permission );
 	}
 
 	/**

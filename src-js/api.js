@@ -131,3 +131,11 @@ export const activateStyle = ( version ) => apiFetch( { path: `${ base }/style/$
 export const getSetup = () => apiFetch( { path: `${ base }/setup` } );
 export const runSetup = ( step, data ) =>
 	apiFetch( { path: `${ base }/setup/${ step }`, method: 'POST', data } );
+
+export const getRuns = ( { status = '', type = '', page = 1 } = {} ) => {
+	const query = new URLSearchParams( { status, type, page: String( page ) } );
+	return apiFetch( { path: `${ base }/runs?${ query.toString() }` } );
+};
+export const getRun = ( id ) => apiFetch( { path: `${ base }/runs/${ id }` } );
+export const batchProduce = ( topicIds, start ) =>
+	apiFetch( { path: `${ base }/production/batch`, method: 'POST', data: { topic_ids: topicIds, start } } );

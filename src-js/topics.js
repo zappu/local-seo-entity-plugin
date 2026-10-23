@@ -7,8 +7,8 @@
  * Ab Stufe E: Beitrag schreiben, Entwurf mit Prüfbericht (Kosten, Bewertung, Mängel).
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
-import { Button, Card, CardBody, CardHeader, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
-import { decideClaim, decideTopic, getTopic, getTopics, produceTopic, startResearch } from './api';
+import { Button, Card, CardBody, CardHeader, CheckboxControl, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
+import { batchProduce, decideClaim, decideTopic, getTopic, getTopics, produceTopic, startResearch } from './api';
 import { CLAIM_STATUS, dateTime, number, RUN_STATUS, TOPIC_FORMATS, TOPIC_STATUS, usd } from './format';
 
 const FILTERS = [
@@ -288,12 +288,21 @@ function TopicDetail( { id, labels, setNotice } ) {
 	);
 }
 
-function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice } ) {
+function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice, selected, onSelect } ) {
 	const [ open, setOpen ] = useState( false );
 	const producing = topic.status === 'in_production' || topic.status === 'produced';
 	return (
 		<div className={ `lsec-topic lsec-topic--${ topic.status }` }>
-			<div className="lsec-topic__head">
+			<div className={ `lsec-topic__head${ onSelect ? ' lsec-topic__head--select' : '' }` }>
+				{ onSelect && (
+					<CheckboxControl
+						className="lsec-topic__select"
+						label={ <span className="screen-reader-text">Für den Sammelauftrag auswählen</span> }
+						checked={ selected }
+						onChange={ () => onSelect( topic.id ) }
+						__nextHasNoMarginBottom
+					/>
+				) }
 				<div className="lsec-topic__score" title="Priorität (0–100)">
 					{ topic.priority_score === null ? '–' : Math.round( topic.priority_score ) }
 				</div>
@@ -348,6 +357,8 @@ export default function Topics() {
 	const [ data, setData ] = useState( null );
 	const [ notice, setNotice ] = useState( null );
 	const [ busy, setBusy ] = useState( false );
+	const [ selected, setSelected ] = useState( [] );
+	useEffect( () => setSelected( [] ), [ status ] );
 
 	const load = useCallback( () => {
 		getTopics( status )
@@ -371,6 +382,29 @@ export default function Topics() {
 			.then( ( run ) => {
 				setNotice( { status: 'success', text: `Entwurf eingeplant (Ablauf ${ run.run_id }). Er entsteht über den Cronjob in einigen Minuten.` } );
 				load();
+			} )
+			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
+			.finally( () => setBusy( false ) );
+	};
+
+	const onSelect = ( id ) =>
+		setSelected( ( list ) => ( list.includes( id ) ? list.filter( ( x ) => x !== id ) : list.concat( [ id ] ) ) );
+
+	// Sammelauftrag (Stufe F): erst die Schätzung, nach Bestätigung starten.
+	const onBatch = () => {
+		setBusy( true );
+		batchProduce( selected, false )
+			.then( ( estimate ) => {
+				const budget = null === estimate.budget_left ? '' : ` Im Monatsbudget sind noch ${ usd( estimate.budget_left ) } frei.`;
+				// eslint-disable-next-line no-alert
+				if ( ! window.confirm( `${ estimate.count } Entwürfe schreiben? Geschätzte Kosten etwa ${ usd( estimate.estimate ) } (je Entwurf etwa ${ usd( estimate.per_draft ) }).${ budget } Die Abläufe arbeitet der Cronjob nacheinander ab.` ) ) {
+					return null;
+				}
+				return batchProduce( selected, true ).then( ( result ) => {
+					setNotice( { status: 'success', text: `${ result.started.length } Entwürfe eingeplant (Abläufe ${ result.started.join( ', ' ) }). Stand auf der Seite „Abläufe“.` } );
+					setSelected( [] );
+					load();
+				} );
 			} )
 			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
 			.finally( () => setBusy( false ) );
@@ -416,8 +450,32 @@ export default function Topics() {
 							</p>
 						) }
 						{ data.topics.length === 0 && <p>Keine Themen für diese Auswahl.</p> }
+						{ status === 'approved' && data.topics.length > 1 && (
+							<div className="lsec-batch">
+								<CheckboxControl
+									label="Alle auswählen"
+									checked={ selected.length > 0 && selected.length === data.topics.filter( ( t ) => t.status === 'approved' ).length }
+									onChange={ ( all ) => setSelected( all ? data.topics.filter( ( t ) => t.status === 'approved' ).map( ( t ) => t.id ).slice( 0, 20 ) : [] ) }
+									__nextHasNoMarginBottom
+								/>
+								<Button variant="primary" disabled={ busy || selected.length === 0 } onClick={ onBatch }>
+									Ausgewählte schreiben ({ selected.length })
+								</Button>
+								<span className="lsec-muted">höchstens 20 auf einmal; vor dem Start erscheint die Kostenschätzung</span>
+							</div>
+						) }
 						{ data.topics.map( ( t ) => (
-							<TopicRow key={ t.id } topic={ t } labels={ data.labels } onDecide={ onDecide } onProduce={ onProduce } busy={ busy } setNotice={ setNotice } />
+							<TopicRow
+								key={ t.id }
+								topic={ t }
+								labels={ data.labels }
+								onDecide={ onDecide }
+								onProduce={ onProduce }
+								busy={ busy }
+								setNotice={ setNotice }
+								selected={ selected.includes( t.id ) }
+								onSelect={ status === 'approved' && t.status === 'approved' ? onSelect : null }
+							/>
 						) ) }
 					</CardBody>
 				</Card>

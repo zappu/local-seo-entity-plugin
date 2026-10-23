@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.9.0 – 23.10.2026
+
+- **Seite „Abläufe“** (Stufe F): alle Abläufe mit Filter, Kosten und Grund; aufklappbar mit Schritten, Ergebnissen und KI-Aufrufen; Fortsetzen und Abbrechen. Link im Dashboard.
+- **Sammelauftrag** (Stufe F): auf der Themen-Seite mehrere freigegebene Themen auswählen und gemeinsam schreiben lassen, mit Kostenschätzung vor dem Start; auch `wp lsec production batch`.
+
 ## 0.8.3 – 23.10.2026
 
 - **Keine Arbeitsanweisungen im Text:** Neue Regelprüfung `PROMPT_LEAK` für Sätze wie „Das ist allgemeines Fachwissen“ oder „laut Profil“; die automatische Nachbesserung streicht sie.

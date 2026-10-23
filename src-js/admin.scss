@@ -564,6 +564,14 @@
 		align-items: start;
 	}
 
+	&__head--select {
+		grid-template-columns: 24px 56px 1fr auto;
+	}
+
+	&__select {
+		padding-top: 14px;
+	}
+
 	&__score {
 		display: flex;
 		align-items: center;
@@ -620,6 +628,10 @@
 @media (max-width: 782px) {
 	.lsec-topic__head {
 		grid-template-columns: 48px 1fr;
+	}
+
+	.lsec-topic__head--select {
+		grid-template-columns: 24px 48px 1fr;
 	}
 
 	.lsec-topic__head .lsec-actions {
@@ -774,4 +786,56 @@
 	margin: 0;
 	list-style: disc;
 	padding-left: 18px;
+}
+
+// Abläufe (Stufe F).
+.lsec-runs td {
+	vertical-align: top;
+}
+
+.lsec-run-detail {
+	padding: 8px 0 16px;
+
+	h4 {
+		margin: 12px 0 6px;
+	}
+}
+
+.lsec-run-output {
+	max-height: 360px;
+	overflow: auto;
+	white-space: pre-wrap;
+	font-size: 12px;
+	background: #f6f7f7;
+	padding: 8px;
+}
+
+.lsec-run-status {
+	&--failed,
+	&--blocked {
+		color: #b32d2e;
+		font-weight: 600;
+	}
+
+	&--waiting {
+		color: #996800;
+		font-weight: 600;
+	}
+
+	&--running,
+	&--queued {
+		color: #2271b1;
+	}
+}
+
+.lsec-pager {
+	margin-top: 12px;
+}
+
+.lsec-batch {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
 }
