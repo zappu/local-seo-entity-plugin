@@ -20,7 +20,12 @@ use Lsec\Integrations\AI\AiCallRepository;
 use Lsec\Integrations\AI\AiRequest;
 use Lsec\Integrations\AI\AiService;
 use Lsec\Research\Keywords\KeywordFilter;
+use Lsec\Entities\EntityRepository;
+use Lsec\Entities\PlaceName;
+use Lsec\Research\SourceRepository;
 use Lsec\Topics\ClaimRepository;
+use Lsec\Topics\FactChecker;
+use Lsec\Topics\SourceFetcher;
 use Lsec\Topics\TopicRepository;
 use Lsec\Workflow\RunContext;
 use Lsec\Workflow\StepHandler;
@@ -59,10 +64,12 @@ final class ContentProductionWorkflow {
 			array(
 				'load_topic'     => self::step( $plugin, 'load_topic' ),
 				'gather_context' => self::step( $plugin, 'gather_context' ),
+				'place_facts'    => self::step( $plugin, 'place_facts' ),
 				'create_brief'   => self::step( $plugin, 'create_brief' ),
 				'generate_draft' => self::step( $plugin, 'generate_draft' ),
 				'enrich'         => self::step( $plugin, 'enrich' ),
 				'quality_check'  => self::step( $plugin, 'quality_check' ),
+				'revise'         => self::step( $plugin, 'revise' ),
 				'create_post'    => self::step( $plugin, 'create_post' ),
 				'finalize'       => self::step( $plugin, 'finalize' ),
 			)
@@ -378,13 +385,186 @@ final class ContentProductionWorkflow {
 	}
 
 	/**
+	 * Schritt place_facts: Tatsachen zum Ort recherchieren, wenn eine lokale Seite weniger als zwei hat (0.7.13).
+	 *
+	 * Mehrere Durchgänge: Websuche, Strukturierung, Quellen abrufen (höchstens vier je Durchgang), prüfen und
+	 * speichern. Ein Ort wird höchstens alle 30 Tage recherchiert (Option lsec_place_research).
+	 *
+	 * @param Plugin     $plugin  Plugin.
+	 * @param RunContext $context Kontext.
+	 */
+	public static function place_facts( Plugin $plugin, RunContext $context ): StepResult {
+		$ctx    = $context->output_of( 'gather_context' );
+		$topic  = (array) $ctx['topic'];
+		$region = trim( (string) $topic['region'] );
+		$local  = count( array_filter( (array) $ctx['claims'], static fn( array $c ): bool => in_array( (string) $c['entity_type'], array( 'place', 'service_area' ), true ) ) );
+		$state  = $context->state;
+		if ( array() === $state ) {
+			$skip = null;
+			if ( 'local_landing' !== (string) $topic['format'] || '' === $region ) {
+				$skip = 'keine lokale Seite';
+			} elseif ( $local >= 2 ) {
+				$skip = $local . ' Ortsfakten vorhanden';
+			} elseif ( ! Settings::get( 'place_research' ) ) {
+				$skip = 'ausgeschaltet (Einstellung place_research)';
+			} elseif ( isset( $context->input['stub'] ) && array() === self::stub( $context, 'place' ) ) {
+				$skip = 'Prüfskript ohne Ortsrecherche';
+			} else {
+				$done = (array) get_option( 'lsec_place_research', array() );
+				$last = (int) ( $done[ PlaceName::key( $region ) ] ?? 0 );
+				if ( $last > time() - 30 * DAY_IN_SECONDS ) {
+					$skip = 'zuletzt recherchiert am ' . wp_date( 'd.m.Y', $last );
+				}
+			}
+			if ( null !== $skip ) {
+				return StepResult::done(
+					array(
+						'researched' => false,
+						'reason'     => $skip,
+						'claims'     => array(),
+					)
+				);
+			}
+		}
+
+		$stub = self::stub( $context, 'place' );
+		if ( ! isset( $state['research'] ) ) {
+			if ( null !== $stub ) {
+				$state['research'] = (string) ( $stub['research'] ?? '' );
+				$state['sources']  = (array) ( $stub['sources'] ?? array() );
+			} else {
+				$response          = $plugin->ai->service()->search( 'place_facts_search', PlaceFacts::system(), PlaceFacts::question( $region, (string) $ctx['area'], (string) $topic['title'] ), $context->run_id );
+				$state['research'] = $response->text;
+				$state['sources']  = array() !== $response->sources ? $response->sources : \Lsec\Topics\TopicResearcher::sources_from_text( $response->text );
+			}
+			( new SourceRepository() )->save_all( (array) $state['sources'], 'ai_search' );
+			return StepResult::more( $state );
+		}
+
+		if ( ! isset( $state['facts'] ) ) {
+			if ( null !== $stub ) {
+				$data = (array) ( $stub['result'] ?? array() );
+			} else {
+				$response = $plugin->ai->service()->structured( new AiRequest( 'place_facts', PlaceFacts::system() . "\nNutze ausschließlich das Rechercheergebnis. Erfinde keine Fakten und keine Quellen.", PlaceFacts::structure_prompt( $region, (string) $state['research'], (array) $state['sources'] ), PlaceFacts::schema(), 'facts', false, 3000, 120 ), $context->run_id );
+				$data     = (array) $response->data;
+			}
+			$valid = PlaceFacts::validate( $data, $region, (array) $state['sources'] );
+			$state = array(
+				'research' => mb_substr( (string) $state['research'], 0, 4000 ),
+				'sources'  => (array) $state['sources'],
+				'facts'    => $valid['facts'],
+				'dropped'  => $valid['dropped'],
+				'texts'    => array(),
+				'next'     => 0,
+			);
+			return StepResult::more( $state );
+		}
+
+		$sources = new SourceRepository();
+		$fetcher = new SourceFetcher( $sources );
+		$fetched = 0;
+		$total   = count( $state['facts'] );
+		while ( $state['next'] < $total ) {
+			$url = (string) $state['facts'][ $state['next'] ]['source_url'];
+			if ( ! isset( $state['texts'][ $url ] ) ) {
+				if ( $fetched >= 4 ) {
+					return StepResult::more( $state );
+				}
+				$source_id              = $sources->upsert( $url, '', 'ai_search' );
+				$text                   = 0 === $source_id ? array(
+					'text'   => null,
+					'error'  => 'ungültige Adresse',
+					'cached' => false,
+				) : $fetcher->text( $source_id );
+				$state['texts'][ $url ] = array(
+					'source_id' => $source_id,
+					'error'     => $text['error'],
+				);
+				if ( ! $text['cached'] ) {
+					++$fetched;
+				}
+			}
+			$state['facts'][ $state['next'] ]['source_id'] = (int) $state['texts'][ $url ]['source_id'];
+			++$state['next'];
+		}
+
+		// Entität des Ortes: vorhandene (bestätigte zuerst) oder ein neuer Kandidat.
+		$entities = new EntityRepository();
+		$places   = self::place_ids( $region );
+		$place_id = array() === $places ? (int) $entities->add( 'place', $region, 'candidate', 'ai_research' )['id'] : (int) array_key_first( $places );
+		$names    = array( $region );
+		foreach ( array_merge( array( $place_id ), array_keys( $places ) ) as $id ) {
+			$detail = $entities->detail( (int) $id );
+			if ( null !== $detail ) {
+				$names = array_merge( $names, array( (string) $detail['canonical_name'] ), (array) $detail['aliases'] );
+			}
+		}
+		$names   = array_values( array_unique( $names ) );
+		$checked = array();
+		foreach ( $state['facts'] as $fact ) {
+			$source_id = (int) ( $fact['source_id'] ?? 0 );
+			$text      = $source_id > 0 ? ( $sources->cached_content( $source_id )['text'] ?? null ) : null;
+			$row       = $source_id > 0 ? $sources->find( $source_id ) : null;
+			$page_ref  = null === $row ? (string) $fact['source_url'] : (string) $row['title'] . ' ' . (string) $row['url'];
+			$checked[] = $fact + FactChecker::check( $fact, $names, $text, $state['texts'][ $fact['source_url'] ]['error'] ?? null, $page_ref, array( $region ) ) + array( 'entity_id' => $place_id );
+		}
+		$checked = FactChecker::contradictions( $checked );
+		$claims  = new ClaimRepository();
+		$counts  = array(
+			'verified' => 0,
+			'disputed' => 0,
+			'rejected' => 0,
+		);
+		$lines   = array();
+		foreach ( $checked as $fact ) {
+			$claims->save( $place_id, (string) $fact['property'], (string) $fact['value'], (string) $fact['status'], (string) $fact['note'], (int) ( $fact['source_id'] ?? 0 ), (string) $fact['excerpt'], $fact['quality'] );
+			$counts[ $fact['status'] ] = ( $counts[ $fact['status'] ] ?? 0 ) + 1;
+			$lines[]                   = sprintf( '%s = %s: %s%s', $fact['property'], $fact['value'], $fact['status'], '' !== (string) $fact['note'] ? ' (' . $fact['note'] . ')' : '' );
+		}
+		$done                              = (array) get_option( 'lsec_place_research', array() );
+		$done[ PlaceName::key( $region ) ] = time();
+		update_option( 'lsec_place_research', $done, false );
+
+		$ids    = array_values( array_unique( array_merge( array( $place_id ), array_keys( $places ) ) ) );
+		$usable = array_values( array_filter( $claims->usable( array(), $ids, 20 ), static fn( array $c ): bool => in_array( (string) $c['entity_type'], array( 'place', 'service_area' ), true ) ) );
+		return StepResult::done(
+			array(
+				'researched' => true,
+				'place_id'   => $place_id,
+				'counts'     => $counts,
+				'facts'      => $lines,
+				'dropped'    => (array) $state['dropped'],
+				'claims'     => $usable,
+			)
+		);
+	}
+
+	/**
+	 * Kontext für Briefing, Entwurf und Prüfung: gather_context mit den Ortsfakten aus place_facts.
+	 *
+	 * @param RunContext $context Kontext.
+	 * @return array<string, mixed>
+	 */
+	private static function ctx( RunContext $context ): array {
+		$ctx   = $context->output_of( 'gather_context' );
+		$known = array_map( static fn( array $c ): int => (int) $c['id'], (array) ( $ctx['claims'] ?? array() ) );
+		foreach ( (array) ( $context->output_of( 'place_facts' )['claims'] ?? array() ) as $claim ) {
+			if ( ! in_array( (int) $claim['id'], $known, true ) ) {
+				$ctx['claims'][] = $claim;
+				$known[]         = (int) $claim['id'];
+			}
+		}
+		return $ctx;
+	}
+
+	/**
 	 * Schritt create_brief (8.5).
 	 *
 	 * @param Plugin     $plugin  Plugin.
 	 * @param RunContext $context Kontext.
 	 */
 	public static function create_brief( Plugin $plugin, RunContext $context ): StepResult {
-		$ctx  = $context->output_of( 'gather_context' );
+		$ctx  = self::ctx( $context );
 		$stub = self::stub( $context, 'brief' );
 		if ( null !== $stub ) {
 			$data = $stub;
@@ -423,7 +603,7 @@ final class ContentProductionWorkflow {
 	 * @param RunContext $context Kontext.
 	 */
 	public static function generate_draft( Plugin $plugin, RunContext $context ): StepResult {
-		$ctx   = $context->output_of( 'gather_context' );
+		$ctx   = self::ctx( $context );
 		$brief = (array) $context->output_of( 'create_brief' )['brief'];
 		$stub  = self::stub( $context, 'draft' );
 		if ( null !== $stub ) {
@@ -447,7 +627,7 @@ final class ContentProductionWorkflow {
 	 */
 	public static function enrich( Plugin $plugin, RunContext $context ): StepResult {
 		unset( $plugin );
-		$ctx   = $context->output_of( 'gather_context' );
+		$ctx   = self::ctx( $context );
 		$brief = (array) $context->output_of( 'create_brief' )['brief'];
 		$draft = (array) $context->output_of( 'generate_draft' )['draft'];
 		$notes = array();
@@ -502,7 +682,7 @@ final class ContentProductionWorkflow {
 	 * @param RunContext $context Kontext.
 	 */
 	public static function quality_check( Plugin $plugin, RunContext $context ): StepResult {
-		$ctx       = $context->output_of( 'gather_context' );
+		$ctx       = self::ctx( $context );
 		$result    = self::assess( $plugin, $ctx, (array) $context->output_of( 'enrich' )['draft'], $context->input, self::stub( $context, 'review' ), $context->run_id );
 		$report    = $result['report'];
 		$report_id = ( new QualityReportRepository() )->save( null, $context->run_id, (string) $ctx['topic']['format'], $report );
@@ -561,6 +741,94 @@ final class ContentProductionWorkflow {
 	}
 
 	/**
+	 * Schritt revise: einzelne beanstandete Stellen ersetzen und einmal neu prüfen (0.7.13, DraftReviser).
+	 *
+	 * @param Plugin     $plugin  Plugin.
+	 * @param RunContext $context Kontext.
+	 */
+	public static function revise( Plugin $plugin, RunContext $context ): StepResult {
+		$quality = $context->output_of( 'quality_check' );
+		$reason  = null;
+		if ( ! empty( $quality['passed'] ) ) {
+			$reason = 'bestanden';
+		} elseif ( ! Settings::get( 'production_revise' ) ) {
+			$reason = 'ausgeschaltet (Einstellung production_revise)';
+		} elseif ( ! DraftReviser::fixable( (array) $quality['blocking'] ) ) {
+			$reason = 'nicht automatisch behebbar: ' . implode( ', ', array_values( array_unique( array_diff( array_map( static fn( array $i ): string => (string) $i['code'], (array) $quality['blocking'] ), DraftReviser::FIXABLE ) ) ) );
+		} elseif ( isset( $context->input['stub'] ) && array() === (array) self::stub( $context, 'revision' ) ) {
+			$reason = 'Prüfskript ohne Nachbesserung';
+		}
+		if ( null !== $reason ) {
+			return StepResult::done(
+				array(
+					'revised' => false,
+					'reason'  => $reason,
+				)
+			);
+		}
+		$ctx   = self::ctx( $context );
+		$draft = (array) $context->output_of( 'enrich' )['draft'];
+		$stub  = self::stub( $context, 'revision' );
+		if ( null !== $stub ) {
+			$changes = (array) ( $stub['changes'] ?? array() );
+		} else {
+			$response = self::ai( $plugin, $context->input, 'draft' )->structured( new AiRequest( 'revise_draft', DraftReviser::system(), DraftReviser::prompt( $ctx, $draft, (array) $quality['blocking'] ), DraftReviser::schema(), 'revision', false, 3000, 180 ), $context->run_id );
+			$data     = (array) $response->data;
+			$changes  = (array) ( $data['changes'] ?? array() );
+		}
+		$fixed = DraftReviser::apply( $draft, $changes );
+		if ( array() === $fixed['applied'] ) {
+			return StepResult::done(
+				array(
+					'revised' => false,
+					'reason'  => 'keine beanstandete Stelle im Text gefunden',
+					'missed'  => $fixed['missed'],
+				)
+			);
+		}
+		$result    = self::assess( $plugin, $ctx, $fixed['draft'], $context->input, self::stub( $context, 'review' ), $context->run_id );
+		$report    = $result['report'];
+		$report_id = ( new QualityReportRepository() )->save( null, $context->run_id, (string) $ctx['topic']['format'], $report );
+		return StepResult::done(
+			array(
+				'revised'        => true,
+				'draft'          => $fixed['draft'],
+				'applied'        => $fixed['applied'],
+				'missed'         => $fixed['missed'],
+				'before'         => array_values( array_map( static fn( array $i ): string => (string) $i['code'], (array) $quality['blocking'] ) ),
+				'report_id'      => $report_id,
+				'passed'         => $report['passed'],
+				'score'          => $report['score'],
+				'blocking'       => $report['blocking'],
+				'warnings'       => $report['warnings'],
+				'used_claim_ids' => $result['used_claim_ids'],
+			)
+		);
+	}
+
+	/**
+	 * Entwurf für den Beitrag: nachgebessert oder aus enrich.
+	 *
+	 * @param RunContext $context Kontext.
+	 * @return array<string, mixed>
+	 */
+	private static function final_draft( RunContext $context ): array {
+		$revise = $context->output_of( 'revise' );
+		return ! empty( $revise['revised'] ) ? (array) $revise['draft'] : (array) $context->output_of( 'enrich' )['draft'];
+	}
+
+	/**
+	 * Prüfergebnis für den Beitrag: nach der Nachbesserung oder aus quality_check.
+	 *
+	 * @param RunContext $context Kontext.
+	 * @return array<string, mixed>
+	 */
+	private static function final_quality( RunContext $context ): array {
+		$revise = $context->output_of( 'revise' );
+		return ! empty( $revise['revised'] ) ? $revise : $context->output_of( 'quality_check' );
+	}
+
+	/**
 	 * Schritt create_post: Entwurf anlegen (einmal je Ablauf, 7.4).
 	 *
 	 * @param Plugin     $plugin  Plugin.
@@ -568,9 +836,9 @@ final class ContentProductionWorkflow {
 	 */
 	public static function create_post( Plugin $plugin, RunContext $context ): StepResult {
 		unset( $plugin );
-		$ctx     = $context->output_of( 'gather_context' );
-		$draft   = (array) $context->output_of( 'enrich' )['draft'];
-		$quality = $context->output_of( 'quality_check' );
+		$ctx     = self::ctx( $context );
+		$draft   = self::final_draft( $context );
+		$quality = self::final_quality( $context );
 		$stop    = self::topic_withdrawn( $context );
 		if ( null !== $stop ) {
 			return $stop;
@@ -619,9 +887,9 @@ final class ContentProductionWorkflow {
 	 */
 	public static function finalize( Plugin $plugin, RunContext $context ): StepResult {
 		unset( $plugin );
-		$ctx     = $context->output_of( 'gather_context' );
+		$ctx     = self::ctx( $context );
 		$post    = $context->output_of( 'create_post' );
-		$quality = $context->output_of( 'quality_check' );
+		$quality = self::final_quality( $context );
 		$post_id = (int) $post['post_id'];
 		$stop    = self::topic_withdrawn( $context );
 		if ( null !== $stop ) {

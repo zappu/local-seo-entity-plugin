@@ -15,6 +15,7 @@
 #            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
 #            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
 #            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9), Bericht mit Tatsachen (0.7.10)
+#            E8 automatische Nachbesserung · E9 Ortsfakten werden recherchiert, einmal je Ort (0.7.13)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -582,6 +583,45 @@ contains "Regelprüfung findet die Zahl wieder" "UNSUPPORTED_NUMBER – ohne Bel
 contains "bestandener Entwurf bleibt bestanden" "Prüfung: bestanden" "$(wpc lsec production review "$P1" --stub="$TMP/e1.json" 2>&1)"
 contains "Bericht nennt Format und Tatsachen (0.7.10)" "Format local_landing · Ort LSECTEST Eltze · Geprüfte Tatsachen:" "$(wpc lsec production report "$P1")"
 check "gespeichertes Prüfergebnis unverändert" "0 blocked" "$(wpc post meta get "$P2" _lsec_quality_passed) $(wpj lsec production report "$R2" --format=json | json status)"
+
+echo "E8 Automatische Nachbesserung (0.7.13)"
+contains "Ortsrecherche übersprungen, Ortsfakten vorhanden" "Ortsfakten vorhanden" "$(wpc lsec production report "$P1")"
+contains "ohne Nachbesserung im Prüfskript blockiert" "Nachbesserung: Prüfskript ohne Nachbesserung" "$(wpc lsec production report "$R2")"
+php -r '$d=json_decode(file_get_contents($argv[1]),true); $d["revision"]=["changes"=>[["find"=>"Wir reinigen seit 25 Jahren Pflaster.","replace"=>""]]]; file_put_contents($argv[2], json_encode($d, JSON_UNESCAPED_UNICODE));' "$TMP/e2.json" "$TMP/e8.json"
+wpc lsec topics decide "$T1" approved >/dev/null
+OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e8.json" --now 2>&1)
+contains "nachgebessert" "Nachgebessert (vorher blockiert: UNSUPPORTED_NUMBER), 1 Stellen" "$OUT"
+contains "danach bestanden" "Prüfung: bestanden" "$OUT"
+R8=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
+P8=$(wpj lsec production report "$R8" --format=json | json post_id)
+check "Ablauf fertig" "succeeded" "$(wpj lsec production report "$R8" --format=json | json status)"
+check "Zahl aus dem Beitrag entfernt" "0" "$(wpc post get "$P8" --field=post_content | grep -c '25 Jahren')"
+check "Beitrag als bestanden markiert" "1" "$(wpc post meta get "$P8" _lsec_quality_passed)"
+
+echo "E9 Ortsfakten werden recherchiert, einmal je Ort (0.7.13)"
+SRC9="https://lsectest.invalid/neudorf"
+TXT9="LSECTEST Neudorf liegt an der Autobahn A 2. LSECTEST Neudorf hat einen Bahnhof an der Strecke nach Hannover."
+wpc db query "INSERT INTO ${PREFIX}lsec_sources (url, url_hash, title, source_type, fetched_at, content_hash, content, reliability, created_at) VALUES ('$SRC9', SHA2('$SRC9', 256), 'Neudorf', 'ai_search', UTC_TIMESTAMP(), SHA2('$TXT9', 256), '$TXT9', 'unknown', UTC_TIMESTAMP())" >/dev/null
+wpc lsec entities add place "LSECTEST Neudorf" >/dev/null 2>&1
+wpc eval '$o=(array)get_option("lsec_place_research",array()); unset($o["lsectest neudorf"]); update_option("lsec_place_research",$o,false);' >/dev/null
+cat > "$TMP/neudorf.json" <<JSON
+{"research":"LSECTEST","sources":[],"result":{"topics":[
+{"title":"LSECTEST Fugenreinigung in LSECTEST Neudorf","intent":"local","format":"local_landing","region":"LSECTEST Neudorf","primary_keyword_ids":[$K_NEW],"secondary_keyword_ids":[],"primary_entity_ids":[],"secondary_entity_ids":[],"rationale":"LSECTEST","facts":[],"insufficient_data":false}],
+"excluded_keywords":[]}}
+JSON
+wpc lsec topics research --service=lsectest3 --region="LSECTEST Neudorf" --stub="$TMP/neudorf.json" --offline --now --force >/dev/null 2>&1
+T9=$(wpj lsec topics list --format=json | json . | php -r '$d=json_decode(stream_get_contents(STDIN),true); foreach((array)$d as $r){ if($r["thema"]==="LSECTEST Fugenreinigung in LSECTEST Neudorf"){ echo $r["id"]; break; } }')
+if [ -z "$T9" ]; then
+	skip "Thema für LSECTEST Neudorf nicht angelegt"
+else
+	wpc lsec topics decide "$T9" approved >/dev/null
+	php -r '$d=json_decode(file_get_contents($argv[1]),true); $d["place"]=["research"=>"LSECTEST Neudorf liegt an der A 2 und hat einen Bahnhof.","sources"=>[["url"=>$argv[3],"title"=>"Neudorf"]],"result"=>["facts"=>[["property"=>"autobahn","value"=>"A 2","source_url"=>$argv[3],"quote"=>"LSECTEST Neudorf liegt an der Autobahn A 2."],["property"=>"bahnhof","value"=>"Bahnhof an der Strecke nach Hannover","source_url"=>$argv[3],"quote"=>"LSECTEST Neudorf hat einen Bahnhof an der Strecke nach Hannover."]]]]; file_put_contents($argv[2], json_encode($d, JSON_UNESCAPED_UNICODE));' "$TMP/e1.json" "$TMP/e9.json" "$SRC9"
+	OUT=$(wpc lsec production start "$T9" --allow-duplicate --stub="$TMP/e9.json" --now 2>&1)
+	contains "Ortsfakten recherchiert und geprüft" "Ortsfakten recherchiert: 2 geprüft" "$OUT"
+	printf '%s\n' "$OUT" | grep -q "Ortsfakten recherchiert" || printf '%s\n' "$OUT" | sed 's/^/    | /'
+	OUT=$(wpc lsec production start "$T9" --again --allow-duplicate --stub="$TMP/e9.json" --now 2>&1)
+	contains "zweiter Entwurf nutzt die gespeicherten Ortsfakten" "Ortsrecherche: 2 Ortsfakten vorhanden" "$OUT"
+fi
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

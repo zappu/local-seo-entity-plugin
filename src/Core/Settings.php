@@ -46,6 +46,8 @@ final class Settings {
 		'topic_count'              => 5,
 		'topic_weights'            => array(),
 		'production_auto'          => true,
+		'production_revise'        => true,
+		'place_research'           => true,
 		'drafts_per_day'           => 3,
 		'draft_author'             => 0,
 		'draft_lengths'            => array(),

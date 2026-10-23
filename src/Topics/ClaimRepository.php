@@ -171,7 +171,9 @@ final class ClaimRepository {
 		if ( array() !== $entity_ids ) {
 			$where[] = 'c.subject_id IN (' . implode( ',', $entity_ids ) . ')';
 		}
-		$first = array() === $claim_ids ? '0' : 'c.id IN (' . implode( ',', $claim_ids ) . ')';
+		// Nachtrag 23.10. (0.7.13): Ohne Tatsachen aus der Recherche stand hier „ORDER BY 0“. MariaDB lehnt das ab
+		// (Spalte 0), die Abfrage lieferte nichts, und Themen ohne eigene Tatsachen bekamen keine Ortsfakten.
+		$first = array() === $claim_ids ? '' : 'c.id IN (' . implode( ',', $claim_ids ) . ') DESC, ';
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
 		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
@@ -181,7 +183,7 @@ final class ClaimRepository {
 				(SELECT v.quality FROM {$t( 'evidence' )} v WHERE v.target_type = 'claim' AND v.target_id = c.id ORDER BY v.id DESC LIMIT 1) AS quality
 				FROM {$t( 'claims' )} c JOIN {$t( 'entities' )} e ON e.id = c.subject_id
 				WHERE c.subject_type = 'entity' AND c.status IN ('verified', 'confirmed') AND ( " . implode( ' OR ', $where ) . " )
-				ORDER BY {$first} DESC, FIELD(c.status, 'confirmed', 'verified'), c.id DESC LIMIT %d",
+				ORDER BY {$first}FIELD(c.status, 'confirmed', 'verified'), c.id DESC LIMIT %d",
 				$limit
 			),
 			ARRAY_A

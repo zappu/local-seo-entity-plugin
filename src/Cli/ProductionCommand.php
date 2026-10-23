@@ -147,11 +147,32 @@ final class ProductionCommand {
 		WP_CLI::log( array() === $data['services'] ? 'Leistungsbeschreibungen im Profil: keine – Abläufe des Betriebs darf der Entwurf nicht beschreiben (Seite „Unternehmen“, Leistungen, Kurzbeschreibung).' : 'Leistungsbeschreibungen im Profil: ' . implode( ', ', $data['services'] ) );
 		$facts = (array) $data['facts'];
 		WP_CLI::log( sprintf( 'Format %s · Ort %s · Geprüfte Tatsachen: %d im Kontext (%d zu Orten), im Text verwendet %d (%d zu Orten)', '' !== $facts['format'] ? $facts['format'] : '–', '' !== $facts['region'] ? $facts['region'] : '–', $facts['context'], $facts['local'], $facts['used'], $facts['used_local'] ) );
+		$place = (array) $data['place_research'];
+		if ( $place['researched'] ) {
+			WP_CLI::log( sprintf( 'Ortsfakten recherchiert: %d geprüft, %d strittig, %d verworfen', (int) ( $place['counts']['verified'] ?? 0 ), (int) ( $place['counts']['disputed'] ?? 0 ), (int) ( $place['counts']['rejected'] ?? 0 ) ) );
+			foreach ( (array) $place['facts'] as $line ) {
+				WP_CLI::log( '  ' . $line );
+			}
+		} elseif ( '' !== $place['reason'] && 'keine lokale Seite' !== $place['reason'] ) {
+			WP_CLI::log( 'Ortsrecherche: ' . $place['reason'] );
+		}
 		if ( (int) $data['unpriced'] > 0 ) {
 			WP_CLI::warning( sprintf( '%d KI-Aufrufe ohne Kostenangabe; die Summe ist unvollständig. Einzeln: wp lsec production report %d --format=json', $data['unpriced'], $id ) );
 		}
 		if ( $data['post_id'] > 0 ) {
 			WP_CLI::log( sprintf( 'Entwurf %d: %s · %s Wörter · %s', $data['post_id'], $data['title'], (string) $data['words'], (string) get_edit_post_link( $data['post_id'], 'raw' ) ) );
+		}
+		$revision = (array) $data['revision'];
+		if ( $revision['revised'] ) {
+			WP_CLI::log( sprintf( 'Nachgebessert (vorher blockiert: %s), %d Stellen:', implode( ', ', array_unique( (array) $revision['before'] ) ), count( (array) $revision['applied'] ) ) );
+			foreach ( (array) $revision['applied'] as $line ) {
+				WP_CLI::log( '  ' . $line );
+			}
+			foreach ( (array) $revision['missed'] as $line ) {
+				WP_CLI::log( '  nicht gefunden: ' . $line );
+			}
+		} elseif ( '' !== $revision['reason'] && 'bestanden' !== $revision['reason'] ) {
+			WP_CLI::log( 'Nachbesserung: ' . $revision['reason'] );
 		}
 		if ( null !== $data['score'] ) {
 			self::quality( (bool) $data['passed'], (float) $data['score'], (array) $data['scores'], (array) $data['blocking'], (array) $data['warnings'] );
@@ -221,7 +242,10 @@ final class ProductionCommand {
 			$stub = is_array( $decoded['review'] ?? null ) ? $decoded['review'] : array();
 		}
 		try {
-			$result = ContentProductionWorkflow::assess( $this->plugin, $outputs['gather_context'], (array) $outputs['enrich']['draft'], $input, $stub, null );
+			$ctx           = $outputs['gather_context'];
+			$ctx['claims'] = array_merge( (array) $ctx['claims'], (array) ( $outputs['place_facts']['claims'] ?? array() ) );
+			$draft         = ! empty( $outputs['revise']['revised'] ) ? (array) $outputs['revise']['draft'] : (array) $outputs['enrich']['draft'];
+			$result        = ContentProductionWorkflow::assess( $this->plugin, $ctx, $draft, $input, $stub, null );
 		} catch ( \Throwable $e ) {
 			WP_CLI::error( $this->plugin->logger->redact( $e->getMessage() ) );
 		}

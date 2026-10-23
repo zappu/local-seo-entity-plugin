@@ -324,7 +324,7 @@ final class TopicResearcher {
 	 *
 	 * @param string $url Adresse.
 	 */
-	private static function url_key( string $url ): string {
+	public static function url_key( string $url ): string {
 		$url = strtolower( trim( $url ) );
 		$url = (string) preg_replace( '#^https?://(www\.)?#', '', $url );
 		return rtrim( $url, '/' );

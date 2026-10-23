@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.7.13 – 23.10.2026
+
+- **Automatische Nachbesserung:** Scheitert ein Entwurf nur an einzelnen unbelegten Sätzen oder Zahlen, ersetzt das Schreibmodell genau diese Stellen, und der Entwurf wird einmal neu geprüft (Einstellung „Beanstandete Stellen automatisch nachbessern“).
+- **Ortsfakten recherchieren:** Hat eine lokale Seite weniger als zwei geprüfte Tatsachen zum Ort, recherchiert das Plugin sie vor dem Briefing und prüft sie an den Quellen, einmal je Ort in 30 Tagen (Einstellung „Fehlende Ortsfakten recherchieren“).
+- **Fehler behoben:** Themen ohne eigene Tatsachen aus der Recherche bekamen keine Tatsachen in den Entwurf (fehlerhafte Datenbankabfrage seit 0.7.0).
+- **Bericht:** zeigt Ortsrecherche und Nachbesserung.
+
 ## 0.7.12 – 23.10.2026
 
 - **Übliche Geschäftspraxis erlaubt:** „nach Absprache“, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall und Ähnliches gelten beim Schreiben und in der KI-Bewertung nicht mehr als unbelegt.

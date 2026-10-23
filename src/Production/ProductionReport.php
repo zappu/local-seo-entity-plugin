@@ -34,14 +34,16 @@ final class ProductionReport {
 			$decoded                           = json_decode( (string) $step['output'], true );
 			$outputs[ (string) $step['step'] ] = is_array( $decoded ) ? $decoded : array();
 		}
-		$quality = $outputs['quality_check'] ?? array();
+		$revised = ! empty( $outputs['revise']['revised'] );
+		$quality = $revised ? $outputs['revise'] : ( $outputs['quality_check'] ?? array() );
 		$report  = isset( $quality['report_id'] ) ? ( new QualityReportRepository() )->find( (int) $quality['report_id'] ) : null;
 		$repo    = new AiCallRepository();
 		$calls   = $repo->for_run( $id );
 		$post_id = (int) ( $outputs['create_post']['post_id'] ?? 0 );
-		$facts   = (array) ( $outputs['gather_context']['claims'] ?? array() );
+		$facts   = array_merge( (array) ( $outputs['gather_context']['claims'] ?? array() ), (array) ( $outputs['place_facts']['claims'] ?? array() ) );
 		$local   = static fn( array $c ): bool => in_array( (string) ( $c['entity_type'] ?? '' ), array( 'place', 'service_area' ), true );
-		$used    = array_map( 'intval', (array) ( $outputs['enrich']['draft']['used_claim_ids'] ?? array() ) );
+		$draft   = $revised ? (array) $outputs['revise']['draft'] : (array) ( $outputs['enrich']['draft'] ?? array() );
+		$used    = array_map( 'intval', (array) ( $draft['used_claim_ids'] ?? array() ) );
 		$in_text = array_filter( $facts, static fn( array $c ): bool => in_array( (int) $c['id'], $used, true ) );
 		return array(
 			'run'                 => $id,
@@ -67,7 +69,20 @@ final class ProductionReport {
 			'post_id'             => $post_id,
 			'edit_url'            => $post_id > 0 ? (string) get_edit_post_link( $post_id, 'raw' ) : '',
 			'preview'             => $post_id > 0 ? (string) get_preview_post_link( $post_id ) : '',
-			'title'               => (string) ( $outputs['enrich']['draft']['title'] ?? '' ),
+			'title'               => (string) ( $draft['title'] ?? '' ),
+			'place_research'      => array(
+				'researched' => ! empty( $outputs['place_facts']['researched'] ),
+				'reason'     => (string) ( $outputs['place_facts']['reason'] ?? '' ),
+				'counts'     => (array) ( $outputs['place_facts']['counts'] ?? array() ),
+				'facts'      => (array) ( $outputs['place_facts']['facts'] ?? array() ),
+			),
+			'revision'            => array(
+				'revised' => $revised,
+				'reason'  => (string) ( $outputs['revise']['reason'] ?? '' ),
+				'before'  => (array) ( $outputs['revise']['before'] ?? array() ),
+				'applied' => (array) ( $outputs['revise']['applied'] ?? array() ),
+				'missed'  => (array) ( $outputs['revise']['missed'] ?? array() ),
+			),
 			'words'               => $report['words'] ?? null,
 			'score'               => $report['score'] ?? null,
 			'passed'              => $report['passed'] ?? null,

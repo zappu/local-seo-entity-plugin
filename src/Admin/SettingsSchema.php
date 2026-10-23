@@ -153,6 +153,16 @@ final class SettingsSchema {
 					'type'  => 'toggle',
 					'help'  => 'Der Cronjob erstellt Entwürfe zu freigegebenen Themen, höchstens so viele am Tag wie unten eingestellt. Ein Entwurf kostet etwa 0,05 bis 0,30 USD.',
 				),
+				'production_revise'   => array(
+					'label' => 'Beanstandete Stellen automatisch nachbessern',
+					'type'  => 'toggle',
+					'help'  => 'Scheitert ein Entwurf nur an einzelnen unbelegten Sätzen oder Zahlen, ersetzt das Schreibmodell genau diese Stellen und der Entwurf wird einmal neu geprüft (etwa 0,05 bis 0,10 USD).',
+				),
+				'place_research'      => array(
+					'label' => 'Fehlende Ortsfakten recherchieren',
+					'type'  => 'toggle',
+					'help'  => 'Hat eine lokale Seite weniger als zwei geprüfte Tatsachen zum Ort, recherchiert das Plugin sie vor dem Briefing und prüft sie an den Quellen; einmal je Ort in 30 Tagen (etwa 0,02 bis 0,05 USD).',
+				),
 				'drafts_per_day'      => array(
 					'label' => 'Entwürfe je Tag',
 					'type'  => 'number',
