@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.7.11 – 23.10.2026
+
+- **Ortsfakten:** Der Entwurf nutzt Tatsachen aller Entitäten desselben Ortes („Uetze“, „Gemeinde Uetze“, Servicegebiet Uetze), nicht nur der ersten gefundenen.
+- **Schreibregeln branchenneutral:** keine Absprachen, Abläufe, Kunden oder Ortsverallgemeinerungen ohne Beleg; stattdessen Fachwissen der Branche und Hinweise für die Auswahl eines Anbieters.
+
 ## 0.7.10 – 23.10.2026
 
 - **Lokale Tatsachen:** Die Regel „mindestens zwei geprüfte Tatsachen zum Ort“ blockiert nur noch lokale Seiten (`local_landing`); bei Ratgebern und Beiträgen mit Ort ist sie eine Warnung. Die Meldung nennt, wie viele Tatsachen vorhanden waren.

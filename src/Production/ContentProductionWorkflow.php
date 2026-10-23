@@ -20,7 +20,6 @@ use Lsec\Integrations\AI\AiCallRepository;
 use Lsec\Integrations\AI\AiRequest;
 use Lsec\Integrations\AI\AiService;
 use Lsec\Research\Keywords\KeywordFilter;
-use Lsec\Research\Keywords\KeywordNormalizer;
 use Lsec\Topics\ClaimRepository;
 use Lsec\Topics\TopicRepository;
 use Lsec\Workflow\RunContext;
@@ -283,18 +282,14 @@ final class ContentProductionWorkflow {
 				'role'   => 'profile',
 			);
 		}
-		$region_id = '' === (string) $topic['region'] ? 0 : self::place_id( (string) $topic['region'] );
-		if ( $region_id > 0 && ! isset( $entities[ $region_id ] ) ) {
-			$detail = ( new \Lsec\Entities\EntityRepository() )->detail( $region_id );
-			if ( null !== $detail ) {
-				$entities[ $region_id ] = array(
-					'id'     => $region_id,
-					'name'   => (string) $detail['canonical_name'],
-					'type'   => (string) $detail['type'],
-					'status' => (string) $detail['status'],
-					'role'   => 'place',
-				);
-			}
+		foreach ( '' === (string) $topic['region'] ? array() : self::place_ids( (string) $topic['region'] ) as $region_id => $place ) {
+			$entities[ $region_id ] ??= array(
+				'id'     => $region_id,
+				'name'   => (string) $place['name'],
+				'type'   => (string) $place['type'],
+				'status' => (string) $place['status'],
+				'role'   => 'place',
+			);
 		}
 
 		$claims = ( new ClaimRepository() )->usable( (array) ( $topic['research_basis']['claim_ids'] ?? array() ), array_keys( $entities ), 40 );
@@ -824,16 +819,33 @@ final class ContentProductionWorkflow {
 	}
 
 	/**
-	 * Entität eines Ortes über Name oder Schreibweise.
+	 * Entitäten eines Ortes über Name oder Schreibweise, auch „Gemeinde …“ und Servicegebiet (PlaceName).
 	 *
 	 * @param string $name Ort.
+	 * @return array<int, array{name: string, type: string, status: string}> Nach ID, bestätigte zuerst.
 	 */
-	private static function place_id( string $name ): int {
+	private static function place_ids( string $name ): array {
 		global $wpdb;
-		$e          = Schema::table( $wpdb->prefix, 'entities' );
-		$a          = Schema::table( $wpdb->prefix, 'entity_aliases' );
-		$normalized = KeywordNormalizer::normalize( $name );
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT e.id FROM {$e} e LEFT JOIN {$a} a ON a.entity_id = e.id WHERE e.type IN ('place', 'service_area') AND e.status IN ('confirmed', 'probable', 'candidate') AND ( e.normalized_name = %s OR a.normalized_alias = %s ) ORDER BY FIELD(e.status, 'confirmed', 'probable', 'candidate') LIMIT 1", $normalized, $normalized ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$e    = Schema::table( $wpdb->prefix, 'entities' );
+		$a    = Schema::table( $wpdb->prefix, 'entity_aliases' );
+		$last = \Lsec\Entities\PlaceName::search_word( $name );
+		if ( '' === $last ) {
+			return array();
+		}
+		// Vorauswahl über das letzte Wort des Namens, die Entscheidung trifft PlaceName::same.
+		$like = '%' . $wpdb->esc_like( $last ) . '%';
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT e.id, e.canonical_name, e.type, e.status, a.alias FROM {$e} e LEFT JOIN {$a} a ON a.entity_id = e.id WHERE e.type IN ('place', 'service_area') AND e.status IN ('confirmed', 'probable', 'candidate') AND ( e.normalized_name LIKE %s OR a.normalized_alias LIKE %s ) ORDER BY FIELD(e.status, 'confirmed', 'probable', 'candidate'), e.id LIMIT 200", $like, $like ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$out  = array();
+		foreach ( $rows as $row ) {
+			if ( \Lsec\Entities\PlaceName::same( $name, (string) $row['canonical_name'] ) || \Lsec\Entities\PlaceName::same( $name, (string) ( $row['alias'] ?? '' ) ) ) {
+				$out[ (int) $row['id'] ] ??= array(
+					'name'   => (string) $row['canonical_name'],
+					'type'   => (string) $row['type'],
+					'status' => (string) $row['status'],
+				);
+			}
+		}
+		return $out;
 	}
 
 	/**
