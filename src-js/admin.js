@@ -12,12 +12,14 @@ import Entities from './entities';
 import Keywords from './keywords';
 import Profile from './profile';
 import Settings from './settings';
+import Setup from './setup';
 import Style from './style';
 import Topics from './topics';
 import './admin.scss';
 
 const VIEWS = {
 	dashboard: Dashboard,
+	setup: Setup,
 	profile: Profile,
 	entities: Entities,
 	keywords: Keywords,

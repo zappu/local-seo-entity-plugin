@@ -16,6 +16,7 @@
 #            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
 #            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9), Bericht mit Tatsachen (0.7.10)
 #            E8 automatische Nachbesserung · E9 Ortsfakten werden recherchiert, einmal je Ort (0.7.13)
+#   Stufe F: F1 Einrichtungsassistent: Stand der sechs Schritte, unbekannter Schritt, REST-Routen (0.8.0)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -622,6 +623,16 @@ else
 	OUT=$(wpc lsec production start "$T9" --again --allow-duplicate --stub="$TMP/e9.json" --now 2>&1)
 	contains "zweiter Entwurf nutzt die gespeicherten Ortsfakten" "Ortsrecherche: 2 Tatsachen zu LSECTEST Neudorf vorhanden" "$OUT"
 fi
+
+echo "F1 Einrichtungsassistent (0.8.0)"
+OUT=$(wpc lsec setup 2>&1)
+contains "Stand der Einrichtung" "Schritten erledigt" "$OUT"
+contains "Schritt Technik" "1. Technik prüfen" "$OUT"
+contains "Schritt Entscheidungen" "6. Entscheidungen" "$OUT"
+check "sechs Schritte als JSON" "6" "$(wpj lsec setup --format=json | json total)"
+contains "unbekannter Schritt abgelehnt" "Unbekannter Schritt" "$($WP "${WP_ARGS[@]}" lsec setup unbekannt 2>&1)"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "Route Einrichtung" "/lsec/v1/setup" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

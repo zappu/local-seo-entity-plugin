@@ -6,7 +6,7 @@
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/components';
-import { getDashboard, refreshTextfocus, runAction, runIndex, stopIndex } from './api';
+import { getDashboard, getSetup, refreshTextfocus, runAction, runIndex, stopIndex } from './api';
 import { ago, dateTime, number, RUN_STATUS, usd } from './format';
 
 const REFRESH_MS = 60000;
@@ -346,6 +346,28 @@ function RunsCard( { runs, onAction, busyId } ) {
 	);
 }
 
+function SetupNotice() {
+	const [ setup, setSetup ] = useState( null );
+	useEffect( () => {
+		getSetup()
+			.then( setSetup )
+			.catch( () => {} );
+	}, [] );
+	const pages = ( window.lsecAdmin && window.lsecAdmin.pages ) || {};
+	if ( ! setup || setup.done >= setup.total ) {
+		return null;
+	}
+	const open = setup.steps.filter( ( s ) => ! s.done ).map( ( s ) => s.title );
+	return (
+		<Notice status="warning" isDismissible={ false }>
+			<p>
+				Einrichtung: { setup.done } von { setup.total } Schritten erledigt. Offen: { open.join( ', ' ) }.{ ' ' }
+				{ pages.setup && <a href={ pages.setup }>Einrichtung öffnen</a> }
+			</p>
+		</Notice>
+	);
+}
+
 export default function Dashboard() {
 	const [ data, setData ] = useState( null );
 	const [ error, setError ] = useState( null );
@@ -448,6 +470,7 @@ export default function Dashboard() {
 			{ message && (
 				<Notice status={ message.status } onRemove={ () => setMessage( null ) }>{ message.text }</Notice>
 			) }
+			<SetupNotice />
 			<Hints hints={ data.hints } />
 			<div className="lsec-grid">
 				<AiCard ai={ data.ai } />

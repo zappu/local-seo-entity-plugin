@@ -127,3 +127,7 @@ export const getStyle = () => apiFetch( { path: `${ base }/style` } );
 export const buildStyle = ( data ) => apiFetch( { path: `${ base }/style/build`, method: 'POST', data } );
 export const saveStyle = ( profile ) => apiFetch( { path: `${ base }/style`, method: 'POST', data: { profile } } );
 export const activateStyle = ( version ) => apiFetch( { path: `${ base }/style/${ version }/activate`, method: 'POST' } );
+
+export const getSetup = () => apiFetch( { path: `${ base }/setup` } );
+export const runSetup = ( step, data ) =>
+	apiFetch( { path: `${ base }/setup/${ step }`, method: 'POST', data } );

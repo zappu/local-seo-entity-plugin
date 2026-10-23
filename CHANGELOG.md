@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.8.0 – 23.10.2026
+
+- **Einrichtungsassistent** (Stufe F): neue Seite „Einrichtung“ und `wp lsec setup` mit sechs Schritten – Technik prüfen, Website lesen (Profil und Servicegebiet automatisch), erprobte KI-Einstellungen mit einem Klick, Schreibstil aus den eigenen Seiten oder aus einem Freitext (z. B. ZimmWriter-Prompt, mit Konfliktprüfung), alles starten, Entscheidungen. Das Dashboard zeigt offene Schritte.
+- **Style Mimic aus Freitext:** `StyleProfiler::from_text`.
+- **Behoben:** fehlender Seitentitel auf der Seite „Style Mimic“.
+
 ## 0.7.16 – 23.10.2026
 
 - **Ortsfakten im Text:** Ortsfakten werden mit dem Thema verbunden (z. B. Ortsteile als Einsatzorte) statt in einem eigenen Abschnitt aufgezählt; keine Sätze, dass ein Fakt keine Rolle spielt, keine Überschriften über den Text selbst.

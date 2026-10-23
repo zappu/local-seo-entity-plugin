@@ -672,3 +672,101 @@
 	background: #fcf9e8;
 	padding: 4px 8px;
 }
+
+// Einrichtungsassistent (Stufe F).
+.lsec-setup {
+	display: grid;
+	gap: 16px;
+	max-width: 960px;
+}
+
+.lsec-setup-progress {
+	font-size: 14px;
+	max-width: 960px;
+}
+
+.lsec-setup-step {
+	.components-card__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+
+		h2 {
+			margin: 0;
+			font-size: 15px;
+		}
+	}
+
+	&.is-done {
+		opacity: 0.85;
+	}
+}
+
+.lsec-badge {
+	border-radius: 10px;
+	padding: 2px 10px;
+	font-size: 12px;
+
+	&.is-ok {
+		background: #edfaef;
+		color: #00450c;
+	}
+
+	&.is-open {
+		background: #fcf9e8;
+		color: #614200;
+	}
+}
+
+.lsec-setup-items {
+	margin: 0 0 12px;
+	list-style: none;
+}
+
+.lsec-setup-item {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 6px;
+
+	.lsec-setup-mark {
+		width: 1.2em;
+		flex: none;
+		font-weight: 600;
+	}
+
+	&.is-ok .lsec-setup-mark {
+		color: #008a20;
+	}
+
+	&.is-open .lsec-setup-mark {
+		color: #b32d2e;
+	}
+
+	&.is-optional .lsec-setup-mark {
+		color: #757575;
+	}
+}
+
+.lsec-paste {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-top: 4px;
+	flex-wrap: wrap;
+}
+
+.lsec-setup-action {
+	border-top: 1px solid #e0e0e0;
+	padding-top: 12px;
+	max-width: 640px;
+}
+
+.lsec-setup-links a {
+	margin-right: 16px;
+}
+
+.lsec-setup-messages {
+	margin: 0;
+	list-style: disc;
+	padding-left: 18px;
+}

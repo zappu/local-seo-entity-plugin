@@ -23,12 +23,14 @@ final class AppPage {
 	public const KEYWORDS_SLUG = 'lsec-keywords';
 	public const TOPICS_SLUG   = 'lsec-topics';
 	public const STYLE_SLUG    = 'lsec-style';
+	public const SETUP_SLUG    = 'lsec-setup';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
 	 */
 	private const VIEWS = array(
 		self::SLUG          => 'dashboard',
+		self::SETUP_SLUG    => 'setup',
 		self::PROFILE_SLUG  => 'profile',
 		self::ENTITIES_SLUG => 'entities',
 		self::KEYWORDS_SLUG => 'keywords',
@@ -67,6 +69,14 @@ final class AppPage {
 			__( 'Dashboard', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,
 			self::SLUG,
+			array( $this, 'render' )
+		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Einrichtung', 'local-seo-entity-plugin' ),
+			__( 'Einrichtung', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::SETUP_SLUG,
 			array( $this, 'render' )
 		);
 		add_submenu_page(
@@ -149,6 +159,8 @@ final class AppPage {
 						'keywords' => admin_url( 'admin.php?page=' . self::KEYWORDS_SLUG ),
 						'topics'   => admin_url( 'admin.php?page=' . self::TOPICS_SLUG ),
 						'settings' => admin_url( 'admin.php?page=' . self::SETTINGS_SLUG ),
+						'setup'    => admin_url( 'admin.php?page=' . self::SETUP_SLUG ),
+						'style'    => admin_url( 'admin.php?page=' . self::STYLE_SLUG ),
 					),
 				)
 			) . ';',
@@ -174,8 +186,10 @@ final class AppPage {
 			'keywords'  => __( 'Local SEO – Keywords', 'local-seo-entity-plugin' ),
 			'topics'    => __( 'Local SEO – Themen', 'local-seo-entity-plugin' ),
 			'settings'  => __( 'Local SEO – Einstellungen', 'local-seo-entity-plugin' ),
+			'setup'     => __( 'Local SEO – Einrichtung', 'local-seo-entity-plugin' ),
+			'style'     => __( 'Local SEO – Style Mimic', 'local-seo-entity-plugin' ),
 		);
-		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ) . '</h1>';
+		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ?? __( 'Local SEO', 'local-seo-entity-plugin' ) ) . '</h1>';
 		if ( ! is_readable( LSEC_DIR . 'assets/dist/admin.asset.php' ) ) {
 			echo '<div class="notice notice-error"><p>' . esc_html__( 'Die Oberfläche ist nicht gebaut (assets/dist fehlt). Im Plugin-Ordner npm ci && npm run build ausführen oder die ZIP-Datei installieren.', 'local-seo-entity-plugin' ) . '</p></div>';
 		}

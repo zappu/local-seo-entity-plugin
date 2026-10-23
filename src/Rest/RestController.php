@@ -162,6 +162,7 @@ final class RestController {
 		( new KeywordsController( $this->plugin ) )->register( $permission );
 		( new TopicsController( $this->plugin ) )->register( $permission );
 		( new ProductionController( $this->plugin ) )->register( $permission );
+		( new SetupController( $this->plugin ) )->register( $permission );
 	}
 
 	/**

@@ -240,6 +240,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec profile', new ProfileCommand( $this ) );
 			\WP_CLI::add_command( 'lsec production', new \Lsec\Cli\ProductionCommand( $this ) );
 			\WP_CLI::add_command( 'lsec style', new \Lsec\Cli\StyleCommand( $this ) );
+			\WP_CLI::add_command( 'lsec setup', new \Lsec\Cli\SetupCommand( $this ) );
 		}
 	}
 
