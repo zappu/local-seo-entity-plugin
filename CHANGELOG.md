@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.7.7 – 23.10.2026
+
+- **Doppelte Themen bei zusammengesetzten Leistungen:** „Gehweg- und Pflasterreinigung“ verhinderte die Erkennung von 39 und 43 als Dublette, weil Thema 39 kein „Gehweg“ enthält; der Cronjob schrieb deshalb einen zweiten Entwurf. Verglichen wird jetzt über einzelne Leistungswörter (hier „Pflaster“).
+
 ## 0.7.6 – 22.10.2026
 
 - **Angaben des Betriebs aus der eigenen Website:** Zu jedem Entwurf liest das Plugin die passenden eigenen Leistungsseiten (höchstens zwei) und gibt ihren Text der KI als belegte Angaben. Vorgehen, Verfahren und Leistungen kommen so von der Website und bleiben aktuell, ohne Beschreibungen im Profil zu pflegen.

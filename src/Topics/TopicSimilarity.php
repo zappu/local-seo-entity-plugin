@@ -16,8 +16,8 @@ use Lsec\Research\Keywords\KeywordFilter;
  *
  * Zwei Themen sind Dubletten, wenn sie dieselbe Art haben (Seite – lokale Seite, Beitrag, sonstiges –,
  * Ratgeber oder saisonal; Thema 39 war ein Beitrag, 43 eine lokale Seite) und
- * - mit Ort: derselbe Ort und dieselbe Hauptleistung (die erste Leistung aus dem Profil, die im Titel oder
- *   Haupt-Keyword steht), oder
+ * - mit Ort: derselbe Ort und dieselbe Hauptleistung (das erste Leistungswort aus dem Profil im Titel oder
+ *   Haupt-Keyword, siehe vocabulary()), oder
  * - die Titel zu mindestens 50 % dieselben Wörter haben (ohne Ort und Füllwörter), bei gleichem Ort.
  *
  * Die Klasse kennt WordPress nicht.
@@ -43,11 +43,14 @@ final class TopicSimilarity {
 		$hay      = ' ' . $title . ' ' . KeywordFilter::fold( $keywords ) . ' ';
 		$service  = '';
 		$best     = PHP_INT_MAX;
-		foreach ( $services as $name ) {
-			$pos = self::position( $hay, (string) $name );
-			if ( null !== $pos && $pos < $best ) {
+		// Nachtrag 23.10. (0.7.7): Leistungen heißen oft zusammengesetzt („Gehweg- und Pflasterreinigung“). Die
+		// Hauptleistung ist deshalb das erste Leistungswort aus dem Profil im Titel oder Haupt-Keyword (verglichen
+		// über die ersten acht Buchstaben), nicht der ganze Leistungsname.
+		foreach ( self::vocabulary( $services ) as $word ) {
+			$pos = mb_strpos( $hay, ' ' . $word );
+			if ( false !== $pos && $pos < $best ) {
 				$best    = $pos;
-				$service = KeywordFilter::fold( (string) $name );
+				$service = $word;
 			}
 		}
 		$skip  = array_merge( self::FILLER, explode( ' ', $region ) );
@@ -102,6 +105,27 @@ final class TopicSimilarity {
 	}
 
 	/**
+	 * Leistungswörter aus den Namen der Leistungen: Wörter ab sechs Buchstaben ohne allgemeine Wörter
+	 * („Reinigung“, „Bereichen“), gekürzt auf acht Buchstaben.
+	 *
+	 * @param string[] $services Leistungen aus dem Profil.
+	 * @return string[]
+	 */
+	public static function vocabulary( array $services ): array {
+		$generic = array( 'reinigung', 'reinigungen', 'entfernung', 'bereiche', 'bereichen', 'oeffentlichen', 'oberflaechen', 'langfristiger', 'regelmaessige', 'regelmaessig', 'service', 'arbeiten', 'leistung', 'leistungen' );
+		$out     = array();
+		foreach ( $services as $name ) {
+			foreach ( explode( ' ', KeywordFilter::fold( (string) $name ) ) as $word ) {
+				// „Reinigungspakete“ würde sonst jedes Thema mit „Reinigung“ treffen.
+				if ( mb_strlen( $word ) >= 6 && ! in_array( $word, $generic, true ) && ! str_starts_with( $word, 'reinigung' ) && ! str_starts_with( $word, 'entfernung' ) ) {
+					$out[ mb_substr( $word, 0, 8 ) ] = true;
+				}
+			}
+		}
+		return array_keys( $out );
+	}
+
+	/**
 	 * Anteil gemeinsamer Wörter, bezogen auf den kürzeren Titel.
 	 *
 	 * @param string[] $a Wörter.
@@ -112,36 +136,6 @@ final class TopicSimilarity {
 			return 0.0;
 		}
 		return count( array_intersect( $a, $b ) ) / min( count( $a ), count( $b ) );
-	}
-
-	/**
-	 * Position einer Leistung im Text: der ganze Name oder alle seine Wörter ab vier Buchstaben (Wortanfang,
-	 * sieben Buchstaben).
-	 *
-	 * @param string $hay  Vereinheitlichter Text mit Leerzeichen am Rand.
-	 * @param string $name Leistung.
-	 */
-	private static function position( string $hay, string $name ): ?int {
-		$key = KeywordFilter::fold( $name );
-		if ( '' === $key ) {
-			return null;
-		}
-		$pos = mb_strpos( $hay, ' ' . $key );
-		if ( false !== $pos ) {
-			return $pos;
-		}
-		$first = null;
-		foreach ( explode( ' ', $key ) as $word ) {
-			if ( mb_strlen( $word ) < 4 ) {
-				continue;
-			}
-			$p = mb_strpos( $hay, ' ' . mb_substr( $word, 0, 7 ) );
-			if ( false === $p ) {
-				return null;
-			}
-			$first = null === $first ? $p : min( $first, $p );
-		}
-		return $first;
 	}
 
 	/**

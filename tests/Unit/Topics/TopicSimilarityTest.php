@@ -65,4 +65,14 @@ final class TopicSimilarityTest extends TestCase {
 			)
 		);
 	}
+
+	public function test_compound_service_names_from_the_real_profile(): void {
+		$services = array( 'Terrassenreinigung', 'Gehweg- und Pflasterreinigung', 'Garagen- und Parkplatzreinigung', 'Industriebodenreinigung', 'Fassadenreinigung', 'Regelmäßige Reinigungspakete und Wartungsverträge', 'Reinigung von Wänden und Böden in öffentlichen Bereichen' );
+		$a        = self::topic( 'Pflasterreinigung in Uetze: Firma in der Nähe für Einfahrt, Hof und Wege', 'Uetze', 'article' );
+		$b        = self::topic( 'Pflasterreinigung in Uetze: Gehwege und Pflasterflächen vom Profi reinigen lassen', 'Uetze' );
+		$this->assertTrue( TopicSimilarity::same( $a, $b, $services ) );
+		$this->assertFalse( TopicSimilarity::same( $a, self::topic( 'Terrassenreinigung in Uetze: Terrasse professionell reinigen lassen', 'Uetze' ), $services ) );
+		$this->assertFalse( TopicSimilarity::same( self::topic( 'Reinigung von Gewerbeflächen in Uetze', 'Uetze' ), self::topic( 'Reinigung von Eingangsbereichen in Uetze', 'Uetze' ), $services ) );
+		$this->assertNotContains( 'reinigun', TopicSimilarity::vocabulary( $services ) );
+	}
 }
