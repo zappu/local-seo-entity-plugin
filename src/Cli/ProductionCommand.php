@@ -299,10 +299,8 @@ final class ProductionCommand {
 	 * @param int $id Ablauf oder Entwurf.
 	 */
 	private function run_of( int $id ): int {
-		$run = $this->plugin->runs->find( $id );
-		if ( null !== $run && ContentProductionWorkflow::TYPE === $run['type'] ) {
-			return $id;
-		}
+		// Nachtrag 23.10. (0.9.1): Erst der Entwurf, dann der Ablauf. Umgekehrt nahm das Prüfskript bei gleicher
+		// Nummer von Entwurf und Ablauf den falschen Ablauf.
 		$from_post = (int) get_post_meta( $id, '_lsec_run_id', true );
 		return $from_post > 0 ? $from_post : $id;
 	}

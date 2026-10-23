@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.9.1 – 23.10.2026
+
+- **Bericht** (Stufe F): neue Seite „Bericht“ mit den Hinweisen „bestehende Seite verbessern“ (eigene Seiten auf Position 4 bis 20 in der Search Console und verworfene Themen mit passender Seite, als CSV für Excel), den Entwürfen des Plugins mit Prüfergebnis und Kosten und den Entitäten mit Lücken. Auch `wp lsec report`.
+- **Behoben:** `production report` und `production review` nehmen bei gleicher Nummer zuerst den Entwurf.
+
 ## 0.9.0 – 23.10.2026
 
 - **Seite „Abläufe“** (Stufe F): alle Abläufe mit Filter, Kosten und Grund; aufklappbar mit Schritten, Ergebnissen und KI-Aufrufen; Fortsetzen und Abbrechen. Link im Dashboard.

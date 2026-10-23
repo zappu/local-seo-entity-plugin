@@ -839,3 +839,25 @@
 	flex-wrap: wrap;
 	margin-bottom: 12px;
 }
+
+// Bericht (Stufe F).
+.lsec-kpis {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+	margin-bottom: 16px;
+
+	div {
+		display: flex;
+		flex-direction: column;
+	}
+
+	strong {
+		font-size: 22px;
+		line-height: 1.3;
+	}
+
+	span {
+		color: #757575;
+	}
+}

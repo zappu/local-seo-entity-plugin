@@ -18,6 +18,7 @@
 #            E8 automatische Nachbesserung · E9 Ortsfakten werden recherchiert, einmal je Ort (0.7.13)
 #   Stufe F: F1 Einrichtungsassistent: Stand der sechs Schritte, unbekannter Schritt, REST-Routen (0.8.0)
 #            F2 Sammelauftrag mit Kostenschätzung, Seite „Abläufe“ (REST) (0.9.0)
+#            F3 Bericht: Inhalte, Entitäten, Hinweise „bestehende Seite verbessern“ (Search Console Position 4–20), CSV (0.9.1)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -580,6 +581,7 @@ check "Ablauf abgebrochen" "cancelled" "$(wpj lsec production report "$R6" --for
 echo "E7 Vorhandenen Entwurf neu prüfen (0.7.9)"
 OUT=$(wpc lsec production review "$P2" --stub="$TMP/e1.json" 2>&1)
 contains "neu geprüft über die Nummer des Entwurfs" "Entwurf $P2 (Ablauf $R2) neu geprüft" "$OUT"
+printf '%s\n' "$OUT" | grep -q "neu geprüft" || printf '%s\n' "$OUT" | head -8 | sed 's/^/    | /'
 contains "bisheriges Ergebnis angezeigt" "Bisher: blockiert" "$OUT"
 contains "Regelprüfung findet die Zahl wieder" "UNSUPPORTED_NUMBER – ohne Beleg: 25" "$OUT"
 contains "bestandener Entwurf bleibt bestanden" "Prüfung: bestanden" "$(wpc lsec production review "$P1" --stub="$TMP/e1.json" 2>&1)"
@@ -650,6 +652,20 @@ check "Ablauf eingeplant" "queued" "$(wpj lsec production report "$RB" --format=
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Abläufe" "/lsec/v1/runs" "$OUT"
 contains "Route Sammelauftrag" "/lsec/v1/production/batch" "$OUT"
+
+echo "F3 Bericht (0.9.1)"
+P3=$(wpc post list --post_type=page --post_status=publish --field=url --posts_per_page=1)
+wpc db query "INSERT INTO ${PREFIX}lsec_keywords (keyword, normalized, locale, region, first_seen_at, updated_at) VALUES ('lsectest bericht keyword', 'lsectest bericht keyword', 'de_DE', '', UTC_TIMESTAMP(), UTC_TIMESTAMP())" >/dev/null
+K3=$(wpc db query "SELECT id FROM ${PREFIX}lsec_keywords WHERE normalized = 'lsectest bericht keyword'" --skip-column-names | head -1)
+wpc db query "INSERT INTO ${PREFIX}lsec_keyword_metrics (keyword_id, source, period_start, period_end, impressions, clicks, ctr, position, page_url, created_at) VALUES ($K3, 'gsc', DATE_SUB(CURDATE(), INTERVAL 28 DAY), DATE_ADD(CURDATE(), INTERVAL 2 DAY), 120, 2, 0.0167, 8.4, '$P3', UTC_TIMESTAMP())" >/dev/null
+OUT=$(wpc lsec report 2>&1)
+contains "Inhalte im Bericht" "Entwürfe des Plugins:" "$OUT"
+contains "Entitäten im Bericht" "Leistungen und Orte ohne eigenen Inhalt" "$OUT"
+contains "Hinweis aus der Search Console" "lsectest bericht keyword" "$OUT"
+contains "CSV für Excel" "Seite;Titel;Keyword;Position" "$(wpc lsec report --format=csv)"
+wpc db query "DELETE FROM ${PREFIX}lsec_keyword_metrics WHERE keyword_id = $K3" >/dev/null
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "Route Bericht" "/lsec/v1/report" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

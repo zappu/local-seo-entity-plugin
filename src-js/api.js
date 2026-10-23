@@ -139,3 +139,4 @@ export const getRuns = ( { status = '', type = '', page = 1 } = {} ) => {
 export const getRun = ( id ) => apiFetch( { path: `${ base }/runs/${ id }` } );
 export const batchProduce = ( topicIds, start ) =>
 	apiFetch( { path: `${ base }/production/batch`, method: 'POST', data: { topic_ids: topicIds, start } } );
+export const getReport = () => apiFetch( { path: `${ base }/report` } );

@@ -11,6 +11,7 @@ import Dashboard from './dashboard';
 import Entities from './entities';
 import Keywords from './keywords';
 import Profile from './profile';
+import Report from './report';
 import Runs from './runs';
 import Settings from './settings';
 import Setup from './setup';
@@ -26,6 +27,7 @@ const VIEWS = {
 	keywords: Keywords,
 	topics: Topics,
 	runs: Runs,
+	report: Report,
 	style: Style,
 	settings: Settings,
 };
