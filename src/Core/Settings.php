@@ -26,6 +26,7 @@ final class Settings {
 		'ai_model'                 => '',
 		'ai_research_model'        => '',
 		'ai_writing_model'         => '',
+		'ai_review_model'          => '',
 		'ai_prices'                => array(),
 		'ai_monthly_budget'        => 20.0,
 		'ai_run_budget'            => 1.0,

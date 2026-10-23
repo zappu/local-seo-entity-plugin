@@ -10,7 +10,9 @@ namespace Lsec\Cli;
 use Lsec\Core\Plugin;
 use Lsec\Production\ContentProductionWorkflow;
 use Lsec\Production\ProductionReport;
+use Lsec\Integrations\AI\AiCallRepository;
 use Lsec\Production\QualityReportRepository;
+use Lsec\Production\QualityReviewer;
 use Lsec\Topics\TopicRepository;
 use WP_CLI;
 
@@ -130,13 +132,8 @@ final class ProductionCommand {
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function report( array $args, array $assoc_args ): void {
-		$id   = (int) ( $args[0] ?? 0 );
+		$id   = $this->run_of( (int) ( $args[0] ?? 0 ) );
 		$data = ProductionReport::for_run( $this->plugin, $id );
-		// Auch mit der Nummer des Entwurfs (Beitrags-ID).
-		if ( null === $data && (int) get_post_meta( $id, '_lsec_run_id', true ) > 0 ) {
-			$id   = (int) get_post_meta( $id, '_lsec_run_id', true );
-			$data = ProductionReport::for_run( $this->plugin, $id );
-		}
 		if ( null === $data ) {
 			WP_CLI::error( 'Kein Ablauf content_production: ' . $id );
 		}
@@ -155,16 +152,7 @@ final class ProductionCommand {
 			WP_CLI::log( sprintf( 'Entwurf %d: %s · %s Wörter · %s', $data['post_id'], $data['title'], (string) $data['words'], (string) get_edit_post_link( $data['post_id'], 'raw' ) ) );
 		}
 		if ( null !== $data['score'] ) {
-			WP_CLI::log( sprintf( 'Prüfung: %s · Bewertung %s/100', $data['passed'] ? 'bestanden' : 'blockiert', number_format( (float) $data['score'], 1, ',', '' ) ) );
-			foreach ( (array) $data['scores'] as $key => $value ) {
-				WP_CLI::log( sprintf( '  %-20s %s', \Lsec\Production\QualityReviewer::SCORES[ $key ] ?? $key, number_format( (float) $value, 2, ',', '' ) ) );
-			}
-		}
-		foreach ( (array) $data['blocking'] as $issue ) {
-			WP_CLI::log( '  blockiert: ' . $issue['code'] . ' – ' . $issue['detail'] );
-		}
-		foreach ( (array) $data['warnings'] as $issue ) {
-			WP_CLI::log( '  Warnung:   ' . $issue['code'] . ' – ' . $issue['detail'] );
+			self::quality( (bool) $data['passed'], (float) $data['score'], (array) $data['scores'], (array) $data['blocking'], (array) $data['warnings'] );
 		}
 		foreach ( $data['dropped'] as $line ) {
 			WP_CLI::log( '  verworfen: ' . $line );
@@ -173,6 +161,144 @@ final class ProductionCommand {
 			WP_CLI::warning( 'Der Ablauf ist noch nicht fertig (' . $data['status'] . ', Schritt ' . $data['step'] . '). Stand: wp lsec runs show ' . $id );
 		} elseif ( 'failed' === $data['status'] ) {
 			WP_CLI::warning( 'Fehlgeschlagen: ' . $data['error'] . ' – fortsetzen mit wp lsec runs resume ' . $id );
+		}
+	}
+
+	/**
+	 * Prüft einen vorhandenen Entwurf noch einmal: Regeln und KI-Bewertung, ohne ihn neu zu schreiben
+	 * (Vergleich der Prüfmodelle; mit openai/gpt-6-luna unter 1 Cent). Das gespeicherte Prüfergebnis und der
+	 * Status des Entwurfs bleiben unverändert. Geprüft wird der Text, den die KI geschrieben hat, nicht
+	 * spätere Änderungen in WordPress.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <draft>
+	 * : Nummer des Entwurfs oder Ablauf-ID.
+	 *
+	 * [--model=<modell>]
+	 * : Prüfmodell für diese Prüfung (sonst Einstellung ai_review_model, dann Hauptmodell).
+	 *
+	 * [--stub=<file>]
+	 * : JSON mit review statt KI (Prüfskript, ohne Kosten).
+	 *
+	 * [--format=<format>]
+	 * : table oder json.
+	 * ---
+	 * default: table
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec production review 2760 --model=openai/gpt-6-luna
+	 *
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function review( array $args, array $assoc_args ): void {
+		$id   = $this->run_of( (int) ( $args[0] ?? 0 ) );
+		$run  = $this->plugin->runs->find( $id );
+		$prev = ProductionReport::for_run( $this->plugin, $id );
+		if ( null === $run || null === $prev ) {
+			WP_CLI::error( 'Kein Ablauf content_production: ' . $id );
+		}
+		$outputs = array();
+		foreach ( $this->plugin->runs->steps( $id ) as $step ) {
+			$decoded                           = json_decode( (string) $step['output'], true );
+			$outputs[ (string) $step['step'] ] = is_array( $decoded ) ? $decoded : array();
+		}
+		if ( ! isset( $outputs['gather_context']['topic'], $outputs['enrich']['draft'] ) ) {
+			WP_CLI::error( 'Ablauf ' . $id . ' hat noch keinen fertigen Entwurf.' );
+		}
+		$input = isset( $assoc_args['model'] ) && '' !== (string) $assoc_args['model'] ? array( 'reviewer' => (string) $assoc_args['model'] ) : array();
+		$stub  = null;
+		if ( ! empty( $assoc_args['stub'] ) ) {
+			$decoded = json_decode( (string) file_get_contents( (string) $assoc_args['stub'] ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			if ( ! is_array( $decoded ) ) {
+				WP_CLI::error( 'Die Datei enthält kein gültiges JSON.' );
+			}
+			$stub = is_array( $decoded['review'] ?? null ) ? $decoded['review'] : array();
+		}
+		try {
+			$result = ContentProductionWorkflow::assess( $this->plugin, $outputs['gather_context'], (array) $outputs['enrich']['draft'], $input, $stub, null );
+		} catch ( \Throwable $e ) {
+			WP_CLI::error( $this->plugin->logger->redact( $e->getMessage() ) );
+		}
+		$before = '';
+		foreach ( ( new AiCallRepository() )->for_run( $id ) as $call ) {
+			if ( 'quality_review' === $call['task'] && 'ok' === $call['status'] ) {
+				$before = (string) $call['model'];
+			}
+		}
+		$this->plugin->logger->audit(
+			'Entwurf neu geprüft',
+			array(
+				'run_id' => $id,
+				'model'  => $result['model'],
+				'score'  => $result['report']['score'],
+				'passed' => $result['report']['passed'],
+			)
+		);
+		$report = $result['report'];
+		if ( 'json' === ( $assoc_args['format'] ?? 'table' ) ) {
+			WP_CLI::line(
+				(string) wp_json_encode(
+					array(
+						'run'      => $id,
+						'post_id'  => $prev['post_id'],
+						'model'    => $result['model'],
+						'cost_usd' => $result['cost'],
+						'before'   => array(
+							'model'  => $before,
+							'score'  => $prev['score'],
+							'passed' => $prev['passed'],
+						),
+					) + $report,
+					JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+				)
+			);
+			return;
+		}
+		WP_CLI::log( sprintf( 'Entwurf %d (Ablauf %d) neu geprüft · Prüfmodell %s · Kosten %s USD', (int) $prev['post_id'], $id, $result['model'], null === $result['cost'] ? '–' : number_format( (float) $result['cost'], 4, ',', '' ) ) );
+		if ( null !== $prev['score'] ) {
+			WP_CLI::log( sprintf( 'Bisher: %s · Bewertung %s/100 · Prüfmodell %s', $prev['passed'] ? 'bestanden' : 'blockiert', number_format( (float) $prev['score'], 1, ',', '' ), '' !== $before ? $before : '–' ) );
+		}
+		self::quality( (bool) $report['passed'], (float) $report['score'], (array) $report['review'], (array) $report['blocking'], (array) $report['warnings'] );
+		WP_CLI::log( 'Gespeichertes Prüfergebnis und Status des Entwurfs bleiben unverändert.' );
+	}
+
+	/**
+	 * Ablauf zu einer Ablauf-ID oder der Nummer eines Entwurfs (Beitrags-ID, Post-Meta _lsec_run_id).
+	 *
+	 * @param int $id Ablauf oder Entwurf.
+	 */
+	private function run_of( int $id ): int {
+		$run = $this->plugin->runs->find( $id );
+		if ( null !== $run && ContentProductionWorkflow::TYPE === $run['type'] ) {
+			return $id;
+		}
+		$from_post = (int) get_post_meta( $id, '_lsec_run_id', true );
+		return $from_post > 0 ? $from_post : $id;
+	}
+
+	/**
+	 * Prüfergebnis ausgeben.
+	 *
+	 * @param bool                              $passed   Bestanden.
+	 * @param float                             $score    Bewertung 0–100.
+	 * @param array<string, float>              $scores   Einzelwerte.
+	 * @param array<int, array<string, string>> $blocking Blockierende Mängel.
+	 * @param array<int, array<string, string>> $warnings Warnungen.
+	 */
+	private static function quality( bool $passed, float $score, array $scores, array $blocking, array $warnings ): void {
+		WP_CLI::log( sprintf( 'Prüfung: %s · Bewertung %s/100', $passed ? 'bestanden' : 'blockiert', number_format( $score, 1, ',', '' ) ) );
+		foreach ( $scores as $key => $value ) {
+			WP_CLI::log( sprintf( '  %-20s %s', QualityReviewer::SCORES[ $key ] ?? $key, number_format( (float) $value, 2, ',', '' ) ) );
+		}
+		foreach ( $blocking as $issue ) {
+			WP_CLI::log( '  blockiert: ' . $issue['code'] . ' – ' . $issue['detail'] );
+		}
+		foreach ( $warnings as $issue ) {
+			WP_CLI::log( '  Warnung:   ' . $issue['code'] . ' – ' . $issue['detail'] );
 		}
 	}
 

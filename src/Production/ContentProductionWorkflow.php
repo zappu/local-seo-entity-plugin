@@ -434,7 +434,7 @@ final class ContentProductionWorkflow {
 		if ( null !== $stub ) {
 			$data = $stub;
 		} else {
-			$response = self::ai( $plugin, $context->input, true )->structured( new AiRequest( 'generate_draft', DraftGenerator::system(), DraftGenerator::prompt( $ctx, $brief ), DraftGenerator::schema(), 'draft', false, 14000, 300 ), $context->run_id );
+			$response = self::ai( $plugin, $context->input, 'draft' )->structured( new AiRequest( 'generate_draft', DraftGenerator::system(), DraftGenerator::prompt( $ctx, $brief ), DraftGenerator::schema(), 'draft', false, 14000, 300 ), $context->run_id );
 			$data     = (array) $response->data;
 		}
 		$normalized = DraftGenerator::normalize( $data, $ctx );
@@ -507,41 +507,61 @@ final class ContentProductionWorkflow {
 	 * @param RunContext $context Kontext.
 	 */
 	public static function quality_check( Plugin $plugin, RunContext $context ): StepResult {
-		$ctx   = $context->output_of( 'gather_context' );
-		$draft = (array) $context->output_of( 'enrich' )['draft'];
-
-		$markup = BlockBuilder::for_site()->build( (array) $draft['content'] );
-		$rules  = QualityChecker::check( $draft, $ctx, self::site_data( (int) $ctx['topic']['id'], (string) $ctx['topic']['format'], (string) $ctx['topic']['region'], $markup ) );
-
-		$stub = self::stub( $context, 'review' );
-		if ( null !== $stub ) {
-			$data = $stub;
-		} else {
-			$response = self::ai( $plugin, $context->input )->structured( new AiRequest( 'quality_review', QualityReviewer::system(), QualityReviewer::prompt( $ctx, $draft ), QualityReviewer::schema(), 'review', false, 4000, 180 ), $context->run_id );
-			$data     = (array) $response->data;
-		}
-		$review    = QualityReviewer::evaluate( $data, (float) Settings::get( 'quality_min_score' ), (float) Settings::get( 'quality_min_average' ) );
-		$blocking  = array_merge( $rules['blocking'], $review['blocking'] );
-		$warnings  = array_merge( $rules['warnings'], $review['warnings'] );
-		$report    = array(
-			'score'    => round( 100 * $review['average'], 1 ),
-			'passed'   => array() === $blocking,
-			'blocking' => $blocking,
-			'warnings' => $warnings,
-			'checks'   => $rules['checks'],
-			'review'   => $review['scores'],
-			'words'    => $rules['words'],
-		);
+		$ctx       = $context->output_of( 'gather_context' );
+		$result    = self::assess( $plugin, $ctx, (array) $context->output_of( 'enrich' )['draft'], $context->input, self::stub( $context, 'review' ), $context->run_id );
+		$report    = $result['report'];
 		$report_id = ( new QualityReportRepository() )->save( null, $context->run_id, (string) $ctx['topic']['format'], $report );
 		return StepResult::done(
 			array(
 				'report_id'      => $report_id,
 				'passed'         => $report['passed'],
 				'score'          => $report['score'],
-				'blocking'       => $blocking,
-				'warnings'       => $warnings,
-				'used_claim_ids' => $rules['used_claim_ids'],
+				'blocking'       => $report['blocking'],
+				'warnings'       => $report['warnings'],
+				'used_claim_ids' => $result['used_claim_ids'],
 			)
+		);
+	}
+
+	/**
+	 * Regelprüfungen und KI-Bewertung eines Entwurfs; auch für wp lsec production review.
+	 *
+	 * @param Plugin                    $plugin Plugin.
+	 * @param array<string, mixed>      $ctx    Ergebnis von gather_context.
+	 * @param array<string, mixed>      $draft  Entwurf (Ergebnis von enrich).
+	 * @param array<string, mixed>      $input  Startkontext (model, reviewer).
+	 * @param array<string, mixed>|null $stub   Bewertung statt KI (Prüfskript).
+	 * @param int|null                  $run_id Ablauf für das KI-Protokoll; null = ohne Ablauf.
+	 * @return array{report: array<string, mixed>, used_claim_ids: int[], model: string, cost: float|null}
+	 */
+	public static function assess( Plugin $plugin, array $ctx, array $draft, array $input, ?array $stub, ?int $run_id ): array {
+		$markup = BlockBuilder::for_site()->build( (array) $draft['content'] );
+		$rules  = QualityChecker::check( $draft, $ctx, self::site_data( (int) $ctx['topic']['id'], (string) $ctx['topic']['format'], (string) $ctx['topic']['region'], $markup ) );
+		$model  = 'stub';
+		$cost   = 0.0;
+		if ( null !== $stub ) {
+			$data = $stub;
+		} else {
+			$response = self::ai( $plugin, $input, 'review' )->structured( new AiRequest( 'quality_review', QualityReviewer::system(), QualityReviewer::prompt( $ctx, $draft ), QualityReviewer::schema(), 'review', false, 4000, 180 ), $run_id );
+			$data     = (array) $response->data;
+			$model    = $response->model;
+			$cost     = $response->cost;
+		}
+		$review   = QualityReviewer::evaluate( $data, (float) Settings::get( 'quality_min_score' ), (float) Settings::get( 'quality_min_average' ) );
+		$blocking = array_merge( $rules['blocking'], $review['blocking'] );
+		return array(
+			'report'         => array(
+				'score'    => round( 100 * $review['average'], 1 ),
+				'passed'   => array() === $blocking,
+				'blocking' => $blocking,
+				'warnings' => array_merge( $rules['warnings'], $review['warnings'] ),
+				'checks'   => $rules['checks'],
+				'review'   => $review['scores'],
+				'words'    => $rules['words'],
+			),
+			'used_claim_ids' => array_map( 'intval', (array) $rules['used_claim_ids'] ),
+			'model'          => $model,
+			'cost'           => $cost,
 		);
 	}
 
@@ -878,34 +898,44 @@ final class ContentProductionWorkflow {
 	/**
 	 * KI-Dienst; mit model aus dem Start (Modellvergleich) gilt dieses Modell.
 	 *
-	 * @param Plugin               $plugin  Plugin.
-	 * @param array<string, mixed> $input   Startkontext.
-	 * @param bool                 $writing Beitragstext (Schreibmodell).
+	 * @param Plugin               $plugin Plugin.
+	 * @param array<string, mixed> $input  Startkontext.
+	 * @param string               $task   brief, draft oder review.
 	 */
-	private static function ai( Plugin $plugin, array $input, bool $writing = false ): AiService {
-		return $plugin->ai->service( null, self::model_for( $writing, $input, (string) \Lsec\Core\Settings::get( 'ai_writing_model' ) ) );
+	private static function ai( Plugin $plugin, array $input, string $task = 'brief' ): AiService {
+		$settings = array(
+			'draft'  => (string) Settings::get( 'ai_writing_model' ),
+			'review' => (string) Settings::get( 'ai_review_model' ),
+		);
+		return $plugin->ai->service( null, self::model_for( $task, $input, $settings ) );
 	}
 
 	/**
 	 * Modell eines Aufrufs; null = Hauptmodell.
 	 *
 	 * Nachtrag 23.10. (0.7.9): Der Text macht etwa die Hälfte der Kosten aus (Ablauf 127: Briefing 0,062,
-	 * Text 0,117, Bewertung 0,044 USD) und entscheidet, wie natürlich der Beitrag klingt. Das Schreibmodell
-	 * gilt deshalb nur für den Text; Briefing und Bewertung laufen mit dem Hauptmodell. Reihenfolge für den
-	 * Text: --writer, --model, Einstellung ai_writing_model, Hauptmodell. Die übrigen Aufrufe: --model, Hauptmodell.
+	 * Text 0,117, Bewertung 0,044 USD) und entscheidet, wie natürlich der Beitrag klingt. Text (draft) und
+	 * Bewertung (review) haben deshalb eigene Modelle; das Briefing läuft mit dem Hauptmodell.
+	 * Reihenfolge: --writer bzw. Prüfmodell des Befehls review, dann --model, dann die Einstellung
+	 * (ai_writing_model, ai_review_model), dann das Hauptmodell.
 	 *
-	 * @param bool                 $writing Beitragstext.
-	 * @param array<string, mixed> $input   Startkontext mit model und writer.
-	 * @param string               $setting Einstellung ai_writing_model.
+	 * @param string                $task     brief, draft oder review.
+	 * @param array<string, mixed>  $input    Startkontext mit model, writer und reviewer.
+	 * @param array<string, string> $settings Einstellungen je Aufgabe (draft, review).
 	 */
-	public static function model_for( bool $writing, array $input, string $setting ): ?string {
-		$model = '' !== (string) ( $input['model'] ?? '' ) ? (string) $input['model'] : null;
-		if ( ! $writing ) {
-			return $model;
+	public static function model_for( string $task, array $input, array $settings ): ?string {
+		$own = array(
+			'draft'  => 'writer',
+			'review' => 'reviewer',
+		);
+		$key = $own[ $task ] ?? '';
+		if ( '' !== $key && '' !== trim( (string) ( $input[ $key ] ?? '' ) ) ) {
+			return trim( (string) $input[ $key ] );
 		}
-		if ( '' !== (string) ( $input['writer'] ?? '' ) ) {
-			return (string) $input['writer'];
+		if ( '' !== trim( (string) ( $input['model'] ?? '' ) ) ) {
+			return trim( (string) $input['model'] );
 		}
-		return $model ?? ( '' !== trim( $setting ) ? trim( $setting ) : null );
+		$setting = trim( (string) ( $settings[ $task ] ?? '' ) );
+		return '' !== $setting ? $setting : null;
 	}
 }

@@ -33,12 +33,17 @@ final class SettingsSchema {
 				'ai_model'           => array(
 					'label' => 'Hauptmodell',
 					'type'  => 'text',
-					'help'  => 'Gilt für alle Aufgaben außer der Recherche und dem Beitragstext, wenn dafür eigene Modelle eingetragen sind. Bei OpenRouter z. B. openai/gpt-6-luna; Liste mit wp lsec ai models.',
+					'help'  => 'Gilt für alle Aufgaben, für die unten kein eigenes Modell eingetragen ist. Bei OpenRouter z. B. openai/gpt-6-luna; Liste mit wp lsec ai models.',
 				),
 				'ai_writing_model'   => array(
 					'label' => 'Schreibmodell',
 					'type'  => 'text',
 					'help'  => 'Nur für den Text der Beiträge, beim selben Anbieter; Briefing und Bewertung laufen mit dem Hauptmodell. Leer = Hauptmodell. Empfehlung: anthropic/claude-sonnet-5.5 (liest sich natürlicher, etwa 0,12 USD je Text).',
+				),
+				'ai_review_model'    => array(
+					'label' => 'Prüfmodell',
+					'type'  => 'text',
+					'help'  => 'Nur für die KI-Bewertung der Entwürfe, beim selben Anbieter. Leer = Hauptmodell. Vergleich an einem vorhandenen Entwurf: wp lsec production review <entwurf> --model=<modell>.',
 				),
 				'ai_research_model'  => array(
 					'label' => 'Recherchemodell',

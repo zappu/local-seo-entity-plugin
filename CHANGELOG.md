@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.7.9 – 23.10.2026
+
+- **Modelle je Aufgabe:** neue Einstellungen „Schreibmodell“ (`ai_writing_model`, nur für den Beitragstext) und „Prüfmodell“ (`ai_review_model`, nur für die KI-Bewertung); leer = Hauptmodell. Für einen einzelnen Entwurf: `wp lsec production start <thema> --writer=<modell>`.
+- **Entwurf neu prüfen:** `wp lsec production review <entwurf> --model=<modell>` prüft einen vorhandenen Entwurf mit Regeln und KI-Bewertung neu, ohne ihn neu zu schreiben; zeigt das bisherige Ergebnis zum Vergleich. Gespeichertes Ergebnis und Status bleiben unverändert.
+
 ## 0.7.8 – 23.10.2026
 
 - **Ablehnen bricht laufende Entwürfe ab:** Wird ein Thema abgelehnt oder zurückgesetzt, endet sein laufender Entwurf, und es entsteht kein Beitrag mehr.

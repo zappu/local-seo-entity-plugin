@@ -14,7 +14,7 @@
 #   Stufe E: E1 Entwurf zu einem freigegebenen Thema (KI-Attrappe): Blöcke, SEO-Angaben, Prüfbericht bestanden
 #            E2 Entwurf mit unbelegter Zahl wird blocked, der Entwurf entsteht trotzdem · E3 Tageslimit des Cronjobs
 #            E4 Style Mimic von Hand, REST-Routen · E5 doppelte Themen werden zusammengeführt (0.7.1)
-#            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8)
+#            E6 Ablehnen bricht laufende Entwürfe ab (0.7.8) · E7 vorhandenen Entwurf neu prüfen (0.7.9)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -573,6 +573,14 @@ OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e1.
 R6=$(printf '%s' "$OUT" | sed -n 's/^Success: Ablauf \([0-9]*\) eingeplant.*/\1/p')
 contains "Ablehnen bricht den Entwurf ab" "Laufende Entwürfe abgebrochen: Abläufe $R6" "$(wpc lsec topics decide "$T1" rejected)"
 check "Ablauf abgebrochen" "cancelled" "$(wpj lsec production report "$R6" --format=json | json status)"
+
+echo "E7 Vorhandenen Entwurf neu prüfen (0.7.9)"
+OUT=$(wpc lsec production review "$P2" --stub="$TMP/e1.json" 2>&1)
+contains "neu geprüft über die Nummer des Entwurfs" "Entwurf $P2 (Ablauf $R2) neu geprüft" "$OUT"
+contains "bisheriges Ergebnis angezeigt" "Bisher: blockiert" "$OUT"
+contains "Regelprüfung findet die Zahl wieder" "UNSUPPORTED_NUMBER – ohne Beleg: 25" "$OUT"
+contains "bestandener Entwurf bleibt bestanden" "Prüfung: bestanden" "$(wpc lsec production review "$P1" --stub="$TMP/e1.json" 2>&1)"
+check "gespeichertes Prüfergebnis unverändert" "0 blocked" "$(wpc post meta get "$P2" _lsec_quality_passed) $(wpj lsec production report "$R2" --format=json | json status)"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
