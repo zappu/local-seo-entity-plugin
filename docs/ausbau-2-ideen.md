@@ -13,9 +13,12 @@ Gesammelt nach MVP 1, noch nicht beschlossen. Grundlage für die Planung von Aus
 | 5 | SEO Keyword Placement | 02.10.2025 | Vier Stellen: Title-Tag (Keyword vorn, 50–60 Zeichen, passend zur Absicht), H1 (Keyword oder Variante, nicht wortgleich mit dem Title), URL (kurz, unter fünf Wörtern, nur das Haupt-Keyword, kein Jahr), erste 100 Wörter (Keyword natürlich, mit Varianten, Nutzen sofort) |
 | 6 | The No-Nonsense Checklist for SEO QA | 01.10.2025 | Prüfliste vor und nach Veröffentlichungen: robots, noindex, Canonical, Statuscodes, echte Links, Titel/H1, Schema, Mobil |
 | 7 | Rank and Rent HVAC Websites | 05.11.2025 | Leistung × Ort mit eigener lokaler Information, ein Cluster je Leistung, NAP überall gleich, LocalBusiness-Schema, saisonale Auffrischung, Anruf-Knopf und kurzes Formular je Leistungsseite |
+| 9 | Step-by-Step: How to Implement Entity SEO (Hinweis von Thomas: „ganz wichtig“) | 23.09.2025 | Zwölf Schritte: eine Hauptseite (Entity Home) je Entität, klare Beschreibung in den ersten 100–150 Wörtern, Schema nur mit dem, was auf der Seite steht (`mainEntityOfPage`, `about`, `mentions`, `sameAs`), gleiche Fakten überall, 5–10 verwandte Entitäten je Säulenthema, Säule und Cluster, interne Links mit sprechendem Ankertext, echte Fragen beantworten, Bilder beschriften, nach dem Veröffentlichen Profile angleichen, vierteljährlich Markensuche prüfen, Tiefe vor Breite; Vorlage „Steckbrief“ je Seite; typische Fehler. Nennt weder Wikidata noch Knowledge Graph und keine Messgrößen |
 | 8 | The Semantic Lie | 30.07.2025 | Eine klare Absicht je Seite, Ziel im ersten Satz, benannte Entitäten und ausdrückliche Beziehungen, Schema; die Thesen zu Common Crawl, C4 und Updates sind unbelegt und keine Grundlage für Funktionen |
 
 Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8, **Keyword-Platzierung** (0.10.4) aus 5.
+
+Beitrag 9 passt am genauesten zum Kern des Plugins (Entitäten) und bündelt mehrere Ideen unten; deshalb steht er als Abschnitt 8 mit eigener Reihenfolge.
 
 ## Ideen
 
@@ -80,3 +83,35 @@ Heute gilt: Haupt-Keyword im Titel, in der Einleitung und in einer Zwischenüber
 - LocalBusiness-Schema über Rank Math aus dem Profil (steht als „Strukturierte Daten über Rank Math“ schon in Ausbau 2).
 - Saisonale Beiträge jährlich zur Auffrischung vorschlagen (zu „Überarbeitung bestehender Beiträge“).
 - Später: Beiträge für das Google-Unternehmensprofil aus neuen Entwürfen.
+
+### 8. Entity SEO nach Casey Keith (aus 9, bündelt Teile von 1, 5 und 7)
+
+Abgleich der zwölf Schritte mit dem Plugin in 1.0:
+
+| Schritt | Heute im Plugin | Lücke |
+|---|---|---|
+| 1 Entity Home | Profil mit Leistungen; Einrichtung meldet „Leistungen ohne eigene Seite“ | keine feste Zuordnung Entität → Hauptseite |
+| 2 Klare Beschreibung | Antwort zuerst (0.10.3), Kurzbeschreibung im Profil | Prüfung der Hauptseiten selbst fehlt |
+| 3 Schema wie die Seite | Rank Math setzt Article-Schema | kein `about`/`mentions`/`sameAs` aus den Entitäten; kein Organization-/LocalBusiness-Schema aus dem Profil |
+| 4 Gleiche Fakten | Unternehmensprofil als Quelle | kein Faktenblatt, kein NAP-Abgleich (Idee 7) |
+| 5 Verwandte Entitäten | Entitäten je Thema, Briefing nutzt sie | keine 5–10 gezielt recherchierten Begriffe je Leistung (Idee 1) |
+| 6 Säule und Cluster | Leistungsseiten, Themen je Leistung | keine Cluster-Struktur (Idee 1) |
+| 7 Interne Links | Entwürfe verlinken passende Seiten | Ankertext nicht geprüft; Link zur Hauptseite der Entität nicht Pflicht |
+| 8 Echte Fragen | Briefing nennt Fragen | Fragen aus der Search Console fehlen (Idee 5) |
+| 9 Bilder beschriften | Alternativtext deutsch, KI-Bilder mit sprechendem Dateinamen (0.10.0) | Bildunterschrift fehlt |
+| 10 Profile angleichen | – | Liste der eigenen Profile (`sameAs`) und Prüfliste nach dem Veröffentlichen |
+| 11 Beobachten | Markensuchen im Bericht (0.10.5) | „neue Suchanfragen seit …“ je Seite, Erinnerung vierteljährlich |
+| 12 Tiefe vor Breite | Priorität mit Relevanz und Lücke | keine Bevorzugung des angefangenen Clusters |
+
+Bausteine, in dieser Reihenfolge vorgeschlagen:
+
+1. **Steckbrief je Entwurf** (Vorlage aus 9): Das Briefing legt fest: Haupt-Entität, Ein-Satz-Definition, Zielgruppe, fünf verwandte Entitäten, drei Fragen, interne Links (mit der Hauptseite der Entität), Schema-Typ und Eigenschaften. Der Steckbrief steht beim Thema und im Prüfbericht. Klein, gleich wirksam.
+2. **Schema aus den Entitäten über Rank Math** (Filter `rank_math/json_ld`): Für Entwürfe des Plugins `about` (Haupt-Entität) und `mentions` (genannte Entitäten), jeweils mit `sameAs` auf Wikidata, wo bestätigt. Nur Entitäten, die im Text stehen (Regel aus 9: Schema sagt nichts, was die Seite nicht sagt). Für die Startseite Organization bzw. LocalBusiness aus dem Profil mit `knowsAbout` (Leistungen), `areaServed` (Servicegebiet mit Wikidata) und `sameAs` (eigene Profile).
+3. **Ankertext-Prüfung**: Hinweis im Prüfbericht bei Links mit „hier“, „mehr“, „klicken Sie hier“ usw.; Regel im Text: Ankertext nennt die Sache.
+4. **Entity Home**: Je bestätigter Leistung, Unternehmen und Person eine Hauptseite (Vorschlag aus dem Index, Bestätigen wie bei Entitäten). Entwürfe verlinken die Hauptseite; der Bericht nennt Entitäten ohne Hauptseite und solche, bei denen zwei eigene Seiten um dieselben Suchanfragen konkurrieren.
+5. **Faktenblatt und eigene Profile**: Seite „Unternehmen“ bekommt die Liste der eigenen Profile (Google-Unternehmensprofil, Facebook, LinkedIn, Branchenbücher) und erzeugt ein Faktenblatt (Name, Adresse, Telefon, Beschreibung, Leistungen, Gründung) zum Abgleich. NAP-Abgleich mit Impressum und Kontaktseite (Idee 7).
+6. **Leistungs-Landkarte und Cluster** (Idee 1) mit Praxisnotizen (Idee 2); Themenrecherche bevorzugt Lücken im angefangenen Cluster (Tiefe vor Breite).
+7. **Fragen aus der Search Console** (Idee 5) als FAQ-Vorschläge; **Beobachten**: neue Suchanfragen je Seite seit dem Veröffentlichen, vierteljährliche Erinnerung an die Markensuche.
+
+Nicht übernommen: Der Beitrag nennt keine Belege und keine Messgrößen; die Schritte decken sich aber mit den Richtlinien von Google zu strukturierten Daten (Markup muss sichtbaren Inhalt wiedergeben).
+
