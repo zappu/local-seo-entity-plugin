@@ -20,7 +20,7 @@ import {
 	TextControl,
 	ToggleControl,
 } from '@wordpress/components';
-import { decideEntity, deleteEntity, getEntities, getEntity, getMergeSuggestions, mergeEntities, updateEntity } from './api';
+import { decideEntities, decideEntity, deleteEntity, getEntities, getEntity, getMergeSuggestions, mergeEntities, updateEntity } from './api';
 import { ENTITY_STATUS, ENTITY_TYPES, ORIGINS } from './format';
 
 const config = window.lsecAdmin || {};
@@ -353,6 +353,26 @@ export default function Entities() {
 			.finally( () => setBusy( false ) );
 	};
 
+	const decideSelected = ( decision ) => {
+		setBusy( true );
+		decideEntities( selected, decision )
+			.then( ( out ) => {
+				const word = decision === 'confirmed' ? 'bestätigt' : 'abgelehnt';
+				const parts = [ `${ out.changed.length } ${ word }.` ];
+				if ( out.unchanged.length > 0 ) {
+					parts.push( `${ out.unchanged.length } ${ out.unchanged.length === 1 ? 'war' : 'waren' } schon ${ word }.` );
+				}
+				if ( out.skipped.length > 0 ) {
+					parts.push( `${ out.skipped.length } übersprungen (aus dem Unternehmensprofil, dort pflegen).` );
+				}
+				setNotice( { status: 'success', text: parts.join( ' ' ) } );
+				setSelected( [] );
+				load();
+			} )
+			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
+			.finally( () => setBusy( false ) );
+	};
+
 	const merge = ( target, sources ) => {
 		setBusy( true );
 		mergeEntities( target, sources )
@@ -368,6 +388,8 @@ export default function Entities() {
 
 	const setFilter = ( key, value ) => setFilters( ( f ) => ( { ...f, [ key ]: value } ) );
 	const toggle = ( id, on ) => setSelected( ( sel ) => ( on ? [ ...sel, id ] : sel.filter( ( x ) => x !== id ) ) );
+	const selectable = ( rows || [] ).filter( ( r ) => r.status !== 'merged' ).map( ( r ) => Number( r.id ) );
+	const allSelected = selectable.length > 0 && selectable.every( ( id ) => selected.includes( id ) );
 	const selectedRows = ( rows || [] ).filter( ( r ) => selected.includes( Number( r.id ) ) ).map( ( r ) => ( { ...r, id: Number( r.id ) } ) );
 
 	return (
@@ -409,10 +431,14 @@ export default function Entities() {
 					</div>
 				</CardHeader>
 				<CardBody>
-					{ selected.length > 1 && (
+					{ selected.length > 0 && (
 						<div className="lsec-bulk">
 							<span>{ selected.length } ausgewählt</span>
-							<Button variant="secondary" onClick={ () => setMerging( true ) }>Zusammenführen …</Button>
+							<Button variant="secondary" disabled={ busy } onClick={ () => decideSelected( 'confirmed' ) }>Bestätigen</Button>
+							<Button variant="secondary" isDestructive disabled={ busy } onClick={ () => decideSelected( 'rejected' ) }>Ablehnen</Button>
+							{ selected.length > 1 && (
+								<Button variant="secondary" disabled={ busy } onClick={ () => setMerging( true ) }>Zusammenführen …</Button>
+							) }
 							<Button variant="tertiary" onClick={ () => setSelected( [] ) }>Auswahl aufheben</Button>
 						</div>
 					) }
@@ -423,7 +449,16 @@ export default function Entities() {
 							<table className="widefat striped lsec-table">
 								<thead>
 									<tr>
-										<th className="lsec-check"><span className="screen-reader-text">Auswahl</span></th>
+										<th className="lsec-check">
+											<CheckboxControl
+												label=""
+												aria-label="Alle auswählen"
+												checked={ allSelected }
+												disabled={ selectable.length === 0 }
+												onChange={ ( v ) => setSelected( v ? selectable : [] ) }
+												__nextHasNoMarginBottom
+											/>
+										</th>
 										<th>Name</th>
 										<th>Typ</th>
 										<th>Status</th>

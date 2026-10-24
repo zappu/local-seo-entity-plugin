@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.9.2 – 24.10.2026
+
+- **Entitäten gesammelt entscheiden:** mehrere markieren (auch alle über das Kästchen im Tabellenkopf) und gemeinsam bestätigen oder ablehnen; Einträge aus dem Unternehmensprofil werden übersprungen. Auch `wp lsec entities decide 12,13,14 rejected`.
+- **Doppelte Themen vergleichen:** Themennummer in jeder Zeile, der Doppel-Hinweis an beiden Themen und „Vergleichen“ mit beiden Themen nebeneinander und „ablehnen“ je Thema.
+- Herkunft „KI-Recherche“ statt `ai_research`.
+
 ## 0.9.1 – 23.10.2026
 
 - **Bericht** (Stufe F): neue Seite „Bericht“ mit den Hinweisen „bestehende Seite verbessern“ (eigene Seiten auf Position 4 bis 20 in der Search Console und verworfene Themen mit passender Seite, als CSV für Excel), den Entwürfen des Plugins mit Prüfergebnis und Kosten und den Entitäten mit Lücken. Auch `wp lsec report`.

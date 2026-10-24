@@ -79,6 +79,7 @@ final class TopicsController {
 		}
 		$area  = ServiceArea::from_settings();
 		$twins = array();
+		$kept  = array();
 		foreach ( $repo->duplicate_groups( TopicResearchWorkflow::profile_services() ) as $group ) {
 			$keep = array_shift( $group );
 			foreach ( $group as $twin ) {
@@ -87,12 +88,21 @@ final class TopicsController {
 					'title'  => (string) $keep['title'],
 					'status' => (string) $keep['status'],
 				);
+				// Nachtrag 24.10. (0.9.2): Auch das behaltene Thema nennt seine Doppel, damit beide Seiten sichtbar sind.
+				$kept[ (int) $keep['id'] ][] = array(
+					'id'     => (int) $twin['id'],
+					'title'  => (string) $twin['title'],
+					'status' => (string) $twin['status'],
+				);
 			}
 		}
 		return new \WP_REST_Response(
 			array(
 				'topics'     => array_map(
-					static fn( array $t ): array => self::with_quality( $t ) + array( 'duplicate_of' => $twins[ (int) $t['id'] ] ?? null ),
+					static fn( array $t ): array => self::with_quality( $t ) + array(
+						'duplicate_of' => $twins[ (int) $t['id'] ] ?? null,
+						'duplicates'   => $kept[ (int) $t['id'] ] ?? array(),
+					),
 					$repo->list( (string) $request->get_param( 'status' ), 200 )
 				),
 				'counts'     => $repo->counts(),

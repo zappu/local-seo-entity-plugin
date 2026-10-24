@@ -54,6 +54,7 @@ final class EntitiesController {
 		$route( '/entities/(?P<id>\d+)', 'POST', array( $this, 'update_entity' ) );
 		$route( '/entities/(?P<id>\d+)', 'DELETE', array( $this, 'delete_entity' ) );
 		$route( '/entities/merge', 'POST', array( $this, 'merge' ) );
+		$route( '/entities/decision', 'POST', array( $this, 'decide_many' ) );
 		$route( '/entities/merge-suggestions', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new EntityRepository() )->merge_suggestions() ) );
 		$route( '/profile', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new BusinessProfile() )->get() ) );
 		$route( '/profile', 'POST', array( $this, 'save_profile' ) );
@@ -169,6 +170,33 @@ final class EntitiesController {
 			)
 		);
 		return new \WP_REST_Response( $out );
+	}
+
+	/**
+	 * Sammelentscheidung: mehrere Entitäten bestätigen oder ablehnen (Nachtrag 24.10., 0.9.2).
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit ids und decision.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function decide_many( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$ids      = array_map( 'intval', (array) $request->get_param( 'ids' ) );
+		$decision = (string) $request->get_param( 'decision' );
+		try {
+			$out = ( new EntityRepository() )->decide_many( $ids, $decision, get_current_user_id() );
+		} catch ( \InvalidArgumentException $e ) {
+			return new \WP_Error( 'lsec_invalid', $e->getMessage(), array( 'status' => 400 ) );
+		}
+		if ( array() !== $out['changed'] ) {
+			$this->plugin->logger->audit(
+				'Entitäten entschieden',
+				array(
+					'entity_ids' => $out['changed'],
+					'decision'   => $decision,
+					'user_id'    => get_current_user_id(),
+				)
+			);
+		}
+		return new \WP_REST_Response( $out + array( 'decision' => $decision ) );
 	}
 
 	/**

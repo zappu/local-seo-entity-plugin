@@ -685,6 +685,66 @@
 	padding: 4px 8px;
 }
 
+.lsec-duplicate .components-button.is-link {
+	font-weight: 600;
+}
+
+.lsec-topic__id {
+	color: #1d2327;
+}
+
+// Doppelte Themen vergleichen (0.9.2).
+.lsec-compare-modal {
+	width: min(1100px, 95vw);
+	max-width: none;
+}
+
+.lsec-compare {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+}
+
+.lsec-compare__col {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 12px 16px;
+
+	h3 {
+		margin-top: 0;
+	}
+
+	h4 {
+		margin: 12px 0 4px;
+	}
+
+	ul {
+		margin: 0 0 0 18px;
+		list-style: disc;
+	}
+}
+
+.lsec-compare__label {
+	margin: 0 0 4px;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #646970;
+}
+
+.lsec-compare__actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+@media (max-width: 782px) {
+
+	.lsec-compare {
+		grid-template-columns: 1fr;
+	}
+}
+
 // Einrichtungsassistent (Stufe F).
 .lsec-setup {
 	display: grid;

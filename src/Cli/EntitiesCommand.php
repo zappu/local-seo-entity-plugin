@@ -292,12 +292,14 @@ final class EntitiesCommand {
 	}
 
 	/**
-	 * Bestätigt oder verwirft eine Entität; wird mit Benutzer und Zeit protokolliert.
+	 * Bestätigt oder verwirft eine oder mehrere Entitäten; wird mit Benutzer und Zeit protokolliert.
+	 *
+	 * Einträge aus dem Unternehmensprofil und zusammengeführte Entitäten werden übersprungen.
 	 *
 	 * ## OPTIONS
 	 *
 	 * <id>
-	 * : Entität.
+	 * : Entität, mehrere mit Komma (z. B. 12,13,14).
 	 *
 	 * <decision>
 	 * : confirmed oder rejected.
@@ -305,28 +307,36 @@ final class EntitiesCommand {
 	 * [--user=<user>]
 	 * : Benutzer, in dessen Namen entschieden wird (WP-CLI-Standardoption).
 	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec entities decide 12,13,14 rejected
+	 *
 	 * @param string[]              $args       Argumente.
 	 * @param array<string, string> $assoc_args Optionen.
 	 */
 	public function decide( array $args, array $assoc_args ): void {
+		// Nachtrag 24.10. (0.9.2): mehrere Entitäten mit Komma, z. B. 12,13,14.
+		$ids = array_values( array_filter( array_map( 'intval', explode( ',', (string) $args[0] ) ) ) );
 		try {
-			$ok = $this->entities->decide( (int) $args[0], (string) $args[1], get_current_user_id() );
+			$out = $this->entities->decide_many( $ids, (string) $args[1], get_current_user_id() );
 		} catch ( \InvalidArgumentException $e ) {
 			WP_CLI::error( $e->getMessage() );
 		}
-		if ( ! $ok ) {
-			WP_CLI::error( 'Entität nicht gefunden.' );
+		if ( array() === $out['changed'] && array() === $out['unchanged'] ) {
+			WP_CLI::error( 'Nichts geändert: Entität nicht gefunden, zusammengeführt oder aus dem Unternehmensprofil (dort pflegen).' );
 		}
 		$this->plugin->logger->audit(
 			'Entität entschieden',
 			array(
-				'entity_id' => (int) $args[0],
-				'decision'  => (string) $args[1],
-				'user_id'   => get_current_user_id(),
-				'via'       => 'cli',
+				'entity_ids' => $out['changed'],
+				'decision'   => (string) $args[1],
+				'user_id'    => get_current_user_id(),
+				'via'        => 'cli',
 			)
 		);
-		WP_CLI::success( 'Entität ' . (int) $args[0] . ': ' . $args[1] );
+		$done = array_merge( $out['changed'], $out['unchanged'] );
+		sort( $done );
+		WP_CLI::success( 'Entität ' . implode( ', ', $done ) . ': ' . $args[1] . ( array() !== $out['skipped'] ? '; übersprungen: ' . implode( ', ', $out['skipped'] ) : '' ) );
 	}
 
 	/**

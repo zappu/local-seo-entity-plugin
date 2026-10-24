@@ -19,6 +19,7 @@
 #   Stufe F: F1 Einrichtungsassistent: Stand der sechs Schritte, unbekannter Schritt, REST-Routen (0.8.0)
 #            F2 Sammelauftrag mit Kostenschätzung, Seite „Abläufe“ (REST) (0.9.0)
 #            F3 Bericht: Inhalte, Entitäten, Hinweise „bestehende Seite verbessern“ (Search Console Position 4–20), CSV (0.9.1)
+#            F4 Sammelentscheidung über Entitäten (0.9.2)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -666,6 +667,23 @@ contains "CSV für Excel" "Seite;Titel;Keyword;Position" "$(wpc lsec report --fo
 wpc db query "DELETE FROM ${PREFIX}lsec_keyword_metrics WHERE keyword_id = $K3" >/dev/null
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Bericht" "/lsec/v1/report" "$OUT"
+
+echo "F4 Sammelentscheidung über Entitäten (0.9.2)"
+for n in A B; do
+	wpc db query "INSERT INTO ${PREFIX}lsec_entities (uuid, type, canonical_name, normalized_name, status, origin, created_at, updated_at) VALUES (UUID(), 'place', 'LSECTEST Sammel $n', 'lsectest sammel $n', 'candidate', 'ai_extraction', UTC_TIMESTAMP(), UTC_TIMESTAMP())" >/dev/null
+done
+wpc db query "INSERT INTO ${PREFIX}lsec_entities (uuid, type, canonical_name, normalized_name, status, origin, created_at, updated_at) VALUES (UUID(), 'service', 'LSECTEST Sammel Profil', 'lsectest sammel profil', 'confirmed', 'business_profile', UTC_TIMESTAMP(), UTC_TIMESTAMP())" >/dev/null
+EA=$(wpc db query "SELECT id FROM ${PREFIX}lsec_entities WHERE canonical_name = 'LSECTEST Sammel A'" --skip-column-names | last_number)
+EB=$(wpc db query "SELECT id FROM ${PREFIX}lsec_entities WHERE canonical_name = 'LSECTEST Sammel B'" --skip-column-names | last_number)
+EP=$(wpc db query "SELECT id FROM ${PREFIX}lsec_entities WHERE canonical_name = 'LSECTEST Sammel Profil'" --skip-column-names | last_number)
+OUT=$(wpc lsec entities decide "$EA,$EB,$EP" rejected 2>&1)
+contains "mehrere abgelehnt, Profil übersprungen" "übersprungen: $EP" "$OUT"
+check "beide abgelehnt" "2" "$(wpc db query "SELECT COUNT(*) FROM ${PREFIX}lsec_entities WHERE id IN ($EA, $EB) AND status = 'rejected' AND decided_at IS NOT NULL" --skip-column-names | last_number)"
+check "Profileintrag unverändert" "confirmed" "$(wpc db query "SELECT status FROM ${PREFIX}lsec_entities WHERE id = $EP" --skip-column-names | last_word)"
+OUT=$(wpc lsec entities decide "$EA,$EB" rejected 2>&1)
+contains "Wiederholung ist kein Fehler" "Success" "$OUT"
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "Route Sammelentscheidung" "/lsec/v1/entities/decision" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

@@ -120,6 +120,7 @@ export const ENTITY_STATUS = {
 export const ORIGINS = {
 	business_profile: 'Profil',
 	ai_extraction: 'KI',
+	ai_research: 'KI-Recherche',
 	manual: 'von Hand',
 	import: 'Import',
 };

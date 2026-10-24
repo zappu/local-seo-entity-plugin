@@ -7,7 +7,7 @@
  * Ab Stufe E: Beitrag schreiben, Entwurf mit Prüfbericht (Kosten, Bewertung, Mängel).
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
-import { Button, Card, CardBody, CardHeader, CheckboxControl, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
+import { Button, Card, CardBody, CardHeader, CheckboxControl, Modal, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
 import { batchProduce, decideClaim, decideTopic, getTopic, getTopics, produceTopic, startResearch } from './api';
 import { CLAIM_STATUS, dateTime, number, RUN_STATUS, TOPIC_FORMATS, TOPIC_STATUS, usd } from './format';
 
@@ -288,7 +288,86 @@ function TopicDetail( { id, labels, setNotice } ) {
 	);
 }
 
-function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice, selected, onSelect } ) {
+// Nachtrag 24.10. (0.9.2): Doppelte Themen nebeneinander vergleichen und eines davon ablehnen.
+function CompareColumn( { topic, label, onDecide, busy } ) {
+	const fixed = topic.status === 'in_production' || topic.status === 'produced' || topic.status === 'rejected';
+	const primary = topic.keywords.filter( ( k ) => k.role === 'primary' );
+	const other = topic.keywords.filter( ( k ) => k.role !== 'primary' );
+	const kw = ( k ) => (
+		<li key={ k.id }>
+			{ k.keyword }
+			<span className="lsec-muted">
+				{ k.volume !== null && ` · ${ number( k.volume ) } Suchen` }
+				{ k.impressions !== null && ` · ${ number( k.impressions ) } Impr.` }
+			</span>
+		</li>
+	);
+	return (
+		<div className="lsec-compare__col">
+			<p className="lsec-compare__label">{ label }</p>
+			<h3>Thema #{ topic.id }: { topic.title }</h3>
+			<p className="lsec-muted">
+				{ TOPIC_FORMATS[ topic.format ] || topic.format }
+				{ topic.region && ` · ${ topic.region }` }
+				{ ` · ${ TOPIC_STATUS[ topic.status ] || topic.status }` }
+				{ ` · Priorität ${ topic.priority_score === null ? '–' : Math.round( topic.priority_score ) }` }
+			</p>
+			<h4>Haupt-Keywords</h4>
+			{ primary.length === 0 ? <p className="lsec-muted">Keine.</p> : <ul>{ primary.map( kw ) }</ul> }
+			{ other.length > 0 && (
+				<>
+					<h4>Weitere Keywords</h4>
+					<ul>{ other.map( kw ) }</ul>
+				</>
+			) }
+			<h4>Begründung</h4>
+			<p>{ topic.rationale || <span className="lsec-muted">Keine.</span> }</p>
+			{ topic.entities.length > 0 && (
+				<>
+					<h4>Entitäten</h4>
+					<p>{ topic.entities.map( ( e ) => e.name ).join( ', ' ) }</p>
+				</>
+			) }
+			<div className="lsec-compare__actions">
+				{ Number( topic.post_id ) > 0 && (
+					<Button variant="secondary" size="small" href={ editUrl( topic.post_id ) }>Entwurf öffnen</Button>
+				) }
+				{ ! fixed && (
+					<Button variant="secondary" size="small" isDestructive disabled={ busy } onClick={ () => onDecide( topic.id, 'rejected' ) }>
+						Thema #{ topic.id } ablehnen
+					</Button>
+				) }
+			</div>
+		</div>
+	);
+}
+
+function CompareModal( { ids, onDecide, onClose, busy } ) {
+	const [ topics, setTopics ] = useState( null );
+	const [ error, setError ] = useState( '' );
+	useEffect( () => {
+		Promise.all( ids.map( ( id ) => getTopic( id ) ) )
+			.then( setTopics )
+			.catch( ( e ) => setError( e.message ) );
+	}, [ ids ] );
+	return (
+		<Modal title={ `Doppelte Themen vergleichen: #${ ids[ 0 ] } und #${ ids[ 1 ] }` } onRequestClose={ onClose } className="lsec-compare-modal">
+			{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
+			{ ! topics && ! error && <Spinner /> }
+			{ topics && (
+				<>
+					<p className="lsec-muted">Zwei Seiten zum selben Thema würden in Google gegeneinander ranken. Behalte das stärkere Thema und lehne das andere ab; brauchbare Keywords oder Gedanken des abgelehnten fließen beim Schreiben nicht automatisch ein.</p>
+					<div className="lsec-compare">
+						<CompareColumn topic={ topics[ 0 ] } label="dieses Thema" onDecide={ onDecide } busy={ busy } />
+						<CompareColumn topic={ topics[ 1 ] } label="doppelt zu" onDecide={ onDecide } busy={ busy } />
+					</div>
+				</>
+			) }
+		</Modal>
+	);
+}
+
+function TopicRow( { topic, labels, onDecide, onProduce, onCompare, busy, setNotice, selected, onSelect } ) {
 	const [ open, setOpen ] = useState( false );
 	const producing = topic.status === 'in_production' || topic.status === 'produced';
 	return (
@@ -311,7 +390,8 @@ function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice, select
 						<Button variant="link" onClick={ () => setOpen( ( o ) => ! o ) } aria-expanded={ open }>{ topic.title }</Button>
 					</h3>
 					<p className="lsec-muted">
-						{ TOPIC_FORMATS[ topic.format ] || topic.format }
+						<strong className="lsec-topic__id">#{ topic.id }</strong>
+						{ ` · ${ TOPIC_FORMATS[ topic.format ] || topic.format }` }
 						{ topic.region && ` · ${ topic.region }` }
 						{ topic.primary_keywords && ` · ${ topic.primary_keywords }` }
 						{ ` · ${ TOPIC_STATUS[ topic.status ] || topic.status }` }
@@ -319,9 +399,18 @@ function TopicRow( { topic, labels, onDecide, onProduce, busy, setNotice, select
 					</p>
 					{ topic.duplicate_of && (
 						<p className="lsec-duplicate">
-							Doppelt zu #{ topic.duplicate_of.id } „{ topic.duplicate_of.title }“ ({ TOPIC_STATUS[ topic.duplicate_of.status ] || topic.duplicate_of.status }). Zwei Seiten zum selben Thema würden gegeneinander ranken; dieses Thema besser ablehnen.
+							Doppelt zu #{ topic.duplicate_of.id } „{ topic.duplicate_of.title }“ ({ TOPIC_STATUS[ topic.duplicate_of.status ] || topic.duplicate_of.status }). Zwei Seiten zum selben Thema würden gegeneinander ranken; eines davon ablehnen.
+							{ ' ' }
+							<Button variant="link" onClick={ () => onCompare( [ topic.id, topic.duplicate_of.id ] ) }>Vergleichen</Button>
 						</p>
 					) }
+					{ topic.duplicates && topic.duplicates.map( ( twin ) => (
+						<p key={ twin.id } className="lsec-duplicate">
+							Doppelt zu #{ twin.id } „{ twin.title }“ ({ TOPIC_STATUS[ twin.status ] || twin.status }).
+							{ ' ' }
+							<Button variant="link" onClick={ () => onCompare( [ topic.id, twin.id ] ) }>Vergleichen</Button>
+						</p>
+					) ) }
 					{ topic.rationale && <p>{ topic.rationale }</p> }
 				</div>
 				<div className="lsec-actions">
@@ -358,6 +447,7 @@ export default function Topics() {
 	const [ notice, setNotice ] = useState( null );
 	const [ busy, setBusy ] = useState( false );
 	const [ selected, setSelected ] = useState( [] );
+	const [ compare, setCompare ] = useState( null );
 	useEffect( () => setSelected( [] ), [ status ] );
 
 	const load = useCallback( () => {
@@ -413,7 +503,10 @@ export default function Topics() {
 	const onDecide = ( id, decision ) => {
 		setBusy( true );
 		decideTopic( id, decision )
-			.then( load )
+			.then( () => {
+				setCompare( null );
+				load();
+			} )
 			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
 			.finally( () => setBusy( false ) );
 	};
@@ -471,6 +564,7 @@ export default function Topics() {
 								labels={ data.labels }
 								onDecide={ onDecide }
 								onProduce={ onProduce }
+								onCompare={ setCompare }
 								busy={ busy }
 								setNotice={ setNotice }
 								selected={ selected.includes( t.id ) }
@@ -480,6 +574,7 @@ export default function Topics() {
 					</CardBody>
 				</Card>
 			</div>
+			{ compare && <CompareModal ids={ compare } onDecide={ onDecide } onClose={ () => setCompare( null ) } busy={ busy } /> }
 		</>
 	);
 }

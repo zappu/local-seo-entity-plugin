@@ -699,6 +699,75 @@ final class EntityRepository {
 	}
 
 	/**
+	 * Höchstzahl Entitäten je Sammelentscheidung.
+	 */
+	public const DECIDE_MAX = 200;
+
+	/**
+	 * Sammelentscheidung über mehrere Entitäten (Nachtrag 24.10., 0.9.2).
+	 *
+	 * Übersprungen werden unbekannte und zusammengeführte Entitäten sowie Einträge aus dem
+	 * Unternehmensprofil (die werden im Profil gepflegt).
+	 *
+	 * @param int[]  $ids      Entitäten.
+	 * @param string $decision confirmed oder rejected.
+	 * @param int    $user_id  Benutzer.
+	 * @return array{changed: int[], unchanged: int[], skipped: int[]} unchanged: schon so entschieden.
+	 * @throws \InvalidArgumentException Bei ungültiger Entscheidung oder zu vielen Entitäten.
+	 */
+	public function decide_many( array $ids, string $decision, int $user_id ): array {
+		global $wpdb;
+		if ( ! in_array( $decision, self::DECIDED, true ) ) {
+			throw new \InvalidArgumentException( 'Entscheidung: confirmed oder rejected.' );
+		}
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ), static fn( int $id ): bool => $id > 0 ) ) );
+		if ( count( $ids ) > self::DECIDE_MAX ) {
+			throw new \InvalidArgumentException( sprintf( 'Höchstens %d Entitäten auf einmal.', (int) self::DECIDE_MAX ) );
+		}
+		if ( array() === $ids ) {
+			return array(
+				'changed'   => array(),
+				'unchanged' => array(),
+				'skipped'   => array(),
+			);
+		}
+		$table = Schema::table( $wpdb->prefix, 'entities' );
+		$in    = implode( ', ', $ids );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare( "SELECT id, status FROM {$table} WHERE id IN ({$in}) AND status <> 'merged' AND origin <> %s", BusinessProfile::ORIGIN ),
+			ARRAY_A
+		);
+		$open = array();
+		$same = array();
+		foreach ( $rows as $row ) {
+			if ( $decision === $row['status'] ) {
+				$same[] = (int) $row['id'];
+			} else {
+				$open[] = (int) $row['id'];
+			}
+		}
+		if ( array() !== $open ) {
+			$now = gmdate( 'Y-m-d H:i:s' );
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$table} SET status = %s, decided_by = %d, decided_at = %s, updated_at = %s WHERE id IN (" . implode( ', ', $open ) . ')',
+					$decision,
+					$user_id,
+					$now,
+					$now
+				)
+			);
+		}
+		// phpcs:enable
+		return array(
+			'changed'   => $open,
+			'unchanged' => $same,
+			'skipped'   => array_values( array_diff( $ids, $open, $same ) ),
+		);
+	}
+
+	/**
 	 * Status, die der Administrator von Hand setzen kann (nicht merged; dafür gibt es merge()).
 	 */
 	public const EDITABLE_STATUS = array( 'candidate', 'probable', 'unresolved', 'confirmed', 'rejected' );
