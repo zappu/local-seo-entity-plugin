@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## 1.0.0 – 24.10.2026
+
+Erste stabile Version: MVP 1 (Stufen A–F) abgeschlossen und auf beiden Testwebsites abgenommen (alle 32 Punkte der Checkliste in Ordnung). Inhaltlich gleich 0.11.0.
+
+- Das Plugin recherchiert lokale Themen, erkennt Entitäten, gleicht Keywords mit Search Console und Textfocus ab und schreibt Entwürfe mit Rank-Math-Angaben, geprüften Tatsachen, internen Links und Beitragsbild. Es veröffentlicht nie selbst.
+- Betrieb ohne Shell: Nur der Cronjob in Plesk und die Schlüssel in wp-config.php bleiben Handarbeit.
+- Handbuch im Plugin unter **Local SEO → Handbuch**.
+
 ## 0.11.0 – 24.10.2026
 
 Betrieb ohne Shell und aufgeräumtes Backend: Der Cronjob in Plesk bleibt, alle anderen Befehle sind jetzt Knöpfe im Backend; die Einstellungen stehen in Reitern.

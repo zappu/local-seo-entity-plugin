@@ -1,6 +1,6 @@
 # Projektplan
 
-**Stand:** 22.10.2026 · Phase: MVP 1, Stufe B auf Staging geprüft (0.4.0), Nachbesserungen 0.4.1–0.4.3, Abnahme von Hand offen
+**Stand:** 24.10.2026 · Phase: MVP 1 abgeschlossen, Version 1.0.0 abgenommen; nächste Phase Ausbau 2
 
 ## Ziel
 
@@ -17,7 +17,8 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 2 | Vorbereitung durch Thomas: Staging-Website, OpenRouter-Schlüssel, Textfocus-Tarif prüfen, Google-Dienstkonto | Staging-Website und Cronjob erledigt, Schlüssel eingetragen; Textfocus-Tarif und Google-Dienstkonto offen |
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | erledigt (18.10.2026): KI-Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell, Testphase 20 Beiträge in 60 Tagen |
-| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | Stufe A bestanden (0.3.0/0.3.1); Stufe B umgesetzt (0.4.0), Staging offen |
+| MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | **abgeschlossen** am 24.10.2026: Stufen A–F, Abnahme auf beiden Testwebsites, Version 1.0.0 |
+| Ausbau 2 | Ideen in `docs/ausbau-2-ideen.md`; erster Kandidat Leistungs-Landkarte, dann „Seite verbessern“ | offen |
 
 ## Machbarkeitstest: Prüfpunkte
 
@@ -102,7 +103,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | C | Keywords: täglicher Abgleich, Import im Backend, Filter | 0.5.0 | abgenommen am 22.10.2026 auf Staging: `tf_related` für „flächenreinigung“ schließt fremde Firmen und Hamburg aus; Servicegebiet Uetze mit 60 km Umkreis; offen nur der Nachweis des täglichen Laufs (C4 mit `--online`) |
 | D | Themen: Recherche mit Websuche, Faktenprüfung, Priorität, Überschneidung, Freigabe | 0.6.0–0.6.5 | umgesetzt am 22.10.2026; lokal `mvp-pruefung.sh` 93/93; auf Staging nach den Korrekturen 0.6.1–0.6.5 mit `perplexity/sonar-pro` 70 % geprüfte Tatsachen (Lauf 120); offen: Abnahme durch Thomas, PDF-Quellen (Ausbau 2) |
 | E | Produktion: Briefing, Style Mimic, Entwurf, Qualitätsprüfung, `content_production` über den Cronjob | 0.7.0–0.7.9 | abgenommen am 23.10.2026: erste bestandene Entwürfe (Bewertung 87–90), drei Entwürfe über den Cronjob, unbelegte Zahl blockiert, Kosten je Entwurf 0,005–0,22 USD; Modelle je Aufgabe (0.7.9): Text mit `anthropic/claude-sonnet-5.5` (Thomas: „menschlicher“), Briefing mit `openai/gpt-6-luna`, Prüfmodell nach Test |
-| F | Einrichtungsassistent (Wunsch 22.10.), Abläufe-Seite, Berichte, Sammelauftrag, Dokumentation, Abnahme | 0.8.0–1.0.0 | in Arbeit: Einrichtungsassistent (0.8.0–0.8.3; getestet auf der Zahnarzt-Website: Einrichtung über den Assistenten, zwei Entwürfe von Thomas als sehr gut bewertet), Abläufe-Seite und Sammelauftrag (0.9.0), Content- und Entity-Bericht mit Hinweisen „bestehende Seite verbessern“ (0.9.1), Sammelentscheidung über Entitäten und Vergleich doppelter Themen (0.9.2), Beitragsbilder aus der Mediathek oder per KI und Sammelausschluss von Keywords (0.10.0, Wunsch von Thomas, Teil von Anforderung 8 vorgezogen), Kategorie für Ortsseiten (0.10.1), Empfehlung bei doppelten Themen (0.10.2), Antwort zuerst (0.10.3), Keyword-Platzierung (0.10.4), Bericht je Seite mit Marken- und Navigationssuchen (0.10.5); Ideen für Ausbau 2 in `docs/ausbau-2-ideen.md`; Dokumentation (Handbuch `docs/handbuch.md`, Abnahme-Checkliste `docs/abnahme-1.0.md`), Handbuch als Seite im Plugin (0.10.7, aus der Abnahme), Betrieb ohne Shell: Knöpfe statt Befehle (0.11.0, Wunsch von Thomas); Abnahme am 24.10.2026: 29 von 31 Punkten auf beiden Websites in Ordnung; offen: 4.6 Ortsseite in der Kategorie |
+| F | Einrichtungsassistent (Wunsch 22.10.), Abläufe-Seite, Berichte, Sammelauftrag, Dokumentation, Abnahme | 0.8.0–1.0.0 | in Arbeit: Einrichtungsassistent (0.8.0–0.8.3; getestet auf der Zahnarzt-Website: Einrichtung über den Assistenten, zwei Entwürfe von Thomas als sehr gut bewertet), Abläufe-Seite und Sammelauftrag (0.9.0), Content- und Entity-Bericht mit Hinweisen „bestehende Seite verbessern“ (0.9.1), Sammelentscheidung über Entitäten und Vergleich doppelter Themen (0.9.2), Beitragsbilder aus der Mediathek oder per KI und Sammelausschluss von Keywords (0.10.0, Wunsch von Thomas, Teil von Anforderung 8 vorgezogen), Kategorie für Ortsseiten (0.10.1), Empfehlung bei doppelten Themen (0.10.2), Antwort zuerst (0.10.3), Keyword-Platzierung (0.10.4), Bericht je Seite mit Marken- und Navigationssuchen (0.10.5); Ideen für Ausbau 2 in `docs/ausbau-2-ideen.md`; Dokumentation (Handbuch `docs/handbuch.md`, Abnahme-Checkliste `docs/abnahme-1.0.md`), Handbuch als Seite im Plugin (0.10.7, aus der Abnahme), Betrieb ohne Shell: Knöpfe statt Befehle (0.11.0, Wunsch von Thomas); **abgenommen am 24.10.2026** auf beiden Testwebsites (Flächenreinigung und Zahnarztpraxis): alle 32 Punkte der Checkliste in Ordnung, keine Abweichungen, unterschrieben mit 0.11.0 von Thomas Wulff; Version 1.0.0 |
 
 ## Erkenntnisse aus Stufe A
 
