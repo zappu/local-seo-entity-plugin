@@ -2,7 +2,7 @@
 
 Stand: Version 1.0 · Oktober 2026
 
-Dieses Handbuch beschreibt Installation, Einrichtung und Betrieb des Plugins. Technische Einzelheiten und Begründungen stehen in der Spezifikation (`docs/spezifikation/technische-spezifikation-v1.0.md`), Begriffe im `GLOSSAR.md`.
+Dieses Handbuch beschreibt Installation, Einrichtung und Betrieb des Plugins. Im Plugin steht es unter **Local SEO → Handbuch**; jede Seite des Plugins verlinkt es oben neben dem Titel, und in der Plugin-Liste steht der Link „Handbuch“. Technische Einzelheiten und Begründungen stehen in der Spezifikation im Repository (`docs/spezifikation/technische-spezifikation-v1.0.md`), Begriffe im `GLOSSAR.md`.
 
 ## Inhalt
 
@@ -187,6 +187,7 @@ Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel 
 | Seite | Inhalt |
 |---|---|
 | **Dashboard** | KI-Kosten und Budget, Textfocus-Credits, Cronjob, Hinweise mit Befehlen, Inhalte und Entitäten auf einen Blick |
+| **Handbuch** | dieses Handbuch |
 | **Einrichtung** | Assistent (Abschnitt 4) |
 | **Unternehmen** | Profil: Name, Beschreibung, Standorte, Leistungen mit Beschreibung, Marken, Wettbewerber, Servicegebiet (mit Wikidata-Abgleich), Adressen für „Angaben lesen“ |
 | **Entitäten** | erkannte Leistungen, Orte, Marken, Personen und Begriffe mit Status, Sicherheit und Fundstellen; Bestätigen, Ablehnen, Bearbeiten, Zusammenführen, auch für mehrere |

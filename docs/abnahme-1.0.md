@@ -71,7 +71,7 @@ Grundlage: Anforderungsspezifikation 1.0 und technische Spezifikation 1.0, Absch
 
 | | Prüfen | Erwartet | S | Z |
 |---|---|---|---|---|
-| 7.1 | `docs/handbuch.md` lesen | Installation, Cronjob und Einrichtung ließen sich danach auf einer neuen Website nachvollziehen | ☐ | ☐ |
+| 7.1 | **Local SEO → Handbuch** öffnen (auch über den Link „Handbuch“ neben jedem Seitentitel und in der Plugin-Liste) und lesen | Installation, Cronjob und Einrichtung ließen sich danach auf einer neuen Website nachvollziehen | ☐ | ☐ |
 
 ## Abweichungen und Entscheidungen
 

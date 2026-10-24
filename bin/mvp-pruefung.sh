@@ -749,6 +749,13 @@ check "anderes Thema abgelehnt" "rejected" "$(wpj lsec topics show "$T2" --forma
 OUT=$(rest POST topics/resolve "{\"keep\":$T2,\"reject\":$T1}")
 contains "Thema mit Entwurf wird nicht abgelehnt" "gibt es schon einen Entwurf" "$OUT"
 
+echo "F8 Handbuch im Backend (0.10.7)"
+OUT=$(wpc eval 'echo PHP_EOL, (string) \Lsec\Admin\Manual::html(), PHP_EOL;')
+contains "Handbuch wird gelesen" 'id="3-installation"' "$OUT"
+contains "Tabellen und Code werden umgesetzt" "<pre><code>" "$OUT"
+OUT=$(wpc eval 'wp_set_current_user(1); do_action("admin_menu"); global $submenu; echo PHP_EOL, implode(",", array_column($submenu["lsec"] ?? array(), 2)), PHP_EOL;')
+contains "Menüpunkt gleich nach dem Dashboard" "lsec,lsec-manual,lsec-setup" "$OUT"
+
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
 [ -n "$STYLE_V" ] && wpc db query "UPDATE ${PREFIX}lsec_style_profiles SET is_active = 1 WHERE version = (SELECT v FROM (SELECT MAX(version) AS v FROM ${PREFIX}lsec_style_profiles) x)" >/dev/null

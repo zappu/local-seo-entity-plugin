@@ -26,12 +26,14 @@ final class AppPage {
 	public const SETUP_SLUG    = 'lsec-setup';
 	public const RUNS_SLUG     = 'lsec-runs';
 	public const REPORT_SLUG   = 'lsec-report';
+	public const MANUAL_SLUG   = 'lsec-manual';
 
 	/**
 	 * Seiten-Slugs und ihre Ansicht.
 	 */
 	private const VIEWS = array(
 		self::SLUG          => 'dashboard',
+		self::MANUAL_SLUG   => 'manual',
 		self::SETUP_SLUG    => 'setup',
 		self::PROFILE_SLUG  => 'profile',
 		self::ENTITIES_SLUG => 'entities',
@@ -52,6 +54,35 @@ final class AppPage {
 		// Reihenfolge im Menü: Dashboard, Unternehmen, Entitäten, Keywords, Themen, Einstellungen (30), Technik (40).
 		add_action( 'admin_menu', array( $this, 'add_settings_menu' ), 30 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_filter( 'plugin_action_links_' . plugin_basename( LSEC_FILE ), array( $this, 'action_links' ) );
+	}
+
+	/**
+	 * Links in der Plugin-Liste: Handbuch und Dashboard.
+	 *
+	 * @param string[] $links Vorhandene Links.
+	 * @return string[]
+	 */
+	public function action_links( array $links ): array {
+		if ( ! Capabilities::current_user_can_manage() ) {
+			return $links;
+		}
+		return array_merge(
+			array(
+				'lsec-manual'    => '<a href="' . esc_url( self::manual_url() ) . '">' . esc_html__( 'Handbuch', 'local-seo-entity-plugin' ) . '</a>',
+				'lsec-dashboard' => '<a href="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ) . '">' . esc_html__( 'Dashboard', 'local-seo-entity-plugin' ) . '</a>',
+			),
+			$links
+		);
+	}
+
+	/**
+	 * Adresse des Handbuchs, wahlweise mit Abschnitt.
+	 *
+	 * @param string $section Anker ohne #.
+	 */
+	public static function manual_url( string $section = '' ): string {
+		return admin_url( 'admin.php?page=' . self::MANUAL_SLUG ) . ( '' !== $section ? '#' . $section : '' );
 	}
 
 	/**
@@ -73,6 +104,14 @@ final class AppPage {
 			__( 'Dashboard', 'local-seo-entity-plugin' ),
 			Capabilities::MANAGE,
 			self::SLUG,
+			array( $this, 'render' )
+		);
+		add_submenu_page(
+			self::SLUG,
+			__( 'Local SEO – Handbuch', 'local-seo-entity-plugin' ),
+			__( 'Handbuch', 'local-seo-entity-plugin' ),
+			Capabilities::MANAGE,
+			self::MANUAL_SLUG,
 			array( $this, 'render' )
 		);
 		add_submenu_page(
@@ -183,6 +222,7 @@ final class AppPage {
 						'style'    => admin_url( 'admin.php?page=' . self::STYLE_SLUG ),
 						'runs'     => admin_url( 'admin.php?page=' . self::RUNS_SLUG ),
 						'report'   => admin_url( 'admin.php?page=' . self::REPORT_SLUG ),
+						'manual'   => self::manual_url(),
 					),
 				)
 			) . ';',
@@ -212,12 +252,43 @@ final class AppPage {
 			'style'     => __( 'Local SEO – Style Mimic', 'local-seo-entity-plugin' ),
 			'runs'      => __( 'Local SEO – Abläufe', 'local-seo-entity-plugin' ),
 			'report'    => __( 'Local SEO – Bericht', 'local-seo-entity-plugin' ),
+			'manual'    => __( 'Local SEO – Handbuch', 'local-seo-entity-plugin' ),
 		);
-		echo '<div class="wrap"><h1>' . esc_html( $titles[ $view ] ?? __( 'Local SEO', 'local-seo-entity-plugin' ) ) . '</h1>';
+		echo '<div class="wrap"><h1 class="wp-heading-inline">' . esc_html( $titles[ $view ] ?? __( 'Local SEO', 'local-seo-entity-plugin' ) ) . '</h1>';
+		if ( 'manual' === $view ) {
+			echo '<hr class="wp-header-end">';
+			$this->render_manual();
+			echo '</div>';
+			return;
+		}
+		printf( ' <a class="page-title-action" href="%s">%s</a><hr class="wp-header-end">', esc_url( self::manual_url( Manual::SECTIONS[ $view ] ?? '' ) ), esc_html__( 'Handbuch', 'local-seo-entity-plugin' ) );
+		if ( 'dashboard' === $view ) {
+			printf(
+				'<div class="notice notice-info lsec-manual-hint"><p><strong>%s</strong> %s <a href="%s">%s</a> · <a href="%s">%s</a></p></div>',
+				esc_html__( 'Neu hier?', 'local-seo-entity-plugin' ),
+				esc_html__( 'Das Handbuch erklärt Installation, Cronjob, Einrichtung und den täglichen Ablauf.', 'local-seo-entity-plugin' ),
+				esc_url( self::manual_url() ),
+				esc_html__( 'Handbuch lesen', 'local-seo-entity-plugin' ),
+				esc_url( admin_url( 'admin.php?page=' . self::SETUP_SLUG ) ),
+				esc_html__( 'Zur Einrichtung', 'local-seo-entity-plugin' )
+			);
+		}
 		if ( ! is_readable( LSEC_DIR . 'assets/dist/admin.asset.php' ) ) {
 			echo '<div class="notice notice-error"><p>' . esc_html__( 'Die Oberfläche ist nicht gebaut (assets/dist fehlt). Im Plugin-Ordner npm ci && npm run build ausführen oder die ZIP-Datei installieren.', 'local-seo-entity-plugin' ) . '</p></div>';
 		}
 		printf( '<div id="lsec-app" class="lsec-app" data-view="%s"><noscript>%s</noscript></div></div>', esc_attr( $view ), esc_html__( 'Diese Seite braucht JavaScript.', 'local-seo-entity-plugin' ) );
+	}
+
+	/**
+	 * Handbuch mit Inhaltsverzeichnis aus der Datei docs/handbuch.md.
+	 */
+	private function render_manual(): void {
+		$html = Manual::html();
+		if ( null === $html ) {
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'Das Handbuch fehlt (docs/handbuch.md). Bitte die ZIP-Datei des Plugins neu installieren.', 'local-seo-entity-plugin' ) . '</p></div>';
+			return;
+		}
+		echo '<div class="lsec-manual">' . wp_kses_post( $html ) . '</div>';
 	}
 
 	/**

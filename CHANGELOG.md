@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.10.7 – 24.10.2026
+
+- **Handbuch im Plugin:** neuer Menüpunkt **Local SEO → Handbuch** gleich nach dem Dashboard, mit Inhaltsverzeichnis zum Anspringen. Knopf „Handbuch“ neben dem Titel jeder Seite (Einrichtung, Einstellungen und Abläufe öffnen den passenden Abschnitt), Hinweis „Neu hier?“ auf dem Dashboard und Link „Handbuch“ in der Plugin-Liste. Das Handbuch liegt dafür jetzt in der ZIP-Datei.
+
 ## 0.10.6 – 24.10.2026
 
 - **Handbuch** `docs/handbuch.md`: Installation mit Cronjob bei Plesk, Einrichtung, laufender Betrieb, alle Seiten, Prüfbericht, Einstellungen, Befehle, Kosten, Fehlerbehebung, Sicherheit.

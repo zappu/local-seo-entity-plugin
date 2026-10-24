@@ -2,7 +2,7 @@
 
 WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe mit Rank-Math-Angaben und Beitragsbild erstellt. Aktueller Stand: **MVP 1 vollständig umgesetzt (Stufen A–F), Abnahme für Version 1.0 läuft.**
 
-- **Handbuch** (Installation, Cronjob, Einrichtung, Betrieb, Einstellungen, Befehle, Kosten, Fehlerbehebung): [`docs/handbuch.md`](docs/handbuch.md)
+- **Handbuch** (Installation, Cronjob, Einrichtung, Betrieb, Einstellungen, Befehle, Kosten, Fehlerbehebung): [`docs/handbuch.md`](docs/handbuch.md), im Plugin unter **Local SEO → Handbuch**
 - **Abnahme-Checkliste 1.0:** [`docs/abnahme-1.0.md`](docs/abnahme-1.0.md)
 - **Spezifikationen und Plan:** [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md), Ideen für Ausbau 2: [`docs/ausbau-2-ideen.md`](docs/ausbau-2-ideen.md)
 - **Änderungen je Version:** [`CHANGELOG.md`](CHANGELOG.md)
