@@ -742,6 +742,26 @@
 	}
 }
 
+.lsec-advice {
+	border-left: 4px solid #00a32a;
+	background: #f0f6f1;
+	padding: 8px 16px 12px;
+	margin-bottom: 16px;
+
+	ul {
+		margin: 0 0 8px 18px;
+		list-style: disc;
+	}
+}
+
+.lsec-compare__col--keep {
+	border-color: #00a32a;
+}
+
+.lsec-compare__label .lsec-badge {
+	margin-left: 8px;
+}
+
 .lsec-compare__label {
 	margin: 0 0 4px;
 	font-size: 11px;

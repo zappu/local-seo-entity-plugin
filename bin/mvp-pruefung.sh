@@ -22,6 +22,7 @@
 #            F4 Sammelentscheidung über Entitäten (0.9.2)
 #            F5 Beitragsbilder: Beschreibung, Wahl aus der Mediathek, KI-Bild speichern; Sammelausschluss Keywords (0.10.0)
 #            F6 Kategorie für Ortsseiten (0.10.1)
+#            F7 Empfehlung bei doppelten Themen (0.10.2)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -730,6 +731,17 @@ contains "vorhandene Ortsseiten nachträglich" "Ortsseiten neu in „LSECTEST Re
 contains "Ortsseite aus E1 nachträglich zugeordnet" "LSECTEST Regional" "$(wpc post term list "$P1" category --field=name)"
 wpc lsec settings set local_category "" >/dev/null
 for t in $(wpc term list category --name="LSECTEST Regional" --field=term_id); do wpc term delete category "$t" >/dev/null; done
+
+echo "F7 Empfehlung bei doppelten Themen (0.10.2)"
+rest() { wpc eval "wp_set_current_user(1); \$q = new WP_REST_Request('$1', '/lsec/v1/$2'); \$q->set_query_params(json_decode('$3', true)); echo PHP_EOL, wp_json_encode(rest_do_request(\$q)->get_data(), JSON_UNESCAPED_UNICODE), PHP_EOL;"; }
+OUT=$(rest GET topics/compare "{\"a\":$T2,\"b\":$T1}")
+check "Empfehlung: Thema mit Entwurf behalten" "$T1" "$(printf '%s' "$OUT" | json advice.keep)"
+contains "mit Begründung" "wird schon gearbeitet" "$OUT"
+OUT=$(rest POST topics/resolve "{\"keep\":$T1,\"reject\":$T2}")
+check "Empfehlung übernommen" "$T2" "$(printf '%s' "$OUT" | json reject)"
+check "anderes Thema abgelehnt" "rejected" "$(wpj lsec topics show "$T2" --format=json | json status)"
+OUT=$(rest POST topics/resolve "{\"keep\":$T2,\"reject\":$T1}")
+contains "Thema mit Entwurf wird nicht abgelehnt" "gibt es schon einen Entwurf" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

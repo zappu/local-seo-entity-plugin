@@ -16,6 +16,7 @@ use Lsec\Topics\ClaimRepository;
 use Lsec\Topics\PriorityScorer;
 use Lsec\Topics\TopicRepository;
 use Lsec\Topics\TopicResearchWorkflow;
+use Lsec\Topics\TwinAdvice;
 
 /**
  * Themen, Recherche starten, Freigabe und Entscheidungen über Tatsachen. Alle Routen verlangen
@@ -51,6 +52,8 @@ final class TopicsController {
 		$route( '/topics/(?P<id>\d+)', 'GET', array( $this, 'detail' ) );
 		$route( '/topics/(?P<id>\d+)/decision', 'POST', array( $this, 'decide' ) );
 		$route( '/topics/research', 'POST', array( $this, 'research' ) );
+		$route( '/topics/compare', 'GET', array( $this, 'compare' ) );
+		$route( '/topics/resolve', 'POST', array( $this, 'resolve' ) );
 		$route( '/claims/(?P<id>\d+)/decision', 'POST', array( $this, 'decide_claim' ) );
 	}
 
@@ -156,6 +159,67 @@ final class TopicsController {
 		$run                 = \Lsec\Production\ProductionReport::latest_run_id( (int) $topic['id'] );
 		$topic['production'] = $run > 0 ? \Lsec\Production\ProductionReport::for_run( $this->plugin, $run ) : null;
 		return new \WP_REST_Response( $topic );
+	}
+
+	/**
+	 * Zwei Themen mit Empfehlung (Nachtrag 24.10.2026, 0.10.2).
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit a und b.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function compare( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$repo = new TopicRepository();
+		$a    = $repo->detail( (int) $request->get_param( 'a' ) );
+		$b    = $repo->detail( (int) $request->get_param( 'b' ) );
+		if ( null === $a || null === $b || (int) $a['id'] === (int) $b['id'] ) {
+			return new \WP_Error( 'lsec_not_found', 'Zwei verschiedene Themen angeben.', array( 'status' => 404 ) );
+		}
+		return new \WP_REST_Response(
+			array(
+				'topics' => array( $a, $b ),
+				'advice' => TwinAdvice::compare( $a, $b ),
+			)
+		);
+	}
+
+	/**
+	 * Dublette auflösen: ein Thema behalten, das andere ablehnen; dessen fehlende Keywords (als weitere Keywords),
+	 * Tatsachen und Quellen gehen an das behaltene (Nachtrag 24.10.2026, 0.10.2).
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit keep und reject.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function resolve( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$repo   = new TopicRepository();
+		$keep   = $repo->detail( (int) $request->get_param( 'keep' ) );
+		$reject = $repo->detail( (int) $request->get_param( 'reject' ) );
+		if ( null === $keep || null === $reject || (int) $keep['id'] === (int) $reject['id'] ) {
+			return new \WP_Error( 'lsec_not_found', 'Zwei verschiedene Themen angeben.', array( 'status' => 404 ) );
+		}
+		if ( in_array( (string) $reject['status'], array( 'in_production', 'produced' ), true ) ) {
+			return new \WP_Error( 'lsec_invalid', sprintf( 'Zu Thema #%d gibt es schon einen Entwurf; es wird nicht abgelehnt.', (int) $reject['id'] ), array( 'status' => 400 ) );
+		}
+		$adopt = array_map( static fn( array $k ): int => $k['id'], TwinAdvice::adoptable( $keep, $reject ) );
+		$basis = (array) ( $reject['research_basis'] ?? array() );
+		$repo->merge_basis( (int) $keep['id'], array_map( 'intval', (array) ( $basis['claim_ids'] ?? array() ) ), array_map( 'intval', (array) ( $basis['source_ids'] ?? array() ) ), array(), $adopt );
+		$repo->decide( (int) $reject['id'], 'rejected', get_current_user_id() );
+		\Lsec\Production\ContentProductionWorkflow::cancel_for_topic( $this->plugin, (int) $reject['id'] );
+		$this->plugin->logger->audit(
+			'Doppeltes Thema aufgelöst',
+			array(
+				'keep'     => (int) $keep['id'],
+				'reject'   => (int) $reject['id'],
+				'keywords' => $adopt,
+				'user_id'  => get_current_user_id(),
+			)
+		);
+		return new \WP_REST_Response(
+			array(
+				'keep'     => (int) $keep['id'],
+				'reject'   => (int) $reject['id'],
+				'keywords' => count( $adopt ),
+			)
+		);
 	}
 
 	/**

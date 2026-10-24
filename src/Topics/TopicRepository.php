@@ -106,7 +106,7 @@ final class TopicRepository {
 		$row             = self::decode( $row );
 		$row['keywords'] = (array) $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT k.id, k.keyword, k.exclusion, tk.role,
+				"SELECT k.id, k.keyword, k.exclusion, tk.role, k.analysis,
 				(SELECT m.search_volume FROM {$t( 'keyword_metrics' )} m WHERE m.keyword_id = k.id AND m.search_volume IS NOT NULL ORDER BY m.id DESC LIMIT 1) AS volume,
 				(SELECT m.impressions FROM {$t( 'keyword_metrics' )} m WHERE m.keyword_id = k.id AND m.source = 'gsc' ORDER BY m.period_end DESC, DATEDIFF(m.period_end, m.period_start) ASC LIMIT 1) AS impressions
 				FROM {$t( 'topic_keywords' )} tk JOIN {$t( 'keywords' )} k ON k.id = tk.keyword_id WHERE tk.topic_id = %d ORDER BY tk.role, k.keyword",
@@ -114,6 +114,12 @@ final class TopicRepository {
 			),
 			ARRAY_A
 		);
+		foreach ( $row['keywords'] as $i => $keyword ) {
+			// Nachtrag 24.10. (0.10.2): erkannte Orte je Keyword für die Empfehlung bei Dubletten.
+			$analysis                        = json_decode( (string) ( $keyword['analysis'] ?? '' ), true );
+			$row['keywords'][ $i ]['places'] = is_array( $analysis ) ? array_values( array_map( 'strval', (array) ( $analysis['places'] ?? array() ) ) ) : array();
+			unset( $row['keywords'][ $i ]['analysis'] );
+		}
 		$row['entities'] = (array) $wpdb->get_results(
 			$wpdb->prepare( "SELECT e.id, e.canonical_name AS name, e.type, e.status, te.role FROM {$t( 'topic_entities' )} te JOIN {$t( 'entities' )} e ON e.id = te.entity_id WHERE te.topic_id = %d ORDER BY te.role, e.canonical_name", $id ),
 			ARRAY_A

@@ -1238,6 +1238,18 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 - **Bestehende Ortsseiten:** `wp lsec production local-category [--dry-run]` ordnet vorhandene Ortsseiten des Plugins nachträglich zu.
 - Prüfskript F6.
 
+**Nachtrag 24.10.2026 (0.10.2), Empfehlung bei doppelten Themen (Wunsch von Thomas, `Lsec\Topics\TwinAdvice`):**
+- **Vergleichsansicht:** `GET lsec/v1/topics/compare?a=&b=` liefert beide Themen und eine Empfehlung: welches bleibt, welches abgelehnt wird, Gründe, Hinweise und Keywords zum Übernehmen.
+- **Regeln:**
+  1. Wird an einem Thema schon gearbeitet (freigegeben, in Arbeit, Entwurf erstellt), bleibt es.
+  2. Sonst je ein Punkt für deutlich höhere Priorität (mindestens 3), mehr Suchvolumen und mehr Impressionen (je mindestens 20 Prozent) und mehr Keywords (mindestens 2).
+  3. Ein Punkt Abzug, wenn ein Haupt-Keyword laut Keyword-Analyse einen anderen Ort nennt als das Thema. Ein Ort, der im Ort des Themas enthalten ist (Hannover in „Region Hannover“), gilt nicht als fremd.
+  4. Bei Gleichstand gilt die höhere Priorität, dann das ältere Thema.
+- **Hinweise:** Haupt-Keywords mit fremdem Ort stehen am jeweiligen Thema, z. B. „parkplatzreinigung hannover“ bei einer Uetze-Seite.
+- **„Empfehlung übernehmen“** (`POST lsec/v1/topics/resolve` mit keep und reject): Das andere Thema wird abgelehnt und ein laufender Entwurfsablauf dazu abgebrochen. Seine Keywords, die dem behaltenen fehlen (ohne Ausschluss und ohne fremden Ort), kommen als weitere Keywords dazu, ebenso Tatsachen und Quellen (`merge_basis`). Ein Thema mit Entwurf wird nicht abgelehnt.
+- **Themendetails** enthalten je Keyword die erkannten Orte (`places`).
+- Fall aus dem Test (Themen #36 und #32 zu Uetze) als Unit-Test; Prüfskript F7.
+
 **Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
 - **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.
 - **Cronjob bei Plesk:** Auf der ersten Testwebsite stand nur die Aufgabe des WP Toolkits für `wp-cron.php`; der Cronjob des Plugins fehlte. Eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements. Zuverlässig ist: WP-CLI als `private/wp-cli.phar` neben dem Webroot (Befehle für root zum Kopieren, solange die Datei fehlt) und eine Aufgabe „PHP-Skript ausführen“ mit Skriptpfad (voller Pfad, ohne Leerzeichen davor) und Argumenten `--path=<WordPress> lsec cron`, Zeitplan `*/5 * * * *`. Assistent und Dashboard zeigen diese Anleitung; Einträge zum Kopieren können mehrere Blöcke haben.

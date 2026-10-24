@@ -8,7 +8,7 @@
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, CheckboxControl, Modal, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
-import { batchProduce, decideClaim, decideTopic, getTopic, getTopics, produceTopic, startResearch } from './api';
+import { batchProduce, compareTopics, decideClaim, decideTopic, getTopic, getTopics, produceTopic, resolveTopics, startResearch } from './api';
 import { CLAIM_STATUS, dateTime, number, RUN_STATUS, TOPIC_FORMATS, TOPIC_STATUS, usd } from './format';
 
 const FILTERS = [
@@ -306,7 +306,7 @@ function TopicDetail( { id, labels, setNotice } ) {
 }
 
 // Nachtrag 24.10. (0.9.2): Doppelte Themen nebeneinander vergleichen und eines davon ablehnen.
-function CompareColumn( { topic, label, onDecide, busy } ) {
+function CompareColumn( { topic, label, onDecide, busy, recommended, warnings } ) {
 	const fixed = topic.status === 'in_production' || topic.status === 'produced' || topic.status === 'rejected';
 	const primary = topic.keywords.filter( ( k ) => k.role === 'primary' );
 	const other = topic.keywords.filter( ( k ) => k.role !== 'primary' );
@@ -320,9 +320,15 @@ function CompareColumn( { topic, label, onDecide, busy } ) {
 		</li>
 	);
 	return (
-		<div className="lsec-compare__col">
-			<p className="lsec-compare__label">{ label }</p>
+		<div className={ `lsec-compare__col${ recommended ? ' lsec-compare__col--keep' : '' }` }>
+			<p className="lsec-compare__label">
+				{ label }
+				{ recommended && <span className="lsec-badge lsec-badge--e-confirmed">empfohlen</span> }
+			</p>
 			<h3>Thema #{ topic.id }: { topic.title }</h3>
+			{ ( warnings || [] ).map( ( w, i ) => (
+				<p key={ i } className="lsec-duplicate">{ w }</p>
+			) ) }
 			<p className="lsec-muted">
 				{ TOPIC_FORMATS[ topic.format ] || topic.format }
 				{ topic.region && ` · ${ topic.region }` }
@@ -359,24 +365,61 @@ function CompareColumn( { topic, label, onDecide, busy } ) {
 	);
 }
 
-function CompareModal( { ids, onDecide, onClose, busy } ) {
-	const [ topics, setTopics ] = useState( null );
+function CompareModal( { ids, onDecide, onResolved, onClose, busy } ) {
+	const [ data, setData ] = useState( null );
 	const [ error, setError ] = useState( '' );
+	const [ working, setWorking ] = useState( false );
 	useEffect( () => {
-		Promise.all( ids.map( ( id ) => getTopic( id ) ) )
-			.then( setTopics )
+		compareTopics( ids[ 0 ], ids[ 1 ] )
+			.then( setData )
 			.catch( ( e ) => setError( e.message ) );
 	}, [ ids ] );
+	// Nachtrag 24.10. (0.10.2): Empfehlung mit Gründen; „Empfehlung übernehmen“ lehnt das schwächere Thema ab und
+	// gibt dessen fehlende Keywords, Tatsachen und Quellen an das behaltene.
+	const resolve = () => {
+		setWorking( true );
+		resolveTopics( data.advice.keep, data.advice.reject )
+			.then( ( out ) => onResolved( `Thema #${ out.keep } behalten, #${ out.reject } abgelehnt${ out.keywords > 0 ? `; ${ out.keywords } Keywords übernommen` : '' }.` ) )
+			.catch( ( e ) => setError( e.message ) )
+			.finally( () => setWorking( false ) );
+	};
+	const advice = data && data.advice;
+	const warnings = ( advice && advice.warnings ) || {};
 	return (
 		<Modal title={ `Doppelte Themen vergleichen: #${ ids[ 0 ] } und #${ ids[ 1 ] }` } onRequestClose={ onClose } className="lsec-compare-modal">
 			{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
-			{ ! topics && ! error && <Spinner /> }
-			{ topics && (
+			{ ! data && ! error && <Spinner /> }
+			{ data && (
 				<>
-					<p className="lsec-muted">Zwei Seiten zum selben Thema würden in Google gegeneinander ranken. Behalte das stärkere Thema und lehne das andere ab; brauchbare Keywords oder Gedanken des abgelehnten fließen beim Schreiben nicht automatisch ein.</p>
+					<p className="lsec-muted">Zwei Seiten zum selben Thema würden in Google gegeneinander ranken. Behalte das stärkere Thema und lehne das andere ab.</p>
+					<div className="lsec-advice">
+						<p>
+							<strong>Empfehlung: Thema #{ advice.keep } behalten, #{ advice.reject } ablehnen.</strong>
+						</p>
+						<ul>
+							{ advice.reasons.map( ( r, i ) => (
+								<li key={ i }>{ r }</li>
+							) ) }
+						</ul>
+						<p className="lsec-muted">
+							{ advice.adopt.length > 0 ? `Übernommen werden die Keywords ${ advice.adopt.map( ( k ) => `„${ k.keyword }“` ).join( ', ' ) } sowie Tatsachen und Quellen von #${ advice.reject }.` : `Tatsachen und Quellen von #${ advice.reject } werden übernommen; zusätzliche Keywords hat es nicht.` }
+						</p>
+						<Button variant="primary" isBusy={ working } disabled={ working || busy } onClick={ resolve }>
+							Empfehlung übernehmen
+						</Button>
+					</div>
 					<div className="lsec-compare">
-						<CompareColumn topic={ topics[ 0 ] } label="dieses Thema" onDecide={ onDecide } busy={ busy } />
-						<CompareColumn topic={ topics[ 1 ] } label="doppelt zu" onDecide={ onDecide } busy={ busy } />
+						{ data.topics.map( ( t, i ) => (
+							<CompareColumn
+								key={ t.id }
+								topic={ t }
+								label={ i === 0 ? 'dieses Thema' : 'doppelt zu' }
+								onDecide={ onDecide }
+								busy={ busy || working }
+								recommended={ t.id === advice.keep }
+								warnings={ warnings[ t.id ] }
+							/>
+						) ) }
 					</div>
 				</>
 			) }
@@ -591,7 +634,19 @@ export default function Topics() {
 					</CardBody>
 				</Card>
 			</div>
-			{ compare && <CompareModal ids={ compare } onDecide={ onDecide } onClose={ () => setCompare( null ) } busy={ busy } /> }
+			{ compare && (
+				<CompareModal
+					ids={ compare }
+					onDecide={ onDecide }
+					onResolved={ ( text ) => {
+						setCompare( null );
+						setNotice( { status: 'success', text } );
+						load();
+					} }
+					onClose={ () => setCompare( null ) }
+					busy={ busy }
+				/>
+			) }
 		</>
 	);
 }

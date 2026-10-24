@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.10.2 – 24.10.2026
+
+- **Empfehlung bei doppelten Themen:** Der Vergleich nennt, welches Thema bleiben soll, und warum: schon in Arbeit, Priorität, Suchvolumen, Impressionen, Anzahl der Keywords, fremder Ort in einem Haupt-Keyword. „Empfehlung übernehmen“ lehnt das andere Thema ab und übernimmt dessen zusätzliche Keywords, Tatsachen und Quellen.
+
 ## 0.10.1 – 24.10.2026
 
 - **Kategorie für Ortsseiten:** Lokale Seiten bekommen zusätzlich eine feste Kategorie (Einstellungen → Beiträge, z. B. `regional-service`). So lassen sie sich in Blogansichten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Wahlweise blendet das Plugin sie auf der Blogseite selbst aus. Vorhandene Ortsseiten ordnet `wp lsec production local-category` nachträglich zu.

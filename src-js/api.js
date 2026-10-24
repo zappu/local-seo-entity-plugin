@@ -120,6 +120,9 @@ export const runImport = ( token, mapping, source ) =>
 
 export const getTopics = ( status ) => getWith( '/topics', { status } );
 export const getTopic = ( id ) => apiFetch( { path: `${ base }/topics/${ id }` } );
+export const compareTopics = ( a, b ) => apiFetch( { path: `${ base }/topics/compare?a=${ a }&b=${ b }` } );
+export const resolveTopics = ( keep, reject ) =>
+	apiFetch( { path: `${ base }/topics/resolve`, method: 'POST', data: { keep, reject } } );
 export const decideTopic = ( id, decision ) =>
 	apiFetch( { path: `${ base }/topics/${ id }/decision`, method: 'POST', data: { decision } } );
 export const startResearch = ( data ) => apiFetch( { path: `${ base }/topics/research`, method: 'POST', data } );
