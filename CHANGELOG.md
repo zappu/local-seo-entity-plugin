@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 1.1.0 – 24.10.2026
+
+Ausbau 2, erster Teil: Entity SEO nach Casey Keith.
+
+- **Steckbrief je Entwurf:** Haupt-Entität, Ein-Satz-Definition, Zielgruppe, bis zu fünf verwandte Entitäten, drei Kundenfragen, interne Links und Handlungsaufforderung. Der Text richtet sich danach; der Steckbrief steht aufklappbar beim Entwurf auf der Themen-Seite.
+- **Strukturierte Daten über Rank Math:** Beiträge des Plugins bekommen `about` (Hauptthema) und `mentions` (weitere bestätigte Entitäten, mit Wikidata, wo hinterlegt) – nur, was im Text steht. Das Unternehmen bekommt die Leistungen (`knowsAbout`) und das Servicegebiet (`areaServed`). Abschaltbar unter Einstellungen → Beiträge.
+- **Handlungsaufforderung mit Verb und Ergebnis** statt „Kontakt“, keine künstliche Dringlichkeit; Überschriften mit Nutzen.
+- **Neue Hinweise im Prüfbericht:** Ankertext ohne Inhalt („hier“, „mehr“), künstliche Dringlichkeit, fehlende Entität aus dem Steckbrief.
+
 ## 1.0.0 – 24.10.2026
 
 Erste stabile Version: MVP 1 (Stufen A–F) abgeschlossen und auf beiden Testwebsites abgenommen (alle 32 Punkte der Checkliste in Ordnung). Inhaltlich gleich 0.11.0.

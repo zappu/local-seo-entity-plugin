@@ -55,7 +55,7 @@ final class QualityReviewer {
 			. "\nSchreibstil mit Beispielen (für style_match; Beispielsätze sollen nicht wörtlich im Beitrag stehen):\n" . (string) ( $context['style_full'] ?? $context['style'] ) . "\n\n"
 			. "Bewerte von 0 bis 1: intent (passt zur Suchintention und zum Thema; der erste Absatz beantwortet die Suchanfrage direkt, ohne Ankündigung oder Allgemeinplatz), local_relevance (konkreter Bezug zum Ort), entity_integration (Leistungen, Orte und Begriffe sinnvoll eingebunden), value (Nutzen für Leser statt Fülltext), readability, style_match (passt zum Schreibstil).\n"
 			. "blocking_issues: nur echte Mängel, die eine Veröffentlichung verhindern, mit code (UNSUPPORTED_FACT für Zahlen, Daten, Preise, Garantien oder konkrete Tatsachen ohne Beleg; WRONG_PLACE für falsche Ortsangaben; MISLEADING; OFF_TOPIC; COMPETITOR für Werbung für andere Firmen; OTHER), detail und location (Überschrift oder Satzanfang).\n"
-			. "warnings: kleinere Mängel mit code (z. B. THIN_SECTION, REPETITION, WEAK_CTA, LATE_ANSWER, wenn die Antwort auf die Suchanfrage erst spät kommt) und detail.\n";
+			. "warnings: kleinere Mängel mit code (z. B. THIN_SECTION, REPETITION, WEAK_CTA, wenn die Handlungsaufforderung kein Verb mit Ergebnis für den Leser hat oder künstliche Dringlichkeit erzeugt, LATE_ANSWER, wenn die Antwort auf die Suchanfrage erst spät kommt, VAGUE_ENTITY, wenn die Haupt-Entität nicht klar benannt und erklärt wird) und detail.\n";
 	}
 
 	/**

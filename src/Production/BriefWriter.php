@@ -44,7 +44,9 @@ final class BriefWriter {
 			. "- Die Fachbegriffe und Verfahren aus Titel und Keywords bekommen eigene Abschnitte, die sie gründlich erklären; dafür ist allgemeines Fachwissen erlaubt und nötig, es braucht keinen Beleg.\n"
 			. "- internal_link_targets: zwei bis fünf passende Linkziele aus der Liste (post_id) mit Hinweis zum Ankertext.\n"
 			. '- elements: passende Elemente aus ' . implode( ', ', self::ELEMENTS ) . ".\n"
-			. "- cta: Handlungsaufforderung mit den Kontaktwegen aus dem Profil.\n"
+			. "- entity_brief (Steckbrief, nach Casey Keith): primary_entity_id = die Entität aus der Liste, um die es hauptsächlich geht; definition = ein Satz, der sie für Laien erklärt (was es ist, wofür, für wen), ohne Zahlen oder Zusagen; supporting_entity_ids = bis zu fünf weitere Entitäten aus der Liste, die ein guter Beitrag zu diesem Thema beim Namen nennt (verwandte Leistungen, Verfahren, Orte, Marken); questions = drei echte Fragen von Kunden zu diesem Thema, die der Beitrag beantwortet.\n"
+			. "- cta: Handlungsaufforderung mit Verb und Ergebnis für den Leser (z. B. „Besichtigungstermin anfragen“, „Angebot für Ihre Terrasse anfordern“) statt „Kontakt“ oder „Jetzt anfragen“, mit den Kontaktwegen aus dem Profil. Keine künstliche Dringlichkeit (keine Fristen, Rabatte oder Knappheit, die nicht im Profil stehen).\n"
+			. "- Überschriften nennen, wo es passt, den Nutzen für den Leser (was er erfährt oder erreicht), nicht nur das Stichwort.\n"
 			. "- Einen Abschnitt zum Ablauf beim Unternehmen („So arbeiten wir“, „So läuft es ab“) nur planen, wenn es zur Leistung eine Angabe des Unternehmens gibt. Sonst erklärt der Beitrag das Verfahren als Fachwissen: was es ist, wie und warum es wirkt, wann es sinnvoll ist und wann nicht. Keine Abschnitte mit allgemeinen Tipps zur Auswahl eines Anbieters. facts_to_avoid nennt dann ausdrücklich: feste Arbeitsschritte, Geräte und Zusagen des Unternehmens. Übliche Geschäftspraxis (Anfrage, Besichtigung oder Vorgespräch vor dem Angebot, Preis je nach Einzelfall, Termine und Umfang nach Absprache) ist erlaubt, ebenso Arbeitsschritte, die nach allgemeinem Fachwissen zwingend zu einer Leistung aus dem Profil gehören.\n"
 			. "- Servicegebiet und Standort höchstens einmal im Text und einmal in der Handlungsaufforderung. Bei lokalen Seiten planen, wie Ortsteile, Nachbarorte und das Einzugsgebiet aus den geprüften Tatsachen in den Text kommen.\n";
 	}
@@ -125,8 +127,25 @@ final class BriefWriter {
 					'additionalProperties' => false,
 				),
 				'cta'                   => $string,
+				'entity_brief'          => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'primary_entity_id'     => $int,
+						'definition'            => $string,
+						'supporting_entity_ids' => array(
+							'type'  => 'array',
+							'items' => $int,
+						),
+						'questions'             => array(
+							'type'  => 'array',
+							'items' => $string,
+						),
+					),
+					'required'             => array( 'primary_entity_id', 'definition', 'supporting_entity_ids', 'questions' ),
+					'additionalProperties' => false,
+				),
 			),
-			'required'             => array( 'working_title', 'search_intent', 'audience', 'outline', 'required_facts', 'facts_to_avoid', 'internal_link_targets', 'elements', 'length', 'cta' ),
+			'required'             => array( 'working_title', 'search_intent', 'audience', 'outline', 'required_facts', 'facts_to_avoid', 'internal_link_targets', 'elements', 'length', 'cta', 'entity_brief' ),
 			'additionalProperties' => false,
 		);
 	}
@@ -202,8 +221,46 @@ final class BriefWriter {
 					'max_words' => max( $min, min( $max, (int) ( $brief['length']['max_words'] ?? $max ) ) ),
 				),
 				'cta'                   => (string) ( $brief['cta'] ?? '' ),
+				'entity_brief'          => self::entity_brief( (array) ( $brief['entity_brief'] ?? array() ), $context, $dropped ),
 			),
 			'dropped' => array_values( array_unique( $dropped ) ),
+		);
+	}
+
+	/**
+	 * Steckbrief prüfen (Nachtrag 24.10.2026, 1.1.0, nach Casey Keith): Entitäten nur aus dem Kontext, höchstens
+	 * fünf verwandte, höchstens fünf Fragen. Ohne gültige Haupt-Entität gilt die erste Haupt-Entität des Themas.
+	 *
+	 * @param array<string, mixed> $raw     Antwort der KI.
+	 * @param array<string, mixed> $context Kontext.
+	 * @param string[]             $dropped Verworfene Referenzen (wird ergänzt).
+	 * @return array{primary_entity_id: int, definition: string, supporting_entity_ids: int[], questions: string[]}
+	 */
+	public static function entity_brief( array $raw, array $context, array &$dropped ): array {
+		$entities = Context::ids( (array) $context['entities'] );
+		$primary  = (int) ( $raw['primary_entity_id'] ?? 0 );
+		if ( ! isset( $entities[ $primary ] ) ) {
+			if ( $primary > 0 ) {
+				$dropped[] = 'Entität #' . $primary . ' unbekannt';
+			}
+			$first   = array_values( array_filter( (array) $context['entities'], static fn( array $e ): bool => 'primary' === ( $e['role'] ?? '' ) ) );
+			$primary = (int) ( $first[0]['id'] ?? 0 );
+		}
+		$supporting = array();
+		foreach ( (array) ( $raw['supporting_entity_ids'] ?? array() ) as $id ) {
+			$id = (int) $id;
+			if ( ! isset( $entities[ $id ] ) ) {
+				$dropped[] = 'Entität #' . $id . ' unbekannt';
+			} elseif ( $id !== $primary && ! in_array( $id, $supporting, true ) && count( $supporting ) < 5 ) {
+				$supporting[] = $id;
+			}
+		}
+		$questions = array_values( array_filter( array_map( static fn( $q ): string => trim( (string) $q ), (array) ( $raw['questions'] ?? array() ) ) ) );
+		return array(
+			'primary_entity_id'     => $primary,
+			'definition'            => trim( (string) ( $raw['definition'] ?? '' ) ),
+			'supporting_entity_ids' => $supporting,
+			'questions'             => array_slice( $questions, 0, 5 ),
 		);
 	}
 }

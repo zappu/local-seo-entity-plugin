@@ -633,7 +633,9 @@ final class ContentProductionWorkflow {
 		$place = $context->output_of( 'place_facts' );
 		// Recherchiert (jetzt oder in den letzten 30 Tagen): zu wenige Tatsachen sind dann nur eine Warnung.
 		$ctx['place_searched'] = ! empty( $place['researched'] ) || str_starts_with( (string) ( $place['reason'] ?? '' ), 'zuletzt recherchiert' );
-		$known                 = array_map( static fn( array $c ): int => (int) $c['id'], (array) ( $ctx['claims'] ?? array() ) );
+		// Steckbrief aus dem Briefing für die Prüfung (1.1.0); vor create_brief leer.
+		$ctx['entity_brief'] = (array) ( ( (array) $context->output_of( 'create_brief' ) )['brief']['entity_brief'] ?? array() );
+		$known               = array_map( static fn( array $c ): int => (int) $c['id'], (array) ( $ctx['claims'] ?? array() ) );
 		foreach ( (array) ( $context->output_of( 'place_facts' )['claims'] ?? array() ) as $claim ) {
 			if ( ! in_array( (int) $claim['id'], $known, true ) ) {
 				$ctx['claims'][] = $claim;

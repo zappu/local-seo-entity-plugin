@@ -78,6 +78,8 @@ final class ProductionReport {
 				'facts'      => (array) ( $outputs['place_facts']['facts'] ?? array() ),
 			),
 			'image'               => self::image( $post_id, (array) ( $outputs['featured_image'] ?? array() ) ),
+			'entity_brief'        => self::entity_brief( (array) ( $outputs['create_brief']['brief'] ?? array() ), (array) ( $outputs['gather_context']['entities'] ?? array() ), (array) ( $outputs['create_brief']['brief']['internal_link_targets'] ?? array() ), (array) ( $outputs['gather_context']['link_targets'] ?? array() ) ),
+			'schema'              => $post_id > 0 ? self::schema( $post_id ) : null,
 			'revision'            => array(
 				'revised' => $revised,
 				'reason'  => (string) ( $outputs['revise']['reason'] ?? '' ),
@@ -135,5 +137,53 @@ final class ProductionReport {
 		global $wpdb;
 		$table = \Lsec\Infrastructure\Database\Schema::table( $wpdb->prefix, 'runs' );
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND subject_type = 'topic' AND subject_id = %d ORDER BY id DESC LIMIT 1", ContentProductionWorkflow::TYPE, $topic_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * Steckbrief des Entwurfs mit Namen statt IDs (1.1.0); null bei Entwürfen vor 1.1.
+	 *
+	 * @param array<string, mixed>             $brief    Briefing.
+	 * @param array<int, array<string, mixed>> $entities Entitäten des Kontexts.
+	 * @param array<int, array<string, mixed>> $links    Linkziele des Briefings.
+	 * @param array<int, array<string, mixed>> $targets  Linkziele des Kontexts.
+	 * @return array<string, mixed>|null
+	 */
+	public static function entity_brief( array $brief, array $entities, array $links, array $targets ): ?array {
+		$eb = (array) ( $brief['entity_brief'] ?? array() );
+		if ( array() === $eb ) {
+			return null;
+		}
+		$names = array();
+		foreach ( $entities as $entity ) {
+			$names[ (int) $entity['id'] ] = (string) $entity['name'];
+		}
+		$titles = array();
+		foreach ( $targets as $target ) {
+			$titles[ (int) $target['post_id'] ] = (string) $target['title'];
+		}
+		return array(
+			'primary'    => $names[ (int) ( $eb['primary_entity_id'] ?? 0 ) ] ?? '',
+			'definition' => (string) ( $eb['definition'] ?? '' ),
+			'audience'   => (string) ( $brief['audience'] ?? '' ),
+			'supporting' => array_values( array_filter( array_map( static fn( $id ): string => $names[ (int) $id ] ?? '', (array) ( $eb['supporting_entity_ids'] ?? array() ) ) ) ),
+			'questions'  => array_values( array_map( 'strval', (array) ( $eb['questions'] ?? array() ) ) ),
+			'links'      => array_values( array_filter( array_map( static fn( array $l ): string => $titles[ (int) $l['post_id'] ] ?? '', $links ) ) ),
+			'cta'        => (string) ( $brief['cta'] ?? '' ),
+		);
+	}
+
+	/**
+	 * Was das Plugin dem Schema von Rank Math mitgibt (Namen).
+	 *
+	 * @param int $post_id Beitrag.
+	 * @return array{enabled: bool, about: string[], mentions: string[]}
+	 */
+	public static function schema( int $post_id ): array {
+		$found = \Lsec\Content\EntitySchema::for_post( $post_id );
+		return array(
+			'enabled'  => (bool) \Lsec\Core\Settings::get( 'schema_entities' ),
+			'about'    => array_values( array_map( static fn( array $n ): string => (string) $n['name'] . ( isset( $n['sameAs'] ) ? ' (Wikidata)' : '' ), $found['about'] ) ),
+			'mentions' => array_values( array_map( static fn( array $n ): string => (string) $n['name'] . ( isset( $n['sameAs'] ) ? ' (Wikidata)' : '' ), $found['mentions'] ) ),
+		);
 	}
 }

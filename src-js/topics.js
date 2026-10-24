@@ -139,6 +139,73 @@ const SCORE_LABELS = {
 
 const editUrl = ( postId ) => `post.php?post=${ postId }&action=edit`;
 
+
+/**
+ * Steckbrief des Entwurfs (1.1.0, nach Casey Keith) und was davon ins Schema geht.
+ *
+ * @param {Object} props
+ * @param {Object} props.brief  Steckbrief.
+ * @param {Object} props.schema about und mentions.
+ */
+function EntityBrief( { brief, schema } ) {
+	if ( ! brief ) {
+		return null;
+	}
+	return (
+		<details className="lsec-brief">
+			<summary>
+				<strong>Steckbrief:</strong> { brief.primary || '–' }
+				{ brief.definition && <span className="lsec-muted"> · { brief.definition }</span> }
+			</summary>
+			<dl>
+				{ brief.audience && (
+					<>
+						<dt>Für wen</dt>
+						<dd>{ brief.audience }</dd>
+					</>
+				) }
+				<dt>Verwandte Entitäten</dt>
+				<dd>{ brief.supporting.length ? brief.supporting.join( ', ' ) : '–' }</dd>
+				<dt>Fragen, die der Beitrag beantwortet</dt>
+				<dd>
+					{ brief.questions.length ? (
+						<ul>
+							{ brief.questions.map( ( q, i ) => (
+								<li key={ i }>{ q }</li>
+							) ) }
+						</ul>
+					) : (
+						'–'
+					) }
+				</dd>
+				<dt>Interne Links</dt>
+				<dd>{ brief.links.length ? brief.links.join( ', ' ) : '–' }</dd>
+				{ brief.cta && (
+					<>
+						<dt>Handlungsaufforderung</dt>
+						<dd>{ brief.cta }</dd>
+					</>
+				) }
+				{ schema && (
+					<>
+						<dt>Schema (Rank Math)</dt>
+						<dd>
+							{ schema.enabled ? (
+								<>
+									about: { schema.about.length ? schema.about.join( ', ' ) : '–' } · mentions:{ ' ' }
+									{ schema.mentions.length ? schema.mentions.join( ', ' ) : '–' }
+									<span className="lsec-muted"> (nur bestätigte Entitäten, die im Text stehen)</span>
+								</>
+							) : (
+								'ausgeschaltet (Einstellungen → Beiträge)'
+							) }
+						</dd>
+					</>
+				) }
+			</dl>
+		</details>
+	);
+}
 function Production( { report } ) {
 	const running = [ 'queued', 'running', 'waiting' ].includes( report.status );
 	return (
@@ -172,6 +239,7 @@ function Production( { report } ) {
 					</p>
 				</div>
 			) }
+			<EntityBrief brief={ report.entity_brief } schema={ report.schema } />
 			{ report.score !== null && (
 				<>
 					<p>

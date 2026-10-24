@@ -164,6 +164,13 @@ final class ProductionCommand {
 		if ( '' !== (string) $image['source'] ) {
 			WP_CLI::log( sprintf( 'Beitragsbild: %s%s · %s', self::IMAGE_SOURCES[ $image['source'] ] ?? $image['source'], (int) $image['image_id'] > 0 ? ' (Anhang ' . (int) $image['image_id'] . ')' : '', (string) $image['note'] ) );
 		}
+		if ( is_array( $data['entity_brief'] ?? null ) ) {
+			$eb = $data['entity_brief'];
+			WP_CLI::log( sprintf( 'Steckbrief: %s – %s · verwandt: %s · Fragen: %s', '' !== $eb['primary'] ? $eb['primary'] : '–', '' !== $eb['definition'] ? $eb['definition'] : '–', array() !== $eb['supporting'] ? implode( ', ', $eb['supporting'] ) : '–', array() !== $eb['questions'] ? implode( ' | ', $eb['questions'] ) : '–' ) );
+		}
+		if ( is_array( $data['schema'] ?? null ) && $data['schema']['enabled'] ) {
+			WP_CLI::log( sprintf( 'Schema: about %s · mentions %s', array() !== $data['schema']['about'] ? implode( ', ', $data['schema']['about'] ) : '–', array() !== $data['schema']['mentions'] ? implode( ', ', $data['schema']['mentions'] ) : '–' ) );
+		}
 		$place = (array) $data['place_research'];
 		if ( $place['researched'] ) {
 			WP_CLI::log( sprintf( 'Ortsfakten recherchiert: %d geprüft, %d strittig, %d verworfen', (int) ( $place['counts']['verified'] ?? 0 ), (int) ( $place['counts']['disputed'] ?? 0 ), (int) ( $place['counts']['rejected'] ?? 0 ) ) );

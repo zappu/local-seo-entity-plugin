@@ -164,6 +164,16 @@ final class QualityChecker {
 		$repeats = self::repeats( $text );
 		$add( 'REPETITION', 'Keine Wiederholungen oder Floskeln', array() === $repeats, false, implode( ' | ', $repeats ) );
 
+		// Nachtrag 24.10.2026 (1.1.0, Entity SEO und Handlungsaufforderung nach Casey Keith): Hinweise, keine Blocker.
+		$generic = self::generic_anchors( (array) $draft['content'] );
+		$add( 'GENERIC_ANCHOR', 'Ankertexte nennen die Sache', array() === $generic, false, array() === $generic ? '' : 'Ankertext ohne Inhalt: „' . implode( '“, „', $generic ) . '“' );
+		$urgency = self::urgency( $all );
+		$add( 'URGENCY', 'Keine künstliche Dringlichkeit', array() === $urgency, false, implode( ' | ', $urgency ) );
+		$missing = self::brief_entities_missing( $all, (array) ( $context['entity_brief'] ?? array() ), (array) $context['entities'] );
+		if ( array() !== (array) ( $context['entity_brief'] ?? array() ) ) {
+			$add( 'BRIEF_ENTITIES', 'Entitäten aus dem Steckbrief im Text', array() === $missing, false, array() === $missing ? '' : 'fehlen: ' . implode( ', ', $missing ) );
+		}
+
 		$blocking = array();
 		$warnings = array();
 		foreach ( $checks as $c ) {
@@ -409,6 +419,63 @@ final class QualityChecker {
 			$out = array_values( array_unique( $m[1] ) );
 		}
 		return $out;
+	}
+
+	/**
+	 * Ankertexte ohne Inhalt („hier“, „mehr“, „weiterlesen“ …).
+	 *
+	 * @param array<int, mixed> $nodes Inhalt (Blöcke).
+	 * @return string[] Die Ankertexte.
+	 */
+	public static function generic_anchors( array $nodes ): array {
+		$raw = (string) json_encode( $nodes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- die Klasse kennt WordPress nicht.
+		$raw = stripslashes( $raw );
+		$out = array();
+		if ( preg_match_all( '/<a\s[^>]*>(.*?)<\/a>/isu', $raw, $m ) ) {
+			foreach ( $m[1] as $anchor ) {
+				$bare = strip_tags( $anchor ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- die Klasse kennt WordPress nicht.
+				$text = trim( (string) preg_replace( '/\s+/u', ' ', $bare ) );
+				$norm = mb_strtolower( trim( $text, " .,:;!?»«„“\"'-" ) );
+				if ( '' === $norm || 1 === preg_match( '/^(hier|da|dort|mehr|mehr dazu|mehr erfahren|mehr infos?|mehr informationen|weiter|weiterlesen|weiter lesen|link|dieser link|diese seite|diesen beitrag|klicken sie hier|hier klicken|klick hier|hier entlang|zum beitrag|zur seite|siehe hier|lesen sie mehr|jetzt lesen)$/u', $norm ) ) {
+					$out[] = '' === $text ? '(leer)' : $text;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Sätze mit künstlicher Dringlichkeit oder Knappheit.
+	 *
+	 * @param string $text Text.
+	 * @return string[] Die Fundstellen.
+	 */
+	public static function urgency( string $text ): array {
+		preg_match_all( '/\b(nur heute|nur noch (?:heute|wenige|kurz|bis)|solange (?:der )?vorrat reicht|zeitlich begrenzt|begrenzte(?:s|n)? (?:angebot|kontingent|plätze)|letzte chance|jetzt zuschlagen|sofort zugreifen|schnell sein|nicht verpassen|bevor es zu spät ist|wer zuerst kommt)\b/iu', $text, $m );
+		return array_values( array_unique( array_map( 'mb_strtolower', $m[0] ) ) );
+	}
+
+	/**
+	 * Haupt- und verwandte Entitäten aus dem Steckbrief, die im Text fehlen.
+	 *
+	 * @param string                           $text     Text.
+	 * @param array<string, mixed>             $brief    Steckbrief.
+	 * @param array<int, array<string, mixed>> $entities Entitäten des Kontexts.
+	 * @return string[] Namen der fehlenden.
+	 */
+	public static function brief_entities_missing( string $text, array $brief, array $entities ): array {
+		$names = array();
+		foreach ( $entities as $entity ) {
+			$names[ (int) $entity['id'] ] = (string) $entity['name'];
+		}
+		$ids     = array_merge( array( (int) ( $brief['primary_entity_id'] ?? 0 ) ), array_map( 'intval', (array) ( $brief['supporting_entity_ids'] ?? array() ) ) );
+		$missing = array();
+		foreach ( $ids as $id ) {
+			if ( isset( $names[ $id ] ) && ! self::contains( $text, $names[ $id ] ) ) {
+				$missing[] = $names[ $id ];
+			}
+		}
+		return array_values( array_unique( $missing ) );
 	}
 
 	/**

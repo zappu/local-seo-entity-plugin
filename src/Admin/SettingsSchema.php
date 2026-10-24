@@ -183,6 +183,16 @@ final class SettingsSchema {
 					'type'  => 'toggle',
 					'help'  => 'Blendet die Kategorie oben auf der Blogseite von WordPress aus. Elementor-Listen und Widgets des Themes stellt man dort selbst ein (Kategorie ausschließen).',
 				),
+				'schema_entities'     => array(
+					'label' => 'Entitäten in den strukturierten Daten',
+					'type'  => 'toggle',
+					'help'  => 'Ergänzt das Schema von Rank Math bei Beiträgen des Plugins um „about“ (Hauptthema) und „mentions“ (weitere bestätigte Entitäten, mit Wikidata, wo hinterlegt). Nur Entitäten, die im Text stehen; Vorhandenes bleibt.',
+				),
+				'schema_organization' => array(
+					'label' => 'Leistungen und Servicegebiet beim Unternehmen',
+					'type'  => 'toggle',
+					'help'  => 'Ergänzt die Organisation im Schema von Rank Math um die Leistungen aus dem Profil („knowsAbout“) und das Servicegebiet („areaServed“). Gilt auf allen Seiten; nicht, wenn Rank Math die Website als Person führt.',
+				),
 				'drafts_per_day'      => array(
 					'label' => 'Entwürfe je Tag',
 					'type'  => 'number',
@@ -356,6 +366,10 @@ final class SettingsSchema {
 				array(
 					'label'  => 'Entwürfe',
 					'fields' => array( 'draft_author' ),
+				),
+				array(
+					'label'  => 'Strukturierte Daten (Rank Math)',
+					'fields' => array( 'schema_entities', 'schema_organization' ),
 				),
 			),
 			'advanced' => array( 'draft_lengths', 'quality_min_score', 'quality_min_average' ),

@@ -18,7 +18,7 @@ Ein WordPress-Plugin, das für eine einzelne Website lokale SEO-Themen recherchi
 | Machbarkeitstest, Etappe 3 | KI-Adapter, Search Console, Import, Textfocus, Entity-Erkennung, Entwurf mit Rank Math (M6–M18) | **vollständig bestanden** am 18.10.2026 auf Staging (0.2.0–0.2.3, PHP 8.4.26, WP 7.1.3, Rank Math, Elementor) |
 | Spezifikation v1.0 | Offene Entscheidungen anhand der Testergebnisse festschreiben | erledigt (18.10.2026): KI-Budget 20 $/Monat und 1 $/Ablauf, 3 Treffer der Websuche, eigenes Recherchemodell, Testphase 20 Beiträge in 60 Tagen |
 | MVP 1 | Umsetzung nach Spezifikation v1.0 in den Stufen A–F (0.3.0 bis 1.0.0) | **abgeschlossen** am 24.10.2026: Stufen A–F, Abnahme auf beiden Testwebsites, Version 1.0.0 |
-| Ausbau 2 | Ideen in `docs/ausbau-2-ideen.md`; erster Kandidat Leistungs-Landkarte, dann „Seite verbessern“ | offen |
+| Ausbau 2 | Ideen in `docs/ausbau-2-ideen.md` (Casey Keith, Beiträge 1–9) | 1.1.0: Steckbrief, Schema über Rank Math, Ankertext, Handlungsaufforderung; als Nächstes Hauptseite je Entität (1.2), Faktenblatt und eigene Profile (1.3), Leistungs-Landkarte |
 
 ## Machbarkeitstest: Prüfpunkte
 

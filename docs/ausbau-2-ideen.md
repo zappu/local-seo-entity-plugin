@@ -16,7 +16,7 @@ Gesammelt nach MVP 1, noch nicht beschlossen. Grundlage für die Planung von Aus
 | 9 | Step-by-Step: How to Implement Entity SEO (Hinweis von Thomas: „ganz wichtig“) | 23.09.2025 | Zwölf Schritte: eine Hauptseite (Entity Home) je Entität, klare Beschreibung in den ersten 100–150 Wörtern, Schema nur mit dem, was auf der Seite steht (`mainEntityOfPage`, `about`, `mentions`, `sameAs`), gleiche Fakten überall, 5–10 verwandte Entitäten je Säulenthema, Säule und Cluster, interne Links mit sprechendem Ankertext, echte Fragen beantworten, Bilder beschriften, nach dem Veröffentlichen Profile angleichen, vierteljährlich Markensuche prüfen, Tiefe vor Breite; Vorlage „Steckbrief“ je Seite; typische Fehler. Nennt weder Wikidata noch Knowledge Graph und keine Messgrößen |
 | 8 | The Semantic Lie | 30.07.2025 | Eine klare Absicht je Seite, Ziel im ersten Satz, benannte Entitäten und ausdrückliche Beziehungen, Schema; die Thesen zu Common Crawl, C4 und Updates sind unbelegt und keine Grundlage für Funktionen |
 
-Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8, **Keyword-Platzierung** (0.10.4) aus 5.
+Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8, **Keyword-Platzierung** (0.10.4) aus 5, **Steckbrief, Schema über Rank Math, Ankertext** (Abschnitt 8, Bausteine 1–3) und **Handlungsaufforderung** (Idee 3) in 1.1.0.
 
 Beitrag 9 passt am genauesten zum Kern des Plugins (Entitäten) und bündelt mehrere Ideen unten; deshalb steht er als Abschnitt 8 mit eigener Reihenfolge.
 

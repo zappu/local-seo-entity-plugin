@@ -1143,3 +1143,42 @@
 .lsec-settings .lsec-savebar {
 	max-width: 900px;
 }
+
+// Steckbrief (1.1.0)
+.lsec-brief {
+	margin: 8px 0;
+	padding: 8px 12px;
+	border: 1px solid #dcdcde;
+	background: #f6f7f7;
+
+	summary {
+		cursor: pointer;
+	}
+
+	dl {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 4px 16px;
+		margin: 8px 0 0;
+	}
+
+	dt {
+		font-weight: 600;
+	}
+
+	dd {
+		margin: 0;
+	}
+
+	ul {
+		margin: 0;
+		padding-left: 1.2em;
+		list-style: disc;
+	}
+}
+
+@media (max-width: 600px) {
+	.lsec-brief dl {
+		grid-template-columns: 1fr;
+	}
+}

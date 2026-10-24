@@ -774,6 +774,20 @@ contains "Beitragsliste: Beitragsbild suchen" "Beitragsbild suchen" "$OUT"
 contains "Beitragsliste: Entitäten erkennen" "Entitäten erkennen" "$OUT"
 wpc post delete "$PX" --force >/dev/null
 
+echo "F10 Steckbrief, Schema und Schreibregeln (1.1.0)"
+OUT=$(wpc lsec production report "$R6")
+contains "Steckbrief im Bericht" "Steckbrief:" "$OUT"
+E10=$(wpc lsec entities add service "LSECTEST Fugenpflege" --confirmed | sed -n 's/.*: \([0-9]*\)$/\1/p')
+PX=$(wpc post create --post_type=post --post_status=publish --post_title="LSECTEST Fugen" --post_content="<p>Die LSECTEST Fugenpflege nach der Reinigung.</p>" --porcelain)
+wpc post meta update "$PX" _lsec_topic_id 1 >/dev/null
+wpc post meta update "$PX" _lsec_primary_entities "[$E10]" >/dev/null
+OUT=$(wpc eval 'echo PHP_EOL, wp_json_encode( \Lsec\Content\EntitySchema::for_post( '"$PX"' ), JSON_UNESCAPED_UNICODE ), PHP_EOL;')
+contains "Schema: Haupt-Entität als about" '"about":[{"@type":"Service","name":"LSECTEST Fugenpflege"}]' "$OUT"
+wpc post delete "$PX" --force >/dev/null
+OUT=$(wpc eval '$c = array( array( "type" => "paragraph", "text" => "Mehr dazu <a href=\"/x\">hier</a>, nur heute." ) ); echo PHP_EOL, implode( ",", \Lsec\Production\QualityChecker::generic_anchors( $c ) ), "|", implode( ",", \Lsec\Production\QualityChecker::urgency( "Nur heute!" ) ), PHP_EOL;')
+contains "Hinweis bei Ankertext „hier“ und künstlicher Dringlichkeit" "hier|nur heute" "$OUT"
+check "Einstellung Schema für Entitäten an" "1" "$(wpc eval 'echo PHP_EOL, (int) \Lsec\Core\Settings::get( "schema_entities" ), PHP_EOL;' | tail -1)"
+
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
 [ -n "$STYLE_V" ] && wpc db query "UPDATE ${PREFIX}lsec_style_profiles SET is_active = 1 WHERE version = (SELECT v FROM (SELECT MAX(version) AS v FROM ${PREFIX}lsec_style_profiles) x)" >/dev/null

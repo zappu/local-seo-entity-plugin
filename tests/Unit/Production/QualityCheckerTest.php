@@ -391,4 +391,42 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertStringContainsString( 'fehlt', QualityChecker::keyword_placement( 'ölflecken entfernen', 'Pflaster reinigen', 'oelflecken-entfernen', '', 'Ölflecken entfernen geht so.' )['title'] );
 		$this->assertSame( '', QualityChecker::keyword_placement( 'ölflecken entfernen', 'Pflaster reinigen', 'oelflecken-entfernen', '', 'Ölflecken entfernen geht so.' )['intro'], 'Umlaut gefaltet' );
 	}
+
+	public function test_entity_brief(): void {
+		$dropped = array();
+		$brief   = BriefWriter::entity_brief(
+			array(
+				'primary_entity_id'     => 99,
+				'definition'            => ' Pflasterreinigung entfernt Moos und Schmutz aus Fugen. ',
+				'supporting_entity_ids' => array( 5, 5, 98 ),
+				'questions'             => array( 'Wie oft?', '', 'Was kostet es?', 'Wann?', 'Womit?', 'Warum?', 'Zu viel?' ),
+			),
+			self::context(),
+			$dropped
+		);
+		$this->assertSame( 5, $brief['primary_entity_id'], 'unbekannte Haupt-Entität: erste Haupt-Entität des Themas' );
+		$this->assertSame( array(), $brief['supporting_entity_ids'], 'Haupt-Entität nicht doppelt, unbekannte verworfen' );
+		$this->assertSame( 'Pflasterreinigung entfernt Moos und Schmutz aus Fugen.', $brief['definition'] );
+		$this->assertCount( 5, $brief['questions'] );
+		$this->assertSame( array( 'Entität #99 unbekannt', 'Entität #98 unbekannt' ), $dropped );
+		$this->assertArrayHasKey( 'entity_brief', BriefWriter::validate( array(), self::context() )['brief'], 'Steckbrief auch ohne Angabe der KI' );
+	}
+
+	public function test_generic_anchors_and_urgency(): void {
+		$content = array(
+			array(
+				'type' => 'paragraph',
+				'text' => 'Mehr zur <a href="https://example.de/a">Pflasterreinigung</a> lesen Sie <a href="https://example.de/b">hier</a> und <a href="https://example.de/c">Mehr erfahren</a>.',
+			),
+		);
+		$this->assertSame( array( 'hier', 'Mehr erfahren' ), QualityChecker::generic_anchors( $content ) );
+		$this->assertSame( array( 'nur noch wenige', 'solange vorrat reicht' ), QualityChecker::urgency( 'Nur noch wenige Termine frei, solange Vorrat reicht. Nur Fachwissen.' ) );
+		$this->assertSame( array(), QualityChecker::urgency( 'Termine nach Absprache.' ) );
+	}
+
+	public function test_brief_entities_missing(): void {
+		$entities = self::context()['entities'];
+		$this->assertSame( array(), QualityChecker::brief_entities_missing( 'Die Pflasterreinigung in Uetze', array( 'primary_entity_id' => 5 ), $entities ) );
+		$this->assertSame( array( 'Pflasterreinigung' ), QualityChecker::brief_entities_missing( 'Fugen und Moos', array( 'primary_entity_id' => 5 ), $entities ) );
+	}
 }
