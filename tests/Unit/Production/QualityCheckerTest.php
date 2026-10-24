@@ -429,4 +429,29 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertSame( array(), QualityChecker::brief_entities_missing( 'Die Pflasterreinigung in Uetze', array( 'primary_entity_id' => 5 ), $entities ) );
 		$this->assertSame( array( 'Pflasterreinigung' ), QualityChecker::brief_entities_missing( 'Fugen und Moos', array( 'primary_entity_id' => 5 ), $entities ) );
 	}
+
+	public function test_hedges_and_name_typos(): void {
+		$text = 'Eine Garantie für Rutschfreiheit ist das nicht, keine Garantie. Eine feste Aussage lässt sich daraus nicht ableiten. Vollständig wiederhergestellt wird der Zustand nicht in jedem Fall. Eine Haltbarkeit lässt sich nicht zusagen. Ein Einheitsprogramm für alle Böden gibt es nicht. Termine nach Absprache.';
+		$this->assertCount( 5, QualityChecker::hedges( $text ) );
+		$this->assertSame( array(), QualityChecker::hedges( 'Das Ergebnis hängt vom Belag ab.' ) );
+		$entities = array(
+			array(
+				'id'   => 1,
+				'name' => 'Mosmatic',
+				'type' => 'brand',
+			),
+			array(
+				'id'   => 2,
+				'name' => 'Mosmatic Flächenreiniger',
+				'type' => 'product',
+			),
+			array(
+				'id'   => 3,
+				'name' => 'Pflasterreinigung',
+				'type' => 'service',
+			),
+		);
+		$this->assertSame( array( 'Masomatic → Mosmatic' ), QualityChecker::name_typos( 'Wir arbeiten mit dem Masomatic Flächenreiniger und Mosmatic-Düsen.', $entities ) );
+		$this->assertSame( array(), QualityChecker::name_typos( 'Mosmatic und Pflasterreinigungen.', $entities ) );
+	}
 }

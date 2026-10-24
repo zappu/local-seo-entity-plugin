@@ -80,6 +80,19 @@ final class ProductionReport {
 			'image'               => self::image( $post_id, (array) ( $outputs['featured_image'] ?? array() ) ),
 			'entity_brief'        => self::entity_brief( (array) ( $outputs['create_brief']['brief'] ?? array() ), (array) ( $outputs['gather_context']['entities'] ?? array() ), (array) ( $outputs['create_brief']['brief']['internal_link_targets'] ?? array() ), (array) ( $outputs['gather_context']['link_targets'] ?? array() ) ),
 			'schema'              => $post_id > 0 ? self::schema( $post_id ) : null,
+			'previous'            => array(
+				'trashed'   => array_map( 'intval', (array) ( $outputs['create_post']['trashed'] ?? array() ) ),
+				'published' => array_values(
+					array_map(
+						static fn( $id ): array => array(
+							'id'    => (int) $id,
+							'title' => (string) get_the_title( (int) $id ),
+							'url'   => (string) get_permalink( (int) $id ),
+						),
+						(array) ( $outputs['create_post']['published'] ?? array() )
+					)
+				),
+			),
 			'revision'            => array(
 				'revised' => $revised,
 				'reason'  => (string) ( $outputs['revise']['reason'] ?? '' ),

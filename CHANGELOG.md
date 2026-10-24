@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 1.1.3 – 24.10.2026
+
+Nach dem neu geschriebenen Entwurf „Gastronomie-Boden reinigen in Celle“:
+
+- **Neu schreiben ohne „-2“:** Der frühere, noch nicht veröffentlichte Entwurf desselben Themas kommt in den Papierkorb (wiederherstellbar), damit der neue die Titelform bekommt. Ist schon ein Beitrag zum Thema veröffentlicht, bleibt er unangetastet; die Themen-Seite warnt dann, den neuen Entwurf nicht zusätzlich zu veröffentlichen.
+- **Weniger Absicherungen:** höchstens ein Vorbehalt wie „eine Garantie ist das nicht“ im Text; neuer Hinweis `HEDGING` ab drei solchen Sätzen.
+- **Servicegebiet klar benennen:** Der Ort des Themas gehört zum Servicegebiet; kein „ob Ihr Standort dazugehört, klären wir …“. Keine Lexikon-Sätze über den Ort (Kreisstadt, Einwohnerzahl) ohne Bezug, nie in der Handlungsaufforderung.
+- **Markennamen prüfen:** neuer Hinweis `NAME_SPELLING`, wenn ein Wort einem Marken-, Produkt- oder Firmennamen fast gleicht („Masomatic“ statt „Mosmatic“).
+
 ## 1.1.2 – 24.10.2026
 
 - **Entitäten als Schlagwörter für den Thoka Auto Tagger (ab 1.8.0):** Das Plugin schlägt ihm die bestätigten Entitäten eines Beitrags vor (Leistungen, Orte, Marken; ohne das eigene Unternehmen), dieselben wie in den strukturierten Daten. Gilt für alle Beiträge. Ab drei Entitäten nimmt der Auto Tagger nur diese, sonst ergänzt er eigene Begriffe. Einstellung unter Einstellungen → Beiträge → Strukturierte Daten und Schlagwörter.

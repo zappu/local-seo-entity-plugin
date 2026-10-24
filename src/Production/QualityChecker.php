@@ -169,6 +169,12 @@ final class QualityChecker {
 		$add( 'GENERIC_ANCHOR', 'Ankertexte nennen die Sache', array() === $generic, false, array() === $generic ? '' : 'Ankertext ohne Inhalt: „' . implode( '“, „', $generic ) . '“' );
 		$urgency = self::urgency( $all );
 		$add( 'URGENCY', 'Keine künstliche Dringlichkeit', array() === $urgency, false, implode( ' | ', $urgency ) );
+		// Nachtrag 24.10.2026 (1.1.3, Entwurf „Gastronomie-Boden reinigen“): fünf Absicherungen im Text und
+		// „Masomatic“ statt „Mosmatic“.
+		$hedges = self::hedges( $all );
+		$add( 'HEDGING', 'Höchstens zwei Vorbehalte', count( $hedges ) <= 2, false, count( $hedges ) <= 2 ? '' : count( $hedges ) . ' Vorbehalte: ' . implode( ' | ', $hedges ) );
+		$typos = self::name_typos( $all, (array) $context['entities'] );
+		$add( 'NAME_SPELLING', 'Marken und Namen richtig geschrieben', array() === $typos, false, implode( ', ', $typos ) );
 		$missing = self::brief_entities_missing( $all, (array) ( $context['entity_brief'] ?? array() ), (array) $context['entities'] );
 		if ( array() !== (array) ( $context['entity_brief'] ?? array() ) ) {
 			$add( 'BRIEF_ENTITIES', 'Entitäten aus dem Steckbrief im Text', array() === $missing, false, array() === $missing ? '' : 'fehlen: ' . implode( ', ', $missing ) );
@@ -438,6 +444,67 @@ final class QualityChecker {
 				$norm = mb_strtolower( trim( $text, " .,:;!?»«„“\"'-" ) );
 				if ( '' === $norm || 1 === preg_match( '/^(hier|da|dort|mehr|mehr dazu|mehr erfahren|mehr infos?|mehr informationen|weiter|weiterlesen|weiter lesen|link|dieser link|diese seite|diesen beitrag|klicken sie hier|hier klicken|klick hier|hier entlang|zum beitrag|zur seite|siehe hier|lesen sie mehr|jetzt lesen)$/u', $norm ) ) {
 					$out[] = '' === $text ? '(leer)' : $text;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Sätze, die Garantien oder Ergebnisse ausdrücklich absichern („Eine Garantie ist das nicht“).
+	 *
+	 * @param string $text Text.
+	 * @return string[] Die Sätze.
+	 */
+	public static function hedges( string $text ): array {
+		$pattern = '/keine garantie|nicht (?:vorab )?zusagen|nicht (?:fest )?versprechen|nicht in jedem fall|lässt sich (?:daraus |vorab )?nicht (?:ableiten|vorhersagen|garantieren)|(?:einheitsprogramm|pauschale (?:empfehlung|aussage)|patentrezept)[^.!?]* (?:gibt es|ist) nicht|gibt es (?:dabei |hier )?(?:kein|nicht)[^.!?]*(?:pauschal|einheitlich|patentrezept)|ohne gewähr/iu';
+		$out     = array();
+		$parts   = preg_split( '/(?<=[.!?])\s+|\n/u', $text );
+		foreach ( false === $parts ? array() : $parts as $sentence ) {
+			$sentence = trim( $sentence );
+			if ( '' !== $sentence && preg_match( $pattern, $sentence ) ) {
+				$out[] = $sentence;
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Wörter, die einem Marken-, Produkt- oder Firmennamen aus den Entitäten fast gleichen (ein bis zwei
+	 * Zeichen anders), z. B. „Masomatic“ statt „Mosmatic“.
+	 *
+	 * @param string                           $text     Text.
+	 * @param array<int, array<string, mixed>> $entities Entitäten des Kontexts.
+	 * @return string[] „falsch → richtig“.
+	 */
+	public static function name_typos( string $text, array $entities ): array {
+		$names = array();
+		foreach ( $entities as $entity ) {
+			if ( ! in_array( (string) ( $entity['type'] ?? '' ), array( 'brand', 'product', 'organization', 'competitor' ), true ) ) {
+				continue;
+			}
+			$words = preg_split( '/\s+/u', (string) $entity['name'] );
+			foreach ( false === $words ? array() : $words as $word ) {
+				if ( mb_strlen( $word ) >= 5 && 1 === preg_match( '/^\p{Lu}/u', $word ) ) {
+					$names[ mb_strtolower( $word ) ] = $word;
+				}
+			}
+		}
+		if ( array() === $names ) {
+			return array();
+		}
+		preg_match_all( '/\p{Lu}[\p{L}]{4,}/u', $text, $m );
+		$out = array();
+		foreach ( array_unique( $m[0] ) as $word ) {
+			$lower = mb_strtolower( $word );
+			if ( isset( $names[ $lower ] ) ) {
+				continue;
+			}
+			foreach ( $names as $name_lower => $name ) {
+				$limit = mb_strlen( $name_lower ) >= 8 ? 2 : 1;
+				if ( abs( mb_strlen( $lower ) - mb_strlen( $name_lower ) ) <= $limit && mb_substr( $lower, 0, 1 ) === mb_substr( $name_lower, 0, 1 ) && levenshtein( $lower, $name_lower ) <= $limit ) {
+					$out[] = $word . ' → ' . $name;
+					break;
 				}
 			}
 		}

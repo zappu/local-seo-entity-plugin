@@ -153,6 +153,8 @@ Schlüssel als Konstante (3.2), dann in der Einrichtung oder unter **Einstellung
 
 Auf der Seite **Themen** unter „Neue Recherche“: Leistung (oder alle), Ort und Anzahl wählen, dann „Recherche starten“. Kosten etwa 0,05 bis 0,20 USD. Derselbe Schwerpunkt (Leistung und Ort) wird frühestens nach 14 Tagen erneut recherchiert, außer mit „trotzdem“.
 
+**Neu schreiben:** Auf der Themen-Seite schreibt „neu schreiben“ einen neuen Entwurf. Ein früherer, noch nicht veröffentlichter Entwurf desselben Themas kommt dabei in den Papierkorb (wiederherstellbar), damit der neue die Titelform ohne „-2“ bekommt. Ist schon ein Beitrag veröffentlicht, bleibt er stehen; die Themen-Seite warnt dann, nicht beide zu veröffentlichen.
+
 ### 5.4 Mehrere Entwürfe auf einmal
 
 Auf der Seite **Themen** unter „freigegeben“ die gewünschten Themen anhaken und „Ausgewählte schreiben“ wählen, höchstens 20 auf einmal. Vor dem Start zeigt das Plugin eine Kostenschätzung. Die Abläufe arbeitet der Cronjob nacheinander ab.
@@ -232,6 +234,8 @@ Scheitert ein Entwurf nur an einzelnen Stellen (unbelegte Zahl, unbelegte Aussag
 | `GENERIC_ANCHOR` | Ein Link heißt nur „hier“, „mehr“ oder „weiterlesen“; der Ankertext soll die Sache nennen. |
 | `URGENCY` | Künstliche Dringlichkeit („nur heute“, „nur noch wenige Termine“). |
 | `BRIEF_ENTITIES` | Eine Entität aus dem Steckbrief steht nicht im Text. |
+| `HEDGING` | Mehr als zwei Absicherungen („eine Garantie ist das nicht“, „lässt sich nicht zusagen“). |
+| `NAME_SPELLING` | Ein Wort gleicht fast einem Marken-, Produkt- oder Firmennamen, z. B. „Masomatic“ statt „Mosmatic“. |
 
 Den Prüfbericht zeigt die Themen-Seite beim Thema.
 

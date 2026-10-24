@@ -239,6 +239,22 @@ function Production( { report } ) {
 					</p>
 				</div>
 			) }
+			{ report.previous && report.previous.trashed.length > 0 && (
+				<p className="lsec-muted">
+					Der frühere Entwurf zu diesem Thema liegt im Papierkorb (wiederherstellbar), damit der neue die Titelform ohne „-2“ bekommt.
+				</p>
+			) }
+			{ report.previous && report.previous.published.length > 0 && (
+				<Notice status="warning" isDismissible={ false }>
+					Zu diesem Thema ist schon ein Beitrag veröffentlicht:{ ' ' }
+					{ report.previous.published.map( ( p ) => (
+						<a key={ p.id } href={ p.url } target="_blank" rel="noreferrer">
+							„{ p.title }“{ ' ' }
+						</a>
+					) ) }
+					– den neuen Entwurf nicht zusätzlich veröffentlichen, sondern den alten Beitrag damit überarbeiten oder ersetzen (dann eine Weiterleitung einrichten).
+				</Notice>
+			) }
 			<EntityBrief brief={ report.entity_brief } schema={ report.schema } />
 			{ report.score !== null && (
 				<>

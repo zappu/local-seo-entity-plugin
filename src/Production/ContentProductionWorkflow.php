@@ -949,12 +949,19 @@ final class ContentProductionWorkflow {
 				'reused'  => true,
 			);
 		} else {
+			// Nachtrag 24.10.2026 (1.1.3): Beim Neuschreiben bekam der neue Entwurf die Titelform mit „-2“, weil der
+			// alte Entwurf sie noch belegte. Unveröffentlichte ältere Entwürfe desselben Themas kommen deshalb in den
+			// Papierkorb (wiederherstellbar; WordPress gibt die Titelform dabei frei). Veröffentlichte bleiben
+			// unangetastet und werden im Bericht genannt.
+			$previous = self::previous_posts( (int) $ctx['topic']['id'], $context->run_id );
 			try {
 				$result = ( new DraftWriter( BlockBuilder::for_site() ) )->create( $draft, (int) $context->input['author'], $context->run_id );
 			} catch ( \RuntimeException $e ) {
 				return StepResult::fail( 'post_failed', $e->getMessage() );
 			}
-			$post_id = (int) $result['post_id'];
+			$post_id             = (int) $result['post_id'];
+			$result['trashed']   = $previous['trashed'];
+			$result['published'] = $previous['published'];
 		}
 		$primary = array_values( array_map( static fn( array $e ): int => (int) $e['id'], array_filter( (array) $ctx['entities'], static fn( array $e ): bool => 'primary' === $e['role'] ) ) );
 		update_post_meta( $post_id, '_lsec_topic_id', (int) $ctx['topic']['id'] );
@@ -968,6 +975,48 @@ final class ContentProductionWorkflow {
 			$result['local_category'] = \Lsec\Content\LocalCategory::term_id( false );
 		}
 		return StepResult::done( $result );
+	}
+
+	/**
+	 * Ältere Beiträge desselben Themas: unveröffentlichte kommen in den Papierkorb, veröffentlichte werden nur
+	 * gemeldet (1.1.3).
+	 *
+	 * @param int $topic_id Thema.
+	 * @param int $run_id   Aktueller Ablauf.
+	 * @return array{trashed: int[], published: int[]}
+	 */
+	public static function previous_posts( int $topic_id, int $run_id ): array {
+		$out = array(
+			'trashed'   => array(),
+			'published' => array(),
+		);
+		if ( $topic_id <= 0 ) {
+			return $out;
+		}
+		$ids = get_posts(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => array( 'draft', 'pending', 'publish', 'future', 'private' ),
+				'meta_key'       => '_lsec_topic_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_key
+				'meta_value'     => (string) $topic_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_value
+				'fields'         => 'ids',
+				'posts_per_page' => 20,
+			)
+		);
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			if ( (int) get_post_meta( $id, '_lsec_run_id', true ) === $run_id ) {
+				continue;
+			}
+			if ( in_array( get_post_status( $id ), array( 'draft', 'pending' ), true ) ) {
+				if ( false !== wp_trash_post( $id ) ) {
+					$out['trashed'][] = $id;
+				}
+			} else {
+				$out['published'][] = $id;
+			}
+		}
+		return $out;
 	}
 
 	/**

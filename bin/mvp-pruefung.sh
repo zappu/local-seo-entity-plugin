@@ -732,9 +732,11 @@ OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e1.
 R6=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
 P6=$(wpj lsec production report "$R6" --format=json | json post_id)
 contains "neue Ortsseite in der Kategorie" "LSECTEST Regional" "$(wpc post term list "$P6" category --field=name)"
+check "früherer Entwurf desselben Themas im Papierkorb (1.1.3)" "trash" "$(wpc post get "$P1" --field=post_status)"
+wpc post term set "$P6" category 1 >/dev/null
 OUT=$(wpc lsec production local-category 2>&1)
 contains "vorhandene Ortsseiten nachträglich" "Ortsseiten neu in „LSECTEST Regional“" "$OUT"
-contains "Ortsseite aus E1 nachträglich zugeordnet" "LSECTEST Regional" "$(wpc post term list "$P1" category --field=name)"
+contains "Ortsseite ohne Kategorie nachträglich zugeordnet" "LSECTEST Regional" "$(wpc post term list "$P6" category --field=name)"
 wpc lsec settings set local_category "" >/dev/null
 for t in $(wpc term list category --name="LSECTEST Regional" --field=term_id); do wpc term delete category "$t" >/dev/null; done
 
