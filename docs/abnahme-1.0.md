@@ -48,7 +48,8 @@ Grundlage: Anforderungsspezifikation 1.0 und technische Spezifikation 1.0, Absch
 | 4.4 | Rank Math im Entwurf | SEO-Titel mit Keyword vorn, Beschreibung, Fokus-Keyword, kurze Titelform | ☐ | ☐ |
 | 4.5 | Beitragsbild | Bild aus der Mediathek passend zum Thema, sonst KI-Bild ohne Schrift, Logos und erkennbaren Ort; Alternativtext auf Deutsch | ☐ | ☐ |
 | 4.6 | Ortsseite (Kategorie für Ortsseiten eingestellt) | Entwurf zusätzlich in der Kategorie, „Allgemein“ weg | ☐ | ☐ |
-| 4.7 | Entwurf veröffentlichen | erscheint wie gewohnt; mit „auf der Blogseite ausblenden“ nicht auf der Blogseite | ☐ | ☐ |
+| 4.7 | Einen fertigen Entwurf veröffentlichen und auf der Website ansehen | erscheint normal: mit Beitragsbild, Titel und Meta-Beschreibung aus Rank Math und funktionierenden internen Links | ☐ | ☐ |
+| 4.8 | Nur mit Kategorie für Ortsseiten: unter Einstellungen → Beiträge „Ortsseiten auf der Blogseite ausblenden“ einschalten, dann die Beitragsübersicht (Seite mit den neuesten Beiträgen) aufrufen | veröffentlichte Ortsseiten stehen dort nicht mehr, im Kategorie-Archiv aber weiterhin; ohne Kategorie für Ortsseiten: abhaken | ☐ | ☐ |
 
 ## 5. Bilder
 
