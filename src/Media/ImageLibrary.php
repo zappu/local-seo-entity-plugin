@@ -60,7 +60,7 @@ final class ImageLibrary {
 	 */
 	public static function pending_ids( int $limit ): array {
 		global $wpdb;
-		$mimes = "'" . implode( "', '", array_map( 'esc_sql', self::MIMES ) ) . "'";
+		$mimes = "'" . implode( "', '", self::MIMES ) . "'";
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
@@ -87,7 +87,7 @@ final class ImageLibrary {
 	 * @return array{id: int, filename: string, title: string, alt: string, caption: string, width: int, height: int}
 	 */
 	public static function info( int $id ): array {
-		$meta = wp_get_attachment_metadata( $id );
+		$meta = (array) wp_get_attachment_metadata( $id );
 		$file = (string) get_attached_file( $id );
 		return array(
 			'id'       => $id,
@@ -95,8 +95,8 @@ final class ImageLibrary {
 			'title'    => (string) get_the_title( $id ),
 			'alt'      => (string) get_post_meta( $id, '_wp_attachment_image_alt', true ),
 			'caption'  => (string) wp_get_attachment_caption( $id ),
-			'width'    => is_array( $meta ) ? (int) ( $meta['width'] ?? 0 ) : 0,
-			'height'   => is_array( $meta ) ? (int) ( $meta['height'] ?? 0 ) : 0,
+			'width'    => (int) ( $meta['width'] ?? 0 ),
+			'height'   => (int) ( $meta['height'] ?? 0 ),
 		);
 	}
 
@@ -318,7 +318,7 @@ final class ImageLibrary {
 	 */
 	public static function stats(): array {
 		global $wpdb;
-		$mimes = "'" . implode( "', '", array_map( 'esc_sql', self::MIMES ) ) . "'";
+		$mimes = "'" . implode( "', '", self::MIMES ) . "'";
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$images    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_mime_type IN ({$mimes})" );
 		$described = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = 'attachment'", self::META ) );

@@ -104,7 +104,7 @@ final class ImagesCommand {
 			$result                      = ImageLibrary::describe( $id, $ai, $business );
 			$info                        = ImageLibrary::description( $id );
 			$counts[ $result['status'] ] = ( $counts[ $result['status'] ] ?? 0 ) + 1;
-			WP_CLI::log( sprintf( '%d %s: %s%s', $id, $result['status'], $result['note'], null !== $info && 'described' === $result['status'] ? ' [' . implode( ', ', (array) $info['keywords'] ) . ']' . ( empty( $info['suitable'] ) ? ' – nicht als Beitragsbild' : '' ) : '' ) );
+			WP_CLI::log( sprintf( '%d %s: %s%s', $id, $result['status'], $result['note'], null !== $info && 'described' === $result['status'] ? ' [' . implode( ', ', array_map( 'strval', (array) $info['keywords'] ) ) . ']' . ( empty( $info['suitable'] ) ? ' – nicht als Beitragsbild' : '' ) : '' ) );
 		}
 		WP_CLI::success( sprintf( '%d beschrieben, %d klein, %d Fehler.', $counts['described'] ?? 0, $counts['small'] ?? 0, $counts['error'] ?? 0 ) );
 	}
@@ -140,7 +140,7 @@ final class ImagesCommand {
 					'genutzt'    => $r['used'],
 					'ki'         => $r['generated'] ? 'ja' : '',
 					'alt'        => $r['alt'],
-					'stichworte' => implode( ', ', (array) $r['keywords'] ),
+					'stichworte' => implode( ', ', array_map( 'strval', (array) $r['keywords'] ) ),
 				),
 				$rows
 			),

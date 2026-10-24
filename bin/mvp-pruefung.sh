@@ -693,7 +693,7 @@ if php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);'; then
 	php -r '$i=imagecreatetruecolor(200,200); imagejpeg($i,$argv[1]);' "$TMP/lsectest-klein.jpg"
 	IA=$(wpc media import "$TMP/lsectest-bild.jpg" --title="LSECTEST Bild" --porcelain | last_number)
 	IS=$(wpc media import "$TMP/lsectest-klein.jpg" --title="LSECTEST klein" --porcelain | last_number)
-	check "neues Bild ist offen" "1" "$(wpc eval "echo in_array($IA, \\Lsec\\Media\\ImageLibrary::pending_ids(1000), true) ? 1 : 0;")"
+	check "neues Bild ist offen" "1" "$(wpc eval "echo PHP_EOL, in_array($IA, \\Lsec\\Media\\ImageLibrary::pending_ids(1000), true) ? 1 : 0, PHP_EOL;" | last_number)"
 	contains "kleines Bild ohne KI als ungeeignet" "$IS small" "$(wpc lsec images describe "$IS" 2>&1)"
 	# Beschreibung wie von der KI, ohne Kosten.
 	wpc eval "\\Lsec\\Media\\ImageLibrary::store($IA, array('alt' => 'LSECTEST Pflaster wird gereinigt', 'motif' => 'Pflaster', 'keywords' => array('Pflasterreinigung'), 'kind' => 'photo', 'watermark' => false, 'text' => false, 'suitable' => true), 'test');" >/dev/null
@@ -706,8 +706,8 @@ if php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);'; then
 	check "Beitragsbild aus der Mediathek gesetzt" "$IA" "$(wpc post meta get "$P5" _thumbnail_id)"
 	contains "Beitragsbild im Bericht des Entwurfs" "Beitragsbild: aus der Mediathek" "$(wpc lsec production report "$R5")"
 	check "danach nicht mehr frei" "0" "$(wpc lsec images list --free --format=csv | grep -c "^$IA,")"
-	GEN=$(wpc eval "echo \\Lsec\\Media\\ImageLibrary::save_generated(file_get_contents('$TMP/lsectest-bild.jpg'), 'image/jpeg', array('prompt' => 'test photo', 'alt' => 'LSECTEST KI-Bild', 'title' => 'LSECTEST KI-Bild', 'keywords' => array('Test'), 'filename' => 'lsectest-ki-bild'), $P5, 'test/model', 0.01);" | last_number)
-	contains "KI-Bild mit deutschem Dateinamen" "lsectest-ki-bild" "$(wpc eval "echo basename(get_attached_file($GEN));")"
+	GEN=$(wpc eval "echo PHP_EOL, \\Lsec\\Media\\ImageLibrary::save_generated(file_get_contents('$TMP/lsectest-bild.jpg'), 'image/jpeg', array('prompt' => 'test photo', 'alt' => 'LSECTEST KI-Bild', 'title' => 'LSECTEST KI-Bild', 'keywords' => array('Test'), 'filename' => 'lsectest-ki-bild'), $P5, 'test/model', 0.01), PHP_EOL;" | last_number)
+	contains "KI-Bild mit deutschem Dateinamen" "lsectest-ki-bild" "$(wpc eval "echo PHP_EOL, basename(get_attached_file($GEN)), PHP_EOL;")"
 	contains "als KI-Bild vermerkt" "test/model" "$(wpc post meta get "$GEN" _lsec_ai_generated)"
 	check "Alternativtext des KI-Bilds" "LSECTEST KI-Bild" "$(wpc post meta get "$GEN" _wp_attachment_image_alt)"
 	contains "Bilder im Bericht" "Bilder:" "$(wpc lsec report --section=images)"

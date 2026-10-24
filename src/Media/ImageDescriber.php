@@ -47,8 +47,8 @@ final class ImageDescriber {
 			'alt'      => 'Alternativtext',
 			'caption'  => 'Bildunterschrift',
 		) as $key => $label ) {
-			if ( '' !== trim( (string) ( $meta[ $key ] ?? '' ) ) ) {
-				$known .= $label . ': ' . mb_substr( trim( (string) $meta[ $key ] ), 0, 200 ) . "\n";
+			if ( '' !== trim( $meta[ $key ] ) ) {
+				$known .= $label . ': ' . mb_substr( trim( $meta[ $key ] ), 0, 200 ) . "\n";
 			}
 		}
 		return ( '' !== $business ? 'Unternehmen: ' . $business . "\n" : '' )

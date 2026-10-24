@@ -36,7 +36,7 @@ final class ContentReport {
 	/**
 	 * Der ganze Bericht.
 	 *
-	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, generated_at: string}
+	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, images: array<string, mixed>, generated_at: string}
 	 */
 	public static function build(): array {
 		return array(

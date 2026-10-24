@@ -50,7 +50,7 @@ final class ImagePicker {
 	 * @param array<string, mixed> $image Bild.
 	 */
 	public static function hay( array $image ): string {
-		$text = implode( ' ', array( (string) ( $image['alt'] ?? '' ), (string) ( $image['motif'] ?? '' ), implode( ' ', (array) ( $image['keywords'] ?? array() ) ), (string) ( $image['title'] ?? '' ), str_replace( array( '-', '_', '.' ), ' ', (string) ( $image['filename'] ?? '' ) ) ) );
+		$text = implode( ' ', array( (string) ( $image['alt'] ?? '' ), (string) ( $image['motif'] ?? '' ), implode( ' ', array_map( 'strval', (array) ( $image['keywords'] ?? array() ) ) ), (string) ( $image['title'] ?? '' ), str_replace( array( '-', '_', '.' ), ' ', (string) ( $image['filename'] ?? '' ) ) ) );
 		return (string) preg_replace( '/[^a-z0-9 ]+/', ' ', KeywordFilter::fold( $text ) );
 	}
 
@@ -75,7 +75,7 @@ final class ImagePicker {
 				(int) $image['id'],
 				(int) $image['used'] > 0 ? 'schon Beitragsbild von ' . (int) $image['used'] . ' Beitrag/Beiträgen' : 'frei',
 				'' !== (string) ( $image['motif'] ?? '' ) ? (string) $image['motif'] : (string) ( $image['alt'] ?? '' ),
-				implode( ', ', (array) ( $image['keywords'] ?? array() ) )
+				implode( ', ', array_map( 'strval', (array) ( $image['keywords'] ?? array() ) ) )
 			);
 		}
 		$about = '';
