@@ -40,7 +40,20 @@ Beitrag 9 passt am genauesten zum Kern des Plugins (Entitäten) und bündelt meh
 - Der Bericht zeigt je Leistung, welche Teile der Landkarte Inhalt haben.
 - Entspricht „Dynamische Content-Cluster“ aus der Spezifikation (Ausbau 2).
 
-### 2. Praxisnotizen je Leistung (aus 2)
+### 2a. Referenzen nutzen (Gespräch mit Thomas, 24.10.2026) – ersetzt Idee 2 als Hauptweg
+
+Thomas: Praxisnotizen sind „fast nie möglich“ und meist dünn. Neue Referenzen erscheinen aber ohnehin als Blogbeiträge (Beispiel GaLaBau: Klärwerk Hänigsen, rund 300 Wörter, 90 m² Verbundpflaster, Problem und Lösung, fünf Fotos).
+- Referenzbeiträge erkennen (Kategorie in den Einstellungen oder automatisch) und Eckdaten ziehen: Ort, Objekt, Leistung, Problem, Lösung, Menge, Material, Datum, Fotos. Sie gelten als Angaben des Betriebs.
+- Entwürfe bauen passende Referenzen (gleiche Leistung, Ort in der Nähe) als kurzes Beispiel mit Link ein, nur mit Angaben aus der Referenz.
+- Bericht: Leistungen und Orte ohne Referenz.
+- Optional: aus Fotos und drei Zeilen einen Referenzbeitrag als Entwurf schreiben (Bildbeschreibung wie bei Beitragsbildern).
+- Nur Referenzen der eigenen Website: Projekte einer Schwesterfirma (GaLaBau) sind für die Flächenreinigung keine eigene Erfahrung.
+
+### 2b. Google-Rezensionen – zurückgestellt (24.10.2026)
+
+Nur Staats GaLaBau hat Rezensionen; vorerst zurückgestellt. Wenn später: Import (Einfügen oder Datei) vor der Business-Profile-API (Freigabe durch Google nötig, Anmeldung mit dem Konto des Profils); Places-API ungeeignet (höchstens fünf Rezensionen, Speichern nicht erlaubt). Nutzen: Sprache und Themen der Kunden, Ortsbelege, kurze unveränderte Zitate mit Vorname/Initiale, Monat und Link. Keine Bewertungssterne über eigenes Schema (Google zeigt seit 2019 keine Sterne für Eigenbewertungen von Unternehmen).
+
+### 2. Praxisnotizen je Leistung (aus 2) – nur noch optional, siehe 2a
 
 - Ein Feld je Leistung im Profil für echte Erfahrungen des Betriebs, z. B. typische Schäden in der Gegend, bewährte Verfahren, häufige Kundenfragen.
 - Die Notizen gelten als Angaben des Betriebs und dürfen in den Text. Sie sind der Hebel für Einzigartigkeit, den die KI allein nicht liefern kann.
