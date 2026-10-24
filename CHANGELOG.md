@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## 1.2.0 – 24.10.2026
+
+Ausbau 2: Hauptseite je Entität (Entity Home nach Casey Keith).
+
+- **Hauptseiten festlegen:** Für das Unternehmen, jeden Standort, jede Leistung, eigene Marken, Personen und Produkte eine feste eigene Seite, die sie maßgeblich beschreibt. Das Plugin schlägt Seiten vor (Name im Titel oder in der Adresse, Startseite oder Über-uns-Seite für das Unternehmen, Kontaktseite für Standorte, Fundstellen, Search Console); übernommen wird mit einem Klick auf der Seite „Entitäten“, Karte „Hauptseiten“, oder im Detail einer Entität.
+- **Entwürfe verlinken die Hauptseite** ihrer Haupt-Entität, mit dem Namen im Ankertext. Neuer Hinweis `HOME_LINK`, wenn der Link fehlt.
+- **Strukturierte Daten:** Entitäten mit Hauptseite tragen deren Adresse (`url`); die Hauptseite selbst nennt ihre Entitäten in `about`.
+- **Seiten, die sich Konkurrenz machen:** Bericht und Seite „Entitäten“ zeigen Suchanfragen aus der Search Console, für die mehrere eigene Seiten erscheinen, mit Empfehlung.
+- **Bericht:** Karte „Hauptseiten“ mit Entitäten ohne Hauptseite; „keine passende Seite“ zeigt eine Lücke für ein neues Thema. Hinweis im Dashboard, solange Hauptseiten fehlen.
+
 ## 1.1.3 – 24.10.2026
 
 Nach dem neu geschriebenen Entwurf „Gastronomie-Boden reinigen in Celle“:

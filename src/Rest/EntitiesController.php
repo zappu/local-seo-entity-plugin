@@ -12,6 +12,7 @@ use Lsec\Content\ContentIndexWorkflow;
 use Lsec\Core\Plugin;
 use Lsec\Core\Settings;
 use Lsec\Entities\BusinessProfile;
+use Lsec\Entities\EntityHome;
 use Lsec\Entities\EntityRepository;
 use Lsec\Entities\ProfileAssistant;
 use Lsec\Integrations\AI\AiException;
@@ -53,6 +54,9 @@ final class EntitiesController {
 		$route( '/entities/(?P<id>\d+)', 'GET', array( $this, 'detail' ) );
 		$route( '/entities/(?P<id>\d+)', 'POST', array( $this, 'update_entity' ) );
 		$route( '/entities/(?P<id>\d+)', 'DELETE', array( $this, 'delete_entity' ) );
+		$route( '/entities/(?P<id>\d+)/home', 'POST', array( $this, 'set_home' ) );
+		$route( '/entities/(?P<id>\d+)/home-candidates', 'GET', array( $this, 'home_candidates' ) );
+		$route( '/entity-homes', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( EntityHome::overview() ) );
 		$route( '/entities/merge', 'POST', array( $this, 'merge' ) );
 		$route( '/entities/decision', 'POST', array( $this, 'decide_many' ) );
 		$route( '/entities/merge-suggestions', 'GET', static fn(): \WP_REST_Response => new \WP_REST_Response( ( new EntityRepository() )->merge_suggestions() ) );
@@ -84,6 +88,46 @@ final class EntitiesController {
 	public function detail( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$detail = ( new EntityRepository() )->detail( (int) $request['id'] );
 		return null === $detail ? new \WP_Error( 'lsec_not_found', 'Entität nicht gefunden.', array( 'status' => 404 ) ) : new \WP_REST_Response( $detail );
+	}
+
+	/**
+	 * Legt die Hauptseite fest (post_id) oder entfernt sie (post_id 0). Nachtrag 24.10.2026 (1.2.0).
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit post_id und source (suggestion, manual).
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function set_home( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$id      = (int) $request['id'];
+		$post_id = absint( $request->get_param( 'post_id' ) );
+		try {
+			$page = EntityHome::set( $id, $post_id, get_current_user_id(), sanitize_key( (string) $request->get_param( 'source' ) ) );
+		} catch ( \InvalidArgumentException $e ) {
+			return new \WP_Error( 'lsec_invalid', $e->getMessage(), array( 'status' => 422 ) );
+		}
+		$this->plugin->logger->audit(
+			null === $page ? 'Hauptseite entfernt' : 'Hauptseite festgelegt',
+			array(
+				'entity_id' => $id,
+				'post_id'   => $post_id,
+				'user_id'   => get_current_user_id(),
+			)
+		);
+		return new \WP_REST_Response( array( 'home' => $page ) );
+	}
+
+	/**
+	 * Vorschläge für die Hauptseite und, mit search, eigene Inhalte nach Titel.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 */
+	public function home_candidates( \WP_REST_Request $request ): \WP_REST_Response {
+		$search = sanitize_text_field( (string) $request->get_param( 'search' ) );
+		return new \WP_REST_Response(
+			array(
+				'suggestions' => EntityHome::suggestions_for( (int) $request['id'] ),
+				'results'     => '' === $search ? array() : EntityHome::search( $search ),
+			)
+		);
 	}
 
 	/**

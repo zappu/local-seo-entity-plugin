@@ -9,6 +9,7 @@ namespace Lsec\Content;
 
 use Lsec\Core\Settings;
 use Lsec\Entities\BusinessProfile;
+use Lsec\Entities\EntityHome;
 
 /**
  * Ergänzt das JSON-LD von Rank Math (Nachtrag 24.10.2026, 1.1.0, nach Casey Keith, „Step-by-Step Entity SEO“):
@@ -18,6 +19,9 @@ use Lsec\Entities\BusinessProfile;
  *   im Text steht: Schema sagt nichts, was die Seite nicht sagt.
  * - Organisation (publisher, nicht bei Person): `knowsAbout` (Leistungen aus dem Profil) und `areaServed`
  *   (Servicegebiet), nur wenn Rank Math sie nicht schon setzt.
+ *
+ * Nachtrag 24.10.2026 (1.2.0, Hauptseite je Entität): Entitäten mit Hauptseite tragen deren Adresse als `url`;
+ * auf der Hauptseite selbst nennt der Knoten der Seite (WebPage) die Entitäten in `about`.
  *
  * Vorhandene Angaben von Rank Math oder von Hand werden nie überschrieben.
  */
@@ -46,6 +50,11 @@ final class EntitySchema {
 	 * Artikeltypen, an die about und mentions kommen.
 	 */
 	private const ARTICLES = array( 'Article', 'BlogPosting', 'NewsArticle', 'TechArticle' );
+
+	/**
+	 * Seitentypen, an die auf einer Hauptseite about kommt.
+	 */
+	private const WEBPAGES = array( 'WebPage', 'AboutPage', 'ContactPage', 'ItemPage', 'CollectionPage', 'ProfilePage', 'MedicalWebPage' );
 
 	/**
 	 * Registriert den Filter.
@@ -136,6 +145,17 @@ final class EntitySchema {
 					}
 				}
 			}
+			if ( Settings::get( 'schema_entities' ) && is_singular() ) {
+				$homes = EntityHome::entities_for_post( (int) get_queried_object_id() );
+				if ( array() !== $homes ) {
+					$about = self::link_publisher( self::home_nodes( $homes ), is_array( $data['publisher'] ?? null ) ? $data['publisher'] : array() );
+					foreach ( $data as $key => $node ) {
+						if ( is_array( $node ) && self::is_type( $node, self::WEBPAGES ) ) {
+							$data[ $key ] = self::webpage( $node, $about );
+						}
+					}
+				}
+			}
 			if ( Settings::get( 'schema_organization' ) && isset( $data['publisher'] ) && is_array( $data['publisher'] ) ) {
 				$data['publisher'] = self::organization( $data['publisher'], self::services(), self::area() );
 			}
@@ -149,7 +169,7 @@ final class EntitySchema {
 	/**
 	 * Knoten für eine Entität.
 	 *
-	 * @param array{type: string, name: string, wikidata?: string|null} $entity Entität.
+	 * @param array{type: string, name: string, wikidata?: string|null, url?: string|null} $entity Entität.
 	 * @return array<string, mixed>
 	 */
 	public static function node( array $entity ): array {
@@ -158,7 +178,11 @@ final class EntitySchema {
 			// Namen aus Seitentiteln stehen teils mit HTML-Entitäten („&amp;“) in der Datenbank.
 			'name'  => html_entity_decode( $entity['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8' ),
 		);
-		$qid  = (string) ( $entity['wikidata'] ?? '' );
+		$url  = (string) ( $entity['url'] ?? '' );
+		if ( '' !== $url ) {
+			$node['url'] = $url;
+		}
+		$qid = (string) ( $entity['wikidata'] ?? '' );
 		if ( 1 === preg_match( '/^Q\d+$/', $qid ) ) {
 			$node['sameAs'] = 'https://www.wikidata.org/wiki/' . $qid;
 		}
@@ -273,6 +297,37 @@ final class EntitySchema {
 	}
 
 	/**
+	 * Ergänzt den Knoten einer Hauptseite um about, ohne Vorhandenes zu überschreiben.
+	 *
+	 * @param array<string, mixed>       $node  Knoten der Seite.
+	 * @param list<array<string, mixed>> $about Entitäten, deren Hauptseite sie ist.
+	 * @return array<string, mixed>
+	 */
+	public static function webpage( array $node, array $about ): array {
+		if ( array() !== $about && empty( $node['about'] ) ) {
+			$node['about'] = 1 === count( $about ) ? $about[0] : $about;
+		}
+		return $node;
+	}
+
+	/**
+	 * Knoten der Entitäten mit dieser Hauptseite (ohne url: Sie ist die Seite selbst).
+	 *
+	 * @param int[] $ids Entitäten.
+	 * @return list<array<string, mixed>>
+	 */
+	private static function home_nodes( array $ids ): array {
+		$out = array();
+		foreach ( self::confirmed() as $entity ) {
+			if ( in_array( $entity['id'], $ids, true ) ) {
+				$entity['url'] = null;
+				$out[]         = self::node( $entity );
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * Ergänzt die Organisation um knowsAbout und areaServed, ohne Vorhandenes zu überschreiben. Ist der
 	 * Herausgeber eine Person, bleibt der Knoten unverändert.
 	 *
@@ -339,17 +394,18 @@ final class EntitySchema {
 	}
 
 	/**
-	 * Bestätigte Entitäten mit Schreibweisen und Wikidata-ID (ohne Wettbewerber).
+	 * Bestätigte Entitäten mit Schreibweisen, Wikidata-ID und Hauptseite (ohne Wettbewerber).
 	 *
-	 * @return list<array{id: int, type: string, name: string, aliases: string[], wikidata: string|null}>
+	 * @return list<array{id: int, type: string, name: string, aliases: string[], wikidata: string|null, url: string|null}>
 	 */
 	public static function confirmed(): array {
 		global $wpdb;
 		$table   = $wpdb->prefix . 'lsec_entities';
 		$aliases = $wpdb->prefix . 'lsec_entity_aliases';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Tabellennamen aus dem Präfix.
-		$rows = (array) $wpdb->get_results( "SELECT e.id, e.type, e.canonical_name, e.external_ids, GROUP_CONCAT(a.alias SEPARATOR '\n') AS aliases FROM {$table} e LEFT JOIN {$aliases} a ON a.entity_id = e.id WHERE e.status = 'confirmed' AND e.merged_into IS NULL AND e.type <> 'competitor' GROUP BY e.id ORDER BY e.id LIMIT 2000", ARRAY_A );
-		$out  = array();
+		$rows  = (array) $wpdb->get_results( "SELECT e.id, e.type, e.canonical_name, e.external_ids, GROUP_CONCAT(a.alias SEPARATOR '\n') AS aliases FROM {$table} e LEFT JOIN {$aliases} a ON a.entity_id = e.id WHERE e.status = 'confirmed' AND e.merged_into IS NULL AND e.type <> 'competitor' GROUP BY e.id ORDER BY e.id LIMIT 2000", ARRAY_A );
+		$out   = array();
+		$homes = EntityHome::homes();
 		foreach ( $rows as $row ) {
 			$ids   = json_decode( (string) $row['external_ids'], true );
 			$out[] = array(
@@ -358,6 +414,7 @@ final class EntitySchema {
 				'name'     => (string) $row['canonical_name'],
 				'aliases'  => array_values( array_filter( explode( "\n", (string) $row['aliases'] ) ) ),
 				'wikidata' => is_array( $ids ) && isset( $ids['wikidata'] ) ? (string) $ids['wikidata'] : null,
+				'url'      => $homes[ (int) $row['id'] ]['url'] ?? null,
 			);
 		}
 		return $out;
@@ -371,16 +428,17 @@ final class EntitySchema {
 	private static function services(): array {
 		$profile  = ( new BusinessProfile() )->get();
 		$services = array();
-		$wikidata = array();
+		$known    = array();
 		foreach ( self::confirmed() as $entity ) {
-			$wikidata[ $entity['id'] ] = $entity['wikidata'];
+			$known[ $entity['id'] ] = $entity;
 		}
 		foreach ( (array) ( $profile['services'] ?? array() ) as $service ) {
 			$services[] = self::node(
 				array(
 					'type'     => 'concept',
 					'name'     => (string) $service['name'],
-					'wikidata' => $wikidata[ (int) $service['id'] ] ?? null,
+					'wikidata' => $known[ (int) $service['id'] ]['wikidata'] ?? null,
+					'url'      => $known[ (int) $service['id'] ]['url'] ?? null,
 				)
 			);
 		}

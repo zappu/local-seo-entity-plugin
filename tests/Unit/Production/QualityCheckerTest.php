@@ -412,6 +412,31 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertArrayHasKey( 'entity_brief', BriefWriter::validate( array(), self::context() )['brief'], 'Steckbrief auch ohne Angabe der KI' );
 	}
 
+	public function test_home_page_of_primary_entity_is_linked(): void {
+		$ctx                     = self::context();
+		$ctx['link_targets'][0] += array(
+			'home_for'       => 'Pflasterreinigung',
+			'home_entity_id' => 5,
+		);
+		$brief                   = BriefWriter::validate( array(), $ctx )['brief'];
+		$this->assertSame( array( 7 ), array_column( $brief['internal_link_targets'], 'post_id' ), 'Hauptseite immer Linkziel' );
+		$this->assertStringContainsString( 'Pflasterreinigung', $brief['internal_link_targets'][0]['anchor_hint'] );
+		$ctx['entity_brief'] = $brief['entity_brief'];
+		$warnings            = array_column( QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner.' ), $ctx, self::site() )['warnings'], 'code' );
+		$this->assertNotContains( 'HOME_LINK', $warnings );
+		$ctx['link_targets'][]                    = array(
+			'post_id'        => 9,
+			'title'          => 'Leistungen',
+			'url'            => 'https://example.de/leistungen/',
+			'home_for'       => 'Pflasterreinigung',
+			'home_entity_id' => 5,
+		);
+		$ctx['link_targets'][0]['home_entity_id'] = 0;
+		$warnings                                 = array_column( QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner.' ), $ctx, self::site() )['warnings'], 'code' );
+		$this->assertContains( 'HOME_LINK', $warnings );
+		$this->assertStringContainsString( '(Hauptseite für „Pflasterreinigung“)', \Lsec\Production\Context::text( $ctx ) );
+	}
+
 	public function test_generic_anchors_and_urgency(): void {
 		$content = array(
 			array(

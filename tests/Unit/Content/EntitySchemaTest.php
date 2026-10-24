@@ -188,4 +188,36 @@ final class EntitySchemaTest extends TestCase {
 		);
 		$this->assertSame( array( 'Fassadenreinigung', 'Celle' ), EntitySchema::term_names( $nodes, 'Staats Flächenreinigung &amp; Wassertechnik' ) );
 	}
+
+	public function test_home_page_url_and_webpage_about(): void {
+		$node = EntitySchema::node(
+			array(
+				'type'     => 'service',
+				'name'     => 'Terrassenreinigung',
+				'wikidata' => null,
+				'url'      => 'https://example.test/terrassenreinigung/',
+			)
+		);
+		$this->assertSame( 'https://example.test/terrassenreinigung/', $node['url'] );
+		$this->assertArrayNotHasKey(
+			'url',
+			EntitySchema::node(
+				array(
+					'type' => 'service',
+					'name' => 'X',
+					'url'  => null,
+				)
+			)
+		);
+		$page = EntitySchema::webpage( array( '@type' => 'WebPage' ), array( $node ) );
+		$this->assertSame( 'Terrassenreinigung', $page['about']['name'] );
+		$kept = EntitySchema::webpage(
+			array(
+				'@type' => 'WebPage',
+				'about' => array( 'name' => 'von Hand' ),
+			),
+			array( $node )
+		);
+		$this->assertSame( 'von Hand', $kept['about']['name'], 'Vorhandenes bleibt' );
+	}
 }

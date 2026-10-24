@@ -17,6 +17,7 @@ use Lsec\Topics\TopicResearchWorkflow;
  * Stellt zusammen:
  * - Inhalte: gelesene Inhalte, vom Plugin geschriebene Entwürfe mit Status, Prüfergebnis und Kosten.
  * - Entitäten: Anzahl nach Typ und Status, die häufigsten in eigenen Inhalten, Leistungen und Orte ohne Inhalt (ohne eigene Standorte und das Servicegebiet selbst).
+ * - Hauptseiten (1.2.0): Entitäten des Unternehmens ohne Hauptseite und Suchanfragen, für die mehrere eigene Seiten erscheinen.
  * - Hinweise „bestehende Seite verbessern“: verworfene Themen, für die schon eine passende Seite rankt
  *   (Überschneidung, Regel 1 in Abschnitt „Search Console als Signal“), und eigene Seiten auf Position 4 bis 20 in der Search Console.
  */
@@ -36,7 +37,7 @@ final class ContentReport {
 	/**
 	 * Der ganze Bericht.
 	 *
-	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, pages: list<array<string, mixed>>, brand_terms: string[], images: array<string, mixed>, generated_at: string}
+	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, pages: list<array<string, mixed>>, brand_terms: string[], images: array<string, mixed>, homes: array<string, mixed>, generated_at: string}
 	 */
 	public static function build(): array {
 		$improve = self::improve();
@@ -47,6 +48,7 @@ final class ContentReport {
 			'pages'        => self::pages( $improve ),
 			'brand_terms'  => self::brand_terms(),
 			'images'       => self::images(),
+			'homes'        => \Lsec\Entities\EntityHome::overview(),
 			'generated_at' => gmdate( 'c' ),
 		);
 	}

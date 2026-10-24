@@ -48,6 +48,7 @@ final class DraftGenerator {
 			. "- Kontaktdaten (Telefon, E-Mail, Adresse) nur einmal, in der Handlungsaufforderung am Schluss; keine Kontaktdaten in FAQ oder Fließtext.\n"
 			. "- Handlungsaufforderung am Schluss mit Verb und Ergebnis für den Leser („Besichtigungstermin anfragen“, „Angebot für Ihre Einfahrt anfordern“), nicht nur „Kontaktieren Sie uns“. Keine künstliche Dringlichkeit oder Knappheit („nur heute“, „nur noch wenige Termine“), keine Rabatte oder Fristen, die nicht im Profil stehen.\n"
 			. "- Ankertext interner Links nennt die Sache, auf die der Link führt (z. B. „Terrassenreinigung“), nie „hier“, „mehr“, „weiterlesen“ oder „klicken Sie hier“.\n"
+			. "- Linkziele mit „Hauptseite für …“: Die Hauptseite der Haupt-Entität einmal verlinken, an der Stelle, wo die Entität erklärt wird, mit ihrem Namen im Ankertext.\n"
 			. "- Zwischenüberschriften nennen, wo es passt, den Nutzen für den Leser, nicht nur ein Stichwort.\n"
 			. "- Tatsachen nur dort, wo sie dem Leser nützen; keine bloßen Ortslisten.\n"
 			. "- Ortsfakten mit dem Thema verbinden, statt sie in einem eigenen Abschnitt aufzuzählen: Was folgt daraus für die Flächen, Gebäude oder Menschen vor Ort (z. B. Lage, Boden, Verkehr, Ortsteile)? Schreibe nie, dass ein Ortsfakt für das Thema keine Rolle spielt; dann lass ihn weg.\n"

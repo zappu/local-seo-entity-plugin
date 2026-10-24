@@ -792,6 +792,31 @@ OUT=$(wpc eval '$c = array( array( "type" => "paragraph", "text" => "Mehr dazu <
 contains "Hinweis bei Ankertext „hier“ und künstlicher Dringlichkeit" "hier|nur heute" "$OUT"
 check "Einstellung Schema für Entitäten an" "1" "$(wpc eval 'echo PHP_EOL, (int) \Lsec\Core\Settings::get( "schema_entities" ), PHP_EOL;' | tail -1)"
 
+echo "F11 Hauptseite je Entität (1.2.0)"
+PH=$(wpc post create --post_type=page --post_status=publish --post_title="LSECTEST Fugenpflege" --post_name=lsectest-fugenpflege --porcelain)
+wpc eval '\Lsec\Content\ContentIndex::index_post( get_post( '"$PH"' ) );' >/dev/null
+OUT=$(wpc eval 'echo PHP_EOL, implode( ",", array_column( \Lsec\Entities\EntityHome::suggestions_for( '"$E10"' ), "post_id" ) ), PHP_EOL;')
+contains "Vorschlag: Seite mit dem Namen im Titel" "$PH" "$OUT"
+OUT=$(wpc eval 'wp_set_current_user(1); $q = new WP_REST_Request( "POST", "/lsec/v1/entities/'"$E10"'/home" ); $q->set_param( "post_id", '"$PH"' ); $q->set_param( "source", "suggestion" ); $r = rest_do_request( $q ); echo PHP_EOL, $r->get_status(), "|", (int) ( $r->get_data()["home"]["post_id"] ?? 0 ), PHP_EOL;')
+contains "Hauptseite über REST festgelegt" "200|$PH" "$OUT"
+OUT=$(wpc eval 'wp_set_current_user(1); $q = new WP_REST_Request( "POST", "/lsec/v1/entities/'"$E10"'/home" ); $q->set_param( "post_id", 999999 ); echo PHP_EOL, rest_do_request( $q )->get_status(), PHP_EOL;')
+contains "Unbekannte Seite abgelehnt (422)" "422" "$OUT"
+URL=$(wpc eval 'echo PHP_EOL, get_permalink( '"$PH"' ), PHP_EOL;' | tail -1)
+OUT=$(wpc eval '$e = array_values( array_filter( \Lsec\Content\EntitySchema::confirmed(), static fn( $x ) => $x["id"] === '"$E10"' ) ); echo PHP_EOL, wp_json_encode( \Lsec\Content\EntitySchema::node( $e[0] ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ), PHP_EOL;')
+contains "Schema: Entität mit url der Hauptseite" "\"url\":\"$URL\"" "$OUT"
+OUT=$(wpc eval 'global $wp_query, $wp_the_query; $wp_query = new WP_Query( array( "page_id" => '"$PH"' ) ); $wp_the_query = $wp_query; echo PHP_EOL, wp_json_encode( \Lsec\Content\EntitySchema::filter( array( "WebPage" => array( "@type" => "WebPage" ) ) ), JSON_UNESCAPED_UNICODE ), PHP_EOL;')
+contains "Schema: Hauptseite nennt die Entität in about" '"about":{"@type":"Service","name":"LSECTEST Fugenpflege"}' "$OUT"
+OUT=$(wpc eval '$m = new ReflectionMethod( \Lsec\Production\ContentProductionWorkflow::class, "with_homes" ); $m->setAccessible( true ); $t = $m->invoke( null, array(), array( '"$E10"' => array( "id" => '"$E10"', "name" => "LSECTEST Fugenpflege", "role" => "primary" ) ) ); echo PHP_EOL, (int) ( $t[0]["post_id"] ?? 0 ), "|", $t[0]["home_for"] ?? "", PHP_EOL;')
+contains "Entwurf: Hauptseite ist Linkziel" "$PH|LSECTEST Fugenpflege" "$OUT"
+OUT=$(wpc eval 'echo PHP_EOL, wp_json_encode( array_keys( \Lsec\Report\ContentReport::build()["homes"] ) ), PHP_EOL;')
+contains "Bericht mit Hauptseiten und Konkurrenz" '["items","competing","counts"]' "$OUT"
+wpc post update "$PH" --post_status=draft >/dev/null
+OUT=$(wpc eval '$d = ( new \Lsec\Entities\EntityRepository() )->detail( '"$E10"' ); echo PHP_EOL, $d["home_stale"] ? "stale" : "ok", PHP_EOL;')
+contains "Nicht mehr veröffentlichte Hauptseite erkannt" "stale" "$OUT"
+wpc eval '\Lsec\Entities\EntityHome::set( '"$E10"', 0, 1 );' >/dev/null
+check "Hauptseite entfernt" "0" "$(wpc eval 'echo PHP_EOL, isset( \Lsec\Entities\EntityHome::all()['"$E10"'] ) ? 1 : 0, PHP_EOL;' | tail -1)"
+wpc post delete "$PH" --force >/dev/null
+
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null
 [ -n "$STYLE_V" ] && wpc db query "UPDATE ${PREFIX}lsec_style_profiles SET is_active = 1 WHERE version = (SELECT v FROM (SELECT MAX(version) AS v FROM ${PREFIX}lsec_style_profiles) x)" >/dev/null

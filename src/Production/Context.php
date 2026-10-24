@@ -65,7 +65,8 @@ final class Context {
 		if ( $links ) {
 			$out .= "\nLinkziele auf der eigenen Website (#post_id Titel – Adresse):\n";
 			foreach ( (array) $context['link_targets'] as $target ) {
-				$out .= sprintf( "#%d %s – %s\n", $target['post_id'], $target['title'], $target['url'] );
+				$home = (string) ( $target['home_for'] ?? '' );
+				$out .= sprintf( "#%d %s – %s%s\n", $target['post_id'], $target['title'], $target['url'], '' === $home ? '' : ' (Hauptseite für „' . $home . '“)' );
 			}
 		}
 		if ( array() !== (array) ( $context['categories'] ?? array() ) ) {

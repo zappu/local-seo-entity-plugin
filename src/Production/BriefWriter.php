@@ -42,7 +42,7 @@ final class BriefWriter {
 			. "- required_facts: nur Tatsachen aus der Liste (claim_id) und wofür sie im Text stehen. Bei einem Beitrag mit Ort mindestens zwei Tatsachen zu diesem Ort, wenn vorhanden; use sagt, wie die Tatsache mit dem Thema zusammenhängt (z. B. Ortsteile als Einsatzorte, Lage oder Boden als Grund für typische Verschmutzung). Passt keine Tatsache zum Thema, eine Erwähnung im Einstieg oder bei den Einsatzorten statt eines eigenen Abschnitts.\n"
 			. "- facts_to_avoid: was nicht belegt ist und deshalb nicht in den Text gehört (z. B. Preise, Dauer, Garantien).\n"
 			. "- Die Fachbegriffe und Verfahren aus Titel und Keywords bekommen eigene Abschnitte, die sie gründlich erklären; dafür ist allgemeines Fachwissen erlaubt und nötig, es braucht keinen Beleg.\n"
-			. "- internal_link_targets: zwei bis fünf passende Linkziele aus der Liste (post_id) mit Hinweis zum Ankertext.\n"
+			. "- internal_link_targets: zwei bis fünf passende Linkziele aus der Liste (post_id) mit Hinweis zum Ankertext. Linkziele mit „Hauptseite für …“ sind die festen Hauptseiten dieser Entitäten: Die Hauptseite der Haupt-Entität (primary_entity_id) gehört immer dazu, mit dem Namen der Entität im Ankertext.\n"
 			. '- elements: passende Elemente aus ' . implode( ', ', self::ELEMENTS ) . ".\n"
 			. "- entity_brief (Steckbrief, nach Casey Keith): primary_entity_id = die Entität aus der Liste, um die es hauptsächlich geht; definition = ein Satz, der sie für Laien erklärt (was es ist, wofür, für wen), ohne Zahlen oder Zusagen; supporting_entity_ids = bis zu fünf weitere Entitäten aus der Liste, die ein guter Beitrag zu diesem Thema beim Namen nennt (verwandte Leistungen, Verfahren, Orte, Marken); questions = drei echte Fragen von Kunden zu diesem Thema, die der Beitrag beantwortet.\n"
 			. "- cta: Handlungsaufforderung mit Verb und Ergebnis für den Leser (z. B. „Besichtigungstermin anfragen“, „Angebot für Ihre Terrasse anfordern“) statt „Kontakt“ oder „Jetzt anfragen“, mit den Kontaktwegen aus dem Profil. Keine künstliche Dringlichkeit (keine Fristen, Rabatte oder Knappheit, die nicht im Profil stehen).\n"
@@ -204,6 +204,17 @@ final class BriefWriter {
 				$dropped[] = 'Linkziel #' . $id . ' unbekannt';
 			}
 		}
+		$entity_brief = self::entity_brief( (array) ( $brief['entity_brief'] ?? array() ), $context, $dropped );
+		// Nachtrag 24.10.2026 (1.2.0): Die Hauptseite der Haupt-Entität ist immer Linkziel.
+		$home = self::home_target( (array) $context['link_targets'], $entity_brief['primary_entity_id'] );
+		if ( null !== $home && ! isset( $targets[ $home['post_id'] ] ) ) {
+			$targets = array(
+				$home['post_id'] => array(
+					'post_id'     => $home['post_id'],
+					'anchor_hint' => sprintf( 'Hauptseite für „%s“; Ankertext mit diesem Namen', $home['home_for'] ),
+				),
+			) + $targets;
+		}
 		$min = (int) $context['length']['min'];
 		$max = (int) $context['length']['max'];
 		return array(
@@ -221,10 +232,33 @@ final class BriefWriter {
 					'max_words' => max( $min, min( $max, (int) ( $brief['length']['max_words'] ?? $max ) ) ),
 				),
 				'cta'                   => (string) ( $brief['cta'] ?? '' ),
-				'entity_brief'          => self::entity_brief( (array) ( $brief['entity_brief'] ?? array() ), $context, $dropped ),
+				'entity_brief'          => $entity_brief,
 			),
 			'dropped' => array_values( array_unique( $dropped ) ),
 		);
+	}
+
+	/**
+	 * Linkziel, das Hauptseite der Entität ist, sonst null.
+	 *
+	 * @param array<int, array<string, mixed>> $targets   Linkziele des Kontexts.
+	 * @param int                              $entity_id Entität.
+	 * @return array{post_id: int, url: string, home_for: string}|null
+	 */
+	public static function home_target( array $targets, int $entity_id ): ?array {
+		if ( $entity_id <= 0 ) {
+			return null;
+		}
+		foreach ( $targets as $target ) {
+			if ( (int) ( $target['home_entity_id'] ?? 0 ) === $entity_id ) {
+				return array(
+					'post_id'  => (int) $target['post_id'],
+					'url'      => (string) $target['url'],
+					'home_for' => (string) ( $target['home_for'] ?? '' ),
+				);
+			}
+		}
+		return null;
 	}
 
 	/**

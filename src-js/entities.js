@@ -3,7 +3,7 @@
 /** @jsxFrag Fragment */
 /**
  * Entitäten: Vorschläge zum Zusammenführen, Filter, Bestätigen, Ablehnen, Zusammenführen, Details mit Fundstellen,
- * Bearbeiten (Name, Typ, Status, Beschreibung, Schreibweisen) und Löschen.
+ * Bearbeiten (Name, Typ, Status, Beschreibung, Schreibweisen), Löschen und Hauptseiten (1.2.0).
  */
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@wordpress/components';
 import { decideEntities, decideEntity, deleteEntity, getEntities, getEntity, getMergeSuggestions, mergeEntities, updateEntity } from './api';
 import { ENTITY_STATUS, ENTITY_TYPES, ORIGINS } from './format';
+import { HomeSection, HomesCard } from './entity-homes';
 
 const config = window.lsecAdmin || {};
 const MIN_CONFIDENCE = Number( config.minConfidence ?? 0.6 );
@@ -244,6 +245,7 @@ function Detail( { id, edit, onClose, onChanged } ) {
 					{ entity.aliases.length > 0 && (
 						<p><strong>Weitere Schreibweisen:</strong> { entity.aliases.join( ', ' ) }</p>
 					) }
+					<HomeSection entity={ entity } onChanged={ onChanged } />
 					{ entity.merged_from.length > 0 && (
 						<p><strong>Zusammengeführt aus:</strong> { entity.merged_from.map( ( m ) => m.canonical_name ).join( ', ' ) }</p>
 					) }
@@ -323,6 +325,7 @@ export default function Entities() {
 	const [ merging, setMerging ] = useState( false );
 	const [ busy, setBusy ] = useState( false );
 	const [ notice, setNotice ] = useState( null );
+	const [ homesReload, setHomesReload ] = useState( 0 );
 
 	const load = useCallback( () => {
 		getEntities( {
@@ -396,6 +399,7 @@ export default function Entities() {
 		<div className="lsec-entities">
 			{ notice && <Notice status={ notice.status } onRemove={ () => setNotice( null ) }>{ notice.text }</Notice> }
 			<Suggestions groups={ suggestions } onMerge={ merge } busy={ busy } />
+			<HomesCard onOpen={ ( id ) => setDetail( { id, edit: false } ) } reload={ homesReload } />
 			<Card>
 				<CardHeader>
 					<div className="lsec-filters">
@@ -520,6 +524,7 @@ export default function Entities() {
 					onClose={ () => setDetail( null ) }
 					onChanged={ ( text ) => {
 						setNotice( { status: 'success', text } );
+						setHomesReload( ( n ) => n + 1 );
 						load();
 					} }
 				/>

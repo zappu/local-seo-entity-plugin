@@ -1182,3 +1182,45 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+// Hauptseite je Entität (1.2.0).
+.lsec-homes {
+	margin-bottom: 16px;
+
+	.components-card__header {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+	}
+}
+
+.lsec-home__suggestion {
+	margin: 6px 0;
+}
+
+.lsec-home__search {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	margin: 12px 0 8px;
+	max-width: 520px;
+
+	.components-base-control {
+		flex: 1;
+	}
+}
+
+.lsec-home__picker {
+	border-left: 3px solid #dcdcde;
+	padding-left: 12px;
+}
+
+.lsec-home__competing ul,
+.lsec-home__set ul {
+	margin: 4px 0 12px 18px;
+	list-style: disc;
+}
+
+.lsec-home__set {
+	margin: 12px 0;
+}

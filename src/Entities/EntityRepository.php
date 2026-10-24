@@ -399,6 +399,7 @@ final class EntityRepository {
 		}
 		$wpdb->update( $t( 'entities' ), array( 'updated_at' => $now ), array( 'id' => $target ) );
 		// phpcs:enable
+		EntityHome::merged( $target, array_map( 'intval', (array) $out['merged'] ) );
 		return $out;
 	}
 
@@ -933,6 +934,7 @@ final class EntityRepository {
 		$wpdb->query( "DELETE FROM {$t( 'topic_entities' )} WHERE entity_id IN ({$in})" );
 		$deleted = (int) $wpdb->query( "DELETE FROM {$t( 'entities' )} WHERE id IN ({$in})" );
 		// phpcs:enable
+		EntityHome::forget( array_map( 'intval', explode( ',', $in ) ) );
 		return array(
 			'deleted'  => $deleted,
 			'mentions' => $mentions,
@@ -1044,6 +1046,10 @@ final class EntityRepository {
 		$row['merged_from'] = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, canonical_name, type FROM {$t( 'entities' )} WHERE merged_into = %d", $id ), ARRAY_A );
 		$row['claims']      = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, property, value, status FROM {$t( 'claims' )} WHERE subject_type = 'entity' AND subject_id = %d", $id ), ARRAY_A );
 		// phpcs:enable
+		// Hauptseite (1.2.0); stale: festgelegt, aber nicht mehr veröffentlicht.
+		$home              = EntityHome::all()[ $id ] ?? null;
+		$row['home']       = null === $home ? null : EntityHome::page( $home['post_id'] );
+		$row['home_stale'] = null !== $home && null === $row['home'];
 		return $row;
 	}
 

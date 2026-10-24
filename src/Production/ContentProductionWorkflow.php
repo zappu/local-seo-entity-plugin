@@ -14,6 +14,7 @@ use Lsec\Content\DraftWriter;
 use Lsec\Core\Plugin;
 use Lsec\Core\Settings;
 use Lsec\Entities\BusinessProfile;
+use Lsec\Entities\EntityHome;
 use Lsec\Entities\ServiceArea;
 use Lsec\Infrastructure\Database\Schema;
 use Lsec\Integrations\AI\AiCallRepository;
@@ -456,7 +457,7 @@ final class ContentProductionWorkflow {
 				'entities'      => array_values( $entities ),
 				'claims'        => $claims,
 				'keywords'      => $keywords,
-				'link_targets'  => self::link_targets( $topic ),
+				'link_targets'  => self::with_homes( self::link_targets( $topic ), $entities ),
 				'own_pages'     => self::own_pages( $topic ),
 				'categories'    => $categories,
 				'style'         => StyleProfiler::prompt_text( null === $style ? null : (array) $style['profile'], false ),
@@ -1236,6 +1237,36 @@ final class ContentProductionWorkflow {
 			),
 			array_slice( $scored, 0, 12 )
 		);
+	}
+
+	/**
+	 * Linkziele mit den Hauptseiten der Entitäten des Themas (Nachtrag 24.10.2026, 1.2.0): vorn, mit home_for
+	 * (Name) und home_entity_id. Ist die Seite schon Linkziel, wird sie nur gekennzeichnet.
+	 *
+	 * @param array<int, array<string, mixed>> $targets  Linkziele.
+	 * @param array<int, array<string, mixed>> $entities Entitäten des Kontexts (ID → Entität).
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function with_homes( array $targets, array $entities ): array {
+		$homes = EntityHome::homes( array_keys( $entities ) );
+		$front = array();
+		foreach ( $homes as $id => $home ) {
+			$mark = array(
+				'home_for'       => (string) $entities[ $id ]['name'],
+				'home_entity_id' => (int) $id,
+			);
+			foreach ( $targets as $i => $target ) {
+				if ( (int) $target['post_id'] === $home['post_id'] ) {
+					// Eine Seite kann Hauptseite mehrerer Entitäten sein; die Haupt-Entität geht vor.
+					if ( ! isset( $target['home_entity_id'] ) || 'primary' === ( $entities[ $id ]['role'] ?? '' ) ) {
+						$targets[ $i ] = array_merge( $target, $mark );
+					}
+					continue 2;
+				}
+			}
+			$front[ $home['post_id'] ] = $home + $mark;
+		}
+		return array_slice( array_merge( array_values( $front ), $targets ), 0, 16 );
 	}
 
 	/**

@@ -10,6 +10,9 @@ import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/
 import { getReport } from './api';
 import { dateTime, ENTITY_STATUS, ENTITY_TYPES, number, usd } from './format';
 import ToolAction from './tools';
+import { Competing } from './entity-homes';
+
+const config = window.lsecAdmin || {};
 
 const POST_STATUS = { draft: 'Entwurf', publish: 'veröffentlicht', pending: 'zur Prüfung', future: 'geplant', private: 'privat' };
 
@@ -281,6 +284,44 @@ function ImagesCard( { images } ) {
 	);
 }
 
+/**
+ * Hauptseiten je Entität (1.2.0).
+ *
+ * @param {Object} props       Eigenschaften.
+ * @param {Object} props.homes Ergebnis von EntityHome::overview().
+ */
+function HomesCard( { homes } ) {
+	const c = homes.counts;
+	if ( c.total === 0 ) {
+		return null;
+	}
+	const missing = homes.items.filter( ( i ) => ! i.home );
+	return (
+		<Card className="lsec-wide">
+			<CardHeader>
+				<h2>Hauptseiten</h2>
+				<a href={ `${ ( config.pages || {} ).entities || '' }` }>Auf der Seite „Entitäten“ festlegen</a>
+			</CardHeader>
+			<CardBody>
+				<p>
+					{ `${ c.set } von ${ c.total } Entitäten des Unternehmens haben eine Hauptseite.` }
+					{ c.suggested > 0 && ` Für ${ c.suggested } gibt es einen Vorschlag.` }
+				</p>
+				{ missing.length > 0 && (
+					<>
+						<h3>Ohne Hauptseite</h3>
+						<p>
+							{ missing.map( ( i ) => `${ i.name } (${ ENTITY_TYPES[ i.type ] || i.type }${ i.suggestions.length === 0 ? ', keine passende Seite' : '' })` ).join( ' · ' ) }
+						</p>
+						<p className="lsec-muted">„Keine passende Seite“ heißt: Keine eigene Seite trägt den Namen im Titel oder in der Adresse. Eine Seite dazu wäre eine Lücke, die sich als Thema lohnt.</p>
+					</>
+				) }
+				<Competing items={ homes.competing } />
+			</CardBody>
+		</Card>
+	);
+}
+
 export default function Report() {
 	const [ data, setData ] = useState( null );
 	const [ error, setError ] = useState( '' );
@@ -304,6 +345,7 @@ export default function Report() {
 			<ImproveCard items={ data.improve } pages={ data.pages || [] } brandTerms={ data.brand_terms || [] } />
 			<ContentCard content={ data.content } />
 			<EntitiesCard entities={ data.entities } />
+			{ data.homes && <HomesCard homes={ data.homes } /> }
 			{ data.images && <ImagesCard images={ data.images } /> }
 		</div>
 	);

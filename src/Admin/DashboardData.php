@@ -177,6 +177,14 @@ final class DashboardData {
 		if ( array() === Settings::get( 'service_area' ) ) {
 			$add( 'info', 'Kein Servicegebiet hinterlegt. Ohne Servicegebiet bleiben gleichnamige Orte ungeklärt.', '', $profile_url );
 		}
+		// Nachtrag 24.10.2026 (1.2.0): Hauptseiten.
+		if ( $data['content']['profile'] ) {
+			$eligible = \Lsec\Entities\EntityHome::eligible();
+			$missing  = count( array_diff_key( $eligible, \Lsec\Entities\EntityHome::homes( array_keys( $eligible ) ) ) );
+			if ( $missing > 0 ) {
+				$add( 'info', sprintf( '%d von %d Entitäten des Unternehmens haben noch keine Hauptseite. Die Seite „Entitäten“ zeigt Vorschläge zum Übernehmen.', $missing, count( $eligible ) ), '', admin_url( 'admin.php?page=' . AppPage::ENTITIES_SLUG ), 'Hauptseiten festlegen' );
+			}
+		}
 		if ( null === $data['content']['index']['last_indexed_at'] ) {
 			$add( 'info', 'Der Inhaltsindex wurde noch nicht gestartet: auf der Karte „Inhalte und Entitäten“ unten „Index starten“ wählen.' );
 		}

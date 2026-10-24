@@ -180,6 +180,13 @@ final class QualityChecker {
 			$add( 'BRIEF_ENTITIES', 'Entitäten aus dem Steckbrief im Text', array() === $missing, false, array() === $missing ? '' : 'fehlen: ' . implode( ', ', $missing ) );
 		}
 
+		// Nachtrag 24.10.2026 (1.2.0): Hauptseite der Haupt-Entität verlinkt.
+		$home = BriefWriter::home_target( (array) $context['link_targets'], (int) ( $context['entity_brief']['primary_entity_id'] ?? 0 ) );
+		if ( null !== $home ) {
+			$linked = self::links_to( (array) $draft['content'], $home['url'] );
+			$add( 'HOME_LINK', 'Hauptseite der Haupt-Entität verlinkt', $linked, false, $linked ? '' : sprintf( 'Link auf die Hauptseite für „%s“ fehlt: %s', $home['home_for'], $home['url'] ) );
+		}
+
 		$blocking = array();
 		$warnings = array();
 		foreach ( $checks as $c ) {
@@ -425,6 +432,22 @@ final class QualityChecker {
 			$out = array_values( array_unique( $m[1] ) );
 		}
 		return $out;
+	}
+
+	/**
+	 * Ob der Inhalt auf die Adresse verlinkt (mit oder ohne Schrägstrich am Ende).
+	 *
+	 * @param array<int, mixed> $nodes Inhalt (Blöcke).
+	 * @param string            $url   Adresse.
+	 */
+	public static function links_to( array $nodes, string $url ): bool {
+		$url = rtrim( $url, '/' );
+		foreach ( self::hrefs( $nodes ) as $href ) {
+			if ( rtrim( $href, '/' ) === $url ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

@@ -103,7 +103,7 @@ Abgleich der zwölf Schritte mit dem Plugin in 1.0:
 
 | Schritt | Heute im Plugin | Lücke |
 |---|---|---|
-| 1 Entity Home | Profil mit Leistungen; Einrichtung meldet „Leistungen ohne eigene Seite“ | keine feste Zuordnung Entität → Hauptseite |
+| 1 Entity Home | Profil mit Leistungen; Einrichtung meldet „Leistungen ohne eigene Seite“ | keine feste Zuordnung Entität → Hauptseite (seit 1.2.0 umgesetzt) |
 | 2 Klare Beschreibung | Antwort zuerst (0.10.3), Kurzbeschreibung im Profil | Prüfung der Hauptseiten selbst fehlt |
 | 3 Schema wie die Seite | Rank Math setzt Article-Schema | kein `about`/`mentions`/`sameAs` aus den Entitäten; kein Organization-/LocalBusiness-Schema aus dem Profil |
 | 4 Gleiche Fakten | Unternehmensprofil als Quelle | kein Faktenblatt, kein NAP-Abgleich (Idee 7) |
@@ -121,7 +121,7 @@ Bausteine, in dieser Reihenfolge vorgeschlagen:
 1. **Steckbrief je Entwurf** (Vorlage aus 9): Das Briefing legt fest: Haupt-Entität, Ein-Satz-Definition, Zielgruppe, fünf verwandte Entitäten, drei Fragen, interne Links (mit der Hauptseite der Entität), Schema-Typ und Eigenschaften. Der Steckbrief steht beim Thema und im Prüfbericht. Klein, gleich wirksam.
 2. **Schema aus den Entitäten über Rank Math** (Filter `rank_math/json_ld`): Für Entwürfe des Plugins `about` (Haupt-Entität) und `mentions` (genannte Entitäten), jeweils mit `sameAs` auf Wikidata, wo bestätigt. Nur Entitäten, die im Text stehen (Regel aus 9: Schema sagt nichts, was die Seite nicht sagt). Für die Startseite Organization bzw. LocalBusiness aus dem Profil mit `knowsAbout` (Leistungen), `areaServed` (Servicegebiet mit Wikidata) und `sameAs` (eigene Profile).
 3. **Ankertext-Prüfung**: Hinweis im Prüfbericht bei Links mit „hier“, „mehr“, „klicken Sie hier“ usw.; Regel im Text: Ankertext nennt die Sache.
-4. **Entity Home**: Je bestätigter Leistung, Unternehmen und Person eine Hauptseite (Vorschlag aus dem Index, Bestätigen wie bei Entitäten). Entwürfe verlinken die Hauptseite; der Bericht nennt Entitäten ohne Hauptseite und solche, bei denen zwei eigene Seiten um dieselben Suchanfragen konkurrieren.
+4. **Entity Home**: Je bestätigter Leistung, Unternehmen und Person eine Hauptseite (Vorschlag aus dem Index, Bestätigen wie bei Entitäten). Entwürfe verlinken die Hauptseite; der Bericht nennt Entitäten ohne Hauptseite und solche, bei denen zwei eigene Seiten um dieselben Suchanfragen konkurrieren. **Umgesetzt in 1.2.0** (zuerst, weil es noch keine Referenzbeiträge gibt): Vorschläge aus Titel, Adresse, Fundstellen und Search Console, Übernehmen mit einem Klick, Link der Entwürfe auf die Hauptseite mit Hinweis `HOME_LINK`, `url` und `about` im Schema, Konkurrenz eigener Seiten in Bericht und Entitäten-Seite.
 5. **Faktenblatt und eigene Profile**: Seite „Unternehmen“ bekommt die Liste der eigenen Profile (Google-Unternehmensprofil, Facebook, LinkedIn, Branchenbücher) und erzeugt ein Faktenblatt (Name, Adresse, Telefon, Beschreibung, Leistungen, Gründung) zum Abgleich. NAP-Abgleich mit Impressum und Kontaktseite (Idee 7).
 6. **Leistungs-Landkarte und Cluster** (Idee 1) mit Praxisnotizen (Idee 2); Themenrecherche bevorzugt Lücken im angefangenen Cluster (Tiefe vor Breite).
 7. **Fragen aus der Search Console** (Idee 5) als FAQ-Vorschläge; **Beobachten**: neue Suchanfragen je Seite seit dem Veröffentlichen, vierteljährliche Erinnerung an die Markensuche.

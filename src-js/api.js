@@ -69,6 +69,12 @@ export const deleteEntity = ( id ) => apiFetch( { path: `${ base }/entities/${ i
 export const mergeEntities = ( target, sources ) =>
 	apiFetch( { path: `${ base }/entities/merge`, method: 'POST', data: { target, sources } } );
 export const getMergeSuggestions = () => apiFetch( { path: `${ base }/entities/merge-suggestions` } );
+// Hauptseite je Entität (1.2.0).
+export const getEntityHomes = () => apiFetch( { path: `${ base }/entity-homes` } );
+export const setEntityHome = ( id, postId, source = 'manual' ) =>
+	apiFetch( { path: `${ base }/entities/${ id }/home`, method: 'POST', data: { post_id: postId, source } } );
+export const getHomeCandidates = ( id, search = '' ) =>
+	apiFetch( { path: `${ base }/entities/${ id }/home-candidates?search=${ encodeURIComponent( search ) }` } );
 export const getIndex = () => apiFetch( { path: `${ base }/index` } );
 export const runIndex = ( all = false ) =>
 	apiFetch( { path: `${ base }/index/run`, method: 'POST', data: { all } } );

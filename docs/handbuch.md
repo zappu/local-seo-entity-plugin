@@ -146,6 +146,7 @@ Schlüssel als Konstante (3.2), dann in der Einrichtung oder unter **Einstellung
   - Der Prüfbericht steht auf der Themen-Seite beim Thema (Abschnitt 7).
   - Blockierte Entwürfe nicht veröffentlichen, ohne die Mängel zu beheben.
 - **Entitäten pflegen** (Seite „Entitäten“): Vorschläge bestätigen oder ablehnen, auch mehrere auf einmal. Schreibweisen derselben Firma zusammenführen.
+- **Hauptseiten festlegen** (Seite „Entitäten“, Karte „Hauptseiten“): einmal nach der Einrichtung und nach jeder neuen Leistungsseite (Abschnitt 5.7).
 - **Keywords pflegen** (Seite „Keywords“): fremde Firmen, fremde Orte oder Themen ohne Bezug ausschließen, auch mehrere auf einmal.
 - **Bericht lesen** (Seite „Bericht“): Seiten, die sich zu verbessern lohnen, und Leistungen oder Orte ohne Inhalt als Anregung für die nächste Recherche.
 
@@ -174,6 +175,21 @@ Stockfotos (zum Beispiel Envato Elements) für die jeweilige Website lizenzieren
 
 Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel `regional-service`) bekommen lokale Seiten zusätzlich diese Kategorie. So lassen sie sich in Theme- und Elementor-Listen ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Wenn die Ortsseiten in keiner Blogansicht mehr stehen, das Archiv verlinken (Menü oder Leistungsseite), damit Google sie findet. Beim Speichern der Einstellung kommen auch die vorhandenen Ortsseiten in die Kategorie.
 
+### 5.7 Hauptseite je Entität
+
+Jede Leistung, jeder Standort, das Unternehmen selbst, eigene Marken und Personen bekommen **eine** feste eigene Seite, die sie maßgeblich beschreibt: die Hauptseite (nach Casey Keith „Entity Home“). Für Google ist dann klar, welche Seite zu „Fassadenreinigung“ gehört; neue Beiträge stärken diese Seite, statt mit ihr zu konkurrieren.
+
+**Festlegen:** Seite **Entitäten**, Karte **„Hauptseiten“** → „Anzeigen“. Zu jeder Entität ohne Hauptseite steht der beste Vorschlag mit Begründung; **„Übernehmen“** legt ihn fest, **„Andere wählen …“** öffnet die Entität mit allen Vorschlägen und einer Suche nach Seitentiteln. Im Detail einer bestätigten Entität lässt sich die Hauptseite auch ändern oder entfernen.
+
+**Woher die Vorschläge kommen:** Name der Entität im Titel oder in der Adresse der Seite, Startseite oder Über-uns-Seite für das Unternehmen, Kontaktseite für Standorte, Seiten vor Blogbeiträgen, Fundstellen der Entität und Impressionen in der Search Console. Eine Sammelseite „Leistungen“, die viele Leistungen nur nennt, schlägt das Plugin nicht vor; wählen lässt sie sich trotzdem. Steht bei einer Entität **„keine passende Seite“**, fehlt der Website eine Seite dazu: ein gutes Thema für die nächste Recherche.
+
+**Was die Hauptseite bewirkt:**
+- Neue Entwürfe verlinken die Hauptseite ihrer Haupt-Entität, mit dem Namen im Ankertext. Fehlt der Link, meldet der Prüfbericht `HOME_LINK`.
+- In den strukturierten Daten trägt die Entität die Adresse ihrer Hauptseite (`url`), auch in den Leistungen des Unternehmens (`knowsAbout`). Die Hauptseite selbst nennt ihre Entitäten in `about`.
+- Die Seite selbst ändert das Plugin nicht.
+
+**Seiten, die sich Konkurrenz machen:** Mit Search Console zeigen die Karte und der **Bericht** Suchanfragen, für die mehrere eigene Seiten erscheinen, zum Beispiel „fassadenreinigung celle“ mit der Leistungsseite und einem Blogbeitrag. Dann muss Google raten, welche Seite gemeint ist. Abhilfe: die anderen Seiten verlinken auf die Hauptseite und behandeln ein Teilthema (Kosten, Ablauf, ein Ort); ist eine nur eine schwächere Fassung der Hauptseite, beide zusammenführen und die alte Adresse weiterleiten (301, zum Beispiel mit Rank Math → Weiterleitungen).
+
 ## 6. Die Seiten im Backend
 
 Das Menü **Local SEO** ist nach der Häufigkeit der Nutzung geordnet: Überblick, tägliche Arbeit, Grundlagen, zuletzt Einrichtung, Einstellungen und Technik.
@@ -183,9 +199,9 @@ Das Menü **Local SEO** ist nach der Häufigkeit der Nutzung geordnet: Überblic
 | **Dashboard** | KI-Kosten und Budget, Textfocus-Credits, Cronjob, Hinweise mit Knöpfen, Inhalte und Entitäten auf einen Blick |
 | **Handbuch** | dieses Handbuch |
 | **Themen** | Recherche, Vorschläge mit Priorität und Begründung, Dubletten-Vergleich, Freigabe, Entwürfe schreiben, Prüfbericht je Entwurf |
-| **Bericht** | bestehende Seiten verbessern (je Seite, mit Marken- und Navigationssuchen getrennt, CSV), Inhalte des Plugins mit Prüfung, Kosten und Beitragsbild, Entitäten mit Lücken, Bilder |
+| **Bericht** | bestehende Seiten verbessern (je Seite, mit Marken- und Navigationssuchen getrennt, CSV), Inhalte des Plugins mit Prüfung, Kosten und Beitragsbild, Entitäten mit Lücken, Hauptseiten und Seiten, die sich Konkurrenz machen, Bilder |
 | **Keywords** | Keywords aus Search Console, Textfocus und Importen mit Volumen, Wettbewerb, CPC, Impressionen, Klicks, Position und Seite; Ausschließen und Aufnehmen, auch für mehrere; täglicher Abgleich, verwandte Keywords, Import von CSV oder Excel |
-| **Entitäten** | erkannte Leistungen, Orte, Marken, Personen und Begriffe mit Status, Sicherheit und Fundstellen; Bestätigen, Ablehnen, Bearbeiten, Zusammenführen, auch für mehrere |
+| **Entitäten** | Karte „Hauptseiten“ (Abschnitt 5.7); erkannte Leistungen, Orte, Marken, Personen und Begriffe mit Status, Sicherheit und Fundstellen; Bestätigen, Ablehnen, Bearbeiten, Zusammenführen, auch für mehrere; Hauptseite im Detail |
 | **Unternehmen** | Profil: Name, Beschreibung, Standorte, Leistungen mit Beschreibung, Marken, Wettbewerber, Servicegebiet (mit Wikidata-Abgleich), Adressen für „Angaben lesen“ |
 | **Style Mimic** | Schreibstil: Ton, Anrede, Regeln, Beispiele; Versionen |
 | **Abläufe** | alle Hintergrund-Abläufe mit Status, Kosten und Fehlern; Schritte und KI-Aufrufe aufklappbar; Fortsetzen und Abbrechen |
@@ -236,6 +252,7 @@ Scheitert ein Entwurf nur an einzelnen Stellen (unbelegte Zahl, unbelegte Aussag
 | `BRIEF_ENTITIES` | Eine Entität aus dem Steckbrief steht nicht im Text. |
 | `HEDGING` | Mehr als zwei Absicherungen („eine Garantie ist das nicht“, „lässt sich nicht zusagen“). |
 | `NAME_SPELLING` | Ein Wort gleicht fast einem Marken-, Produkt- oder Firmennamen, z. B. „Masomatic“ statt „Mosmatic“. |
+| `HOME_LINK` | Der Link auf die Hauptseite der Haupt-Entität fehlt (Abschnitt 5.7). |
 
 Den Prüfbericht zeigt die Themen-Seite beim Thema.
 
@@ -280,7 +297,7 @@ Jedes Briefing enthält einen **Steckbrief** (nach Casey Keith, „Step-by-Step 
 | Kategorie für Ortsseiten | `local_category` | – | Name oder Titelform; leer = aus |
 | Ortsseiten auf der Blogseite ausblenden | `local_category_hide` | aus | |
 | Autor der Entwürfe | `draft_author` | 0 | 0 = wer das Thema freigegeben hat |
-| Entitäten in den strukturierten Daten | `schema_entities` | an | `about` und `mentions` bei Beiträgen des Plugins (Abschnitt 7.1) |
+| Entitäten in den strukturierten Daten | `schema_entities` | an | `about` und `mentions` bei Beiträgen des Plugins, `about` auf Hauptseiten (Abschnitte 7.1 und 5.7) |
 | Leistungen und Servicegebiet beim Unternehmen | `schema_organization` | an | `knowsAbout` und `areaServed` (Abschnitt 7.1) |
 | Entitäten als Schlagwörter (Thoka Auto Tagger) | `auto_tagger_entities` | an | Abschnitt 7.1 |
 | Länge je Beitragstyp *(weitere)* | `draft_lengths` | Ortsseite 700–1300, Artikel 900–1600, Ratgeber 1200–2200, saisonal 700–1300 Wörter | als JSON |
