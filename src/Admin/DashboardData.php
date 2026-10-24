@@ -153,10 +153,10 @@ final class DashboardData {
 			$add( 'warning', 'Kein API-Schlüssel für ' . $data['ai']['provider'] . '. Diese Zeile in wp-config.php eintragen (in Plesk im Dateimanager):', "define( 'LSEC_" . strtoupper( $data['ai']['provider'] ) . "_API_KEY', '…' );" );
 		}
 		if ( 'month' === $data['ai']['budget']['exceeded'] ) {
-			$add( 'warning', 'Das KI-Monatsbudget ist erreicht. Abläufe warten bis zum nächsten Monat oder bis das Budget erhöht wird (Einstellungen → KI).', '', $settings, 'Einstellungen' );
+			$add( 'warning', 'Das KI-Monatsbudget ist erreicht. Abläufe warten bis zum nächsten Monat oder bis das Budget erhöht wird (Einstellungen → KI und Kosten).', '', $settings . '#ki', 'Einstellungen' );
 		}
 		if ( $data['ai']['budget']['unpriced_calls'] > 0 ) {
-			$add( 'info', sprintf( '%d KI-Aufruf(e) in diesem Monat ohne Preis. Sie zählen nicht zum Budget, bis unter Einstellungen → KI bei „Preise“ ein Preis für das Modell hinterlegt ist.', $data['ai']['budget']['unpriced_calls'] ), '', $settings, 'Einstellungen' );
+			$add( 'info', sprintf( '%d KI-Aufruf(e) in diesem Monat ohne Preis. Sie zählen nicht zum Budget, bis unter Einstellungen → KI und Kosten → Weitere Einstellungen bei „Preise“ ein Preis für das Modell hinterlegt ist.', $data['ai']['budget']['unpriced_calls'] ), '', $settings . '#ki', 'Einstellungen' );
 		}
 		$waiting = (int) ( $status['runs_by_status'][ RunStatus::Waiting->value ] ?? 0 );
 		if ( $waiting > 0 ) {

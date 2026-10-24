@@ -41,7 +41,7 @@ final class AiClientFactory {
 		$model    = $model ?? (string) Settings::get( 'ai_model' );
 
 		if ( '' === $model ) {
-			throw new AiException( 'not_configured', 'Kein KI-Modell eingestellt (Local SEO → Einstellungen → KI oder Einrichtung, Schritt 2).' );
+			throw new AiException( 'not_configured', 'Kein KI-Modell eingestellt (Local SEO → Einstellungen → KI und Kosten oder Einrichtung, Schritt 2).' );
 		}
 
 		$key = $this->secrets->get( $provider . '_api_key' );

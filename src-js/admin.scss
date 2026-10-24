@@ -1079,3 +1079,67 @@
 	padding-top: 16px;
 	border-top: 1px solid #f0f0f1;
 }
+
+// Einstellungen in Reitern (0.11.0)
+.lsec-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+	margin: 16px 0 0;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+.lsec-tabs__tab {
+	position: relative;
+	margin: 0 0 -1px;
+	padding: 10px 16px;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	background: none;
+	color: #50575e;
+	font-size: 14px;
+	cursor: pointer;
+
+	&:hover {
+		color: var(--wp-admin-theme-color, #2271b1);
+	}
+
+	&.is-active {
+		border-color: #c3c4c7;
+		background: #fff;
+		color: #1d2327;
+		font-weight: 600;
+	}
+}
+
+.lsec-tabs__dot {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	margin-left: 6px;
+	border-radius: 50%;
+	background: #d63638;
+	vertical-align: middle;
+}
+
+.lsec-settings__panel {
+	max-width: 900px;
+}
+
+.lsec-settings__intro {
+	margin: 16px 0;
+}
+
+.lsec-settings__advanced .components-card__header {
+	gap: 12px;
+	justify-content: flex-start;
+}
+
+.lsec-savebar {
+	align-items: center;
+	border-top: 1px solid #dcdcde;
+}
+
+.lsec-settings .lsec-savebar {
+	max-width: 900px;
+}

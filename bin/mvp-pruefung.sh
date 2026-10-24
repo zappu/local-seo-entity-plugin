@@ -754,7 +754,7 @@ OUT=$(wpc eval 'echo PHP_EOL, (string) \Lsec\Admin\Manual::html(), PHP_EOL;')
 contains "Handbuch wird gelesen" 'id="3-installation"' "$OUT"
 contains "Tabellen und Code werden umgesetzt" "<pre><code>" "$OUT"
 OUT=$(wpc eval 'require_once ABSPATH . "wp-admin/includes/plugin.php"; wp_set_current_user(1); (new \Lsec\Admin\AppPage())->add_menu(); global $submenu; echo PHP_EOL, implode(",", array_column($submenu["lsec"] ?? array(), 2)), PHP_EOL;')
-contains "Menüpunkt gleich nach dem Dashboard" "lsec,lsec-manual,lsec-setup" "$OUT"
+contains "Menüpunkt gleich nach dem Dashboard" "lsec,lsec-manual,lsec-topics" "$OUT"
 
 echo "F9 Knöpfe statt Befehle (0.11.0)"
 OUT=$(rest POST tools/checks "{}")

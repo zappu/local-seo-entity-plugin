@@ -105,13 +105,13 @@ Kontrolle: **Local SEO → Dashboard**, Karte „Cronjob“ zeigt nach späteste
 1. In der Google Cloud Console ein **Dienstkonto** anlegen, die Search Console API aktivieren und einen **JSON-Schlüssel** herunterladen.
 2. Die Datei mit dem Plesk-Dateimanager als `private/gsc-service-account.json` neben den Webroot legen. Ein anderer Dateiname in `private` geht auch, wenn es die einzige JSON-Datei dort ist. Ist sie für andere lesbar, zeigt die Einrichtung den Knopf **„Nur für den Eigentümer lesbar machen“**.
 3. In der Search Console unter **Einstellungen → Nutzer und Berechtigungen** die E-Mail-Adresse des Dienstkontos als Nutzer eintragen. Der Assistent zeigt diese Adresse an.
-4. Property wählen: Knopf **„Property wählen“** in der Einrichtung, auf dem Dashboard oder unter **Einstellungen → Search Console**. Er zeigt die Properties, die das Dienstkonto sehen darf.
+4. Property wählen: Knopf **„Property wählen“** in der Einrichtung, auf dem Dashboard oder unter **Einstellungen → Datenquellen**. Er zeigt die Properties, die das Dienstkonto sehen darf.
 
 Die Schlüsseldatei nie per E-Mail oder Chat weitergeben.
 
 ### 3.6 Textfocus (optional)
 
-Schlüssel als Konstante (3.2), dann in der Einrichtung oder unter **Einstellungen → Textfocus** den Knopf **„Sprache der Website übernehmen“** drücken.
+Schlüssel als Konstante (3.2), dann in der Einrichtung oder unter **Einstellungen → Datenquellen** den Knopf **„Sprache der Website übernehmen“** drücken.
 
 ## 4. Einrichtung mit dem Assistenten
 
@@ -174,19 +174,21 @@ Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel 
 
 ## 6. Die Seiten im Backend
 
+Das Menü **Local SEO** ist nach der Häufigkeit der Nutzung geordnet: Überblick, tägliche Arbeit, Grundlagen, zuletzt Einrichtung, Einstellungen und Technik.
+
 | Seite | Inhalt |
 |---|---|
-| **Dashboard** | KI-Kosten und Budget, Textfocus-Credits, Cronjob, Hinweise mit Befehlen, Inhalte und Entitäten auf einen Blick |
+| **Dashboard** | KI-Kosten und Budget, Textfocus-Credits, Cronjob, Hinweise mit Knöpfen, Inhalte und Entitäten auf einen Blick |
 | **Handbuch** | dieses Handbuch |
-| **Einrichtung** | Assistent (Abschnitt 4) |
-| **Unternehmen** | Profil: Name, Beschreibung, Standorte, Leistungen mit Beschreibung, Marken, Wettbewerber, Servicegebiet (mit Wikidata-Abgleich), Adressen für „Angaben lesen“ |
-| **Entitäten** | erkannte Leistungen, Orte, Marken, Personen und Begriffe mit Status, Sicherheit und Fundstellen; Bestätigen, Ablehnen, Bearbeiten, Zusammenführen, auch für mehrere |
-| **Keywords** | Keywords aus Search Console, Textfocus und Importen mit Volumen, Wettbewerb, CPC, Impressionen, Klicks, Position und Seite; Ausschließen und Aufnehmen, auch für mehrere; täglicher Abgleich, verwandte Keywords, Import von CSV oder Excel |
 | **Themen** | Recherche, Vorschläge mit Priorität und Begründung, Dubletten-Vergleich, Freigabe, Entwürfe schreiben, Prüfbericht je Entwurf |
+| **Bericht** | bestehende Seiten verbessern (je Seite, mit Marken- und Navigationssuchen getrennt, CSV), Inhalte des Plugins mit Prüfung, Kosten und Beitragsbild, Entitäten mit Lücken, Bilder |
+| **Keywords** | Keywords aus Search Console, Textfocus und Importen mit Volumen, Wettbewerb, CPC, Impressionen, Klicks, Position und Seite; Ausschließen und Aufnehmen, auch für mehrere; täglicher Abgleich, verwandte Keywords, Import von CSV oder Excel |
+| **Entitäten** | erkannte Leistungen, Orte, Marken, Personen und Begriffe mit Status, Sicherheit und Fundstellen; Bestätigen, Ablehnen, Bearbeiten, Zusammenführen, auch für mehrere |
+| **Unternehmen** | Profil: Name, Beschreibung, Standorte, Leistungen mit Beschreibung, Marken, Wettbewerber, Servicegebiet (mit Wikidata-Abgleich), Adressen für „Angaben lesen“ |
 | **Style Mimic** | Schreibstil: Ton, Anrede, Regeln, Beispiele; Versionen |
 | **Abläufe** | alle Hintergrund-Abläufe mit Status, Kosten und Fehlern; Schritte und KI-Aufrufe aufklappbar; Fortsetzen und Abbrechen |
-| **Bericht** | bestehende Seiten verbessern (je Seite, mit Marken- und Navigationssuchen getrennt, CSV), Inhalte des Plugins mit Prüfung, Kosten und Beitragsbild, Entitäten mit Lücken, Bilder |
-| **Einstellungen** | Abschnitt 8 |
+| **Einrichtung** | Assistent (Abschnitt 4) |
+| **Einstellungen** | sechs Reiter: KI und Kosten, Beiträge, Bilder, Recherche, Datenquellen, System (Abschnitt 8) |
 | **Technik** | Knöpfe „Sicherheit prüfen“, „Datenbank aktualisieren“ und „Hängengebliebene Abläufe aufnehmen“; Systemstatus, Schemaversion, Warteschlange, letzte Abläufe |
 | **Beiträge, Seiten, Produkte** (WordPress-Listen) | unter dem Titel „Beitragsbild suchen“ (Beiträge ohne Bild) und „Entitäten erkennen“ (veröffentlichte Inhalte) |
 
@@ -232,9 +234,9 @@ Den Prüfbericht zeigt die Themen-Seite beim Thema.
 
 ## 8. Einstellungen
 
-**Local SEO → Einstellungen**. Bei den Modellfeldern erscheinen beim Tippen die passenden Modelle von OpenRouter. Die Schlüssel in der zweiten Spalte braucht nur, wer mit WP-CLI arbeitet (Anhang).
+**Local SEO → Einstellungen** hat sechs Reiter. Je Reiter stehen oben die Einstellungen, die man braucht; Seltenes steht eingeklappt unter **„Weitere Einstellungen“** (in den Tabellen mit *weitere* markiert). Geänderte Reiter tragen einen roten Punkt; gespeichert wird mit der Leiste unten, auch über mehrere Reiter. Bei den Modellfeldern erscheinen beim Tippen die passenden Modelle von OpenRouter. Die Schlüssel in der zweiten Spalte braucht nur, wer mit WP-CLI arbeitet (Anhang).
 
-### KI
+### KI und Kosten
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
@@ -243,77 +245,67 @@ Den Prüfbericht zeigt die Themen-Seite beim Thema.
 | Schreibmodell | `ai_writing_model` | Hauptmodell | nur für den Text; empfohlen `anthropic/claude-sonnet-5.5` |
 | Prüfmodell | `ai_review_model` | Hauptmodell | nur für die KI-Bewertung; empfohlen `anthropic/claude-sonnet-5.5` |
 | Recherchemodell | `ai_research_model` | Hauptmodell | nur für die Websuche; empfohlen `perplexity/sonar-pro` |
-| Treffer der Websuche | `ai_web_max_results` | 3 | 1 bis 10; weniger Treffer, geringere Kosten |
-| Suchmaschine | `ai_web_engine` | standard | standard, native, exa, parallel, perplexity; ohne Quellen: exa oder parallel |
 | Monatsbudget | `ai_monthly_budget` | 20 USD | erreicht: Abläufe warten; 0 = ohne Grenze |
 | Budget je Ablauf | `ai_run_budget` | 1 USD | Höchstbetrag zum Beispiel für einen Beitrag |
-| Preise | `ai_prices` | – | nur für Anthropic und OpenAI direkt; OpenRouter meldet Kosten selbst |
-| OpenAI-Endpunkt | `openai_endpoint` | – | zum Beispiel EU-Region |
-
-### Textfocus
-
-| Einstellung | Schlüssel | Standard | Erklärung |
-|---|---|---|---|
-| Sprachcode | `textfocus_lang` | – | Knopf „Sprache der Website übernehmen“ |
-| Tagesbudget | `textfocus_daily_budget` | 25 Credits | |
-| Mindestabstand | `textfocus_min_interval` | 60 Sekunden | zwischen zwei Abfragen |
-| Keywords je Aufruf | `textfocus_batch_size` | 10 | |
-
-### Keywords
-
-| Einstellung | Schlüssel | Standard | Erklärung |
-|---|---|---|---|
-| Orte und Namen erkennen | `keyword_analysis` | an | Grundlage für die Ausschlüsse; ein KI-Aufruf je 100 neue Keywords |
-| Suchvolumen nachholen | `keyword_auto_volumes` | an | 10 Keywords je Credit, 5 Credits bleiben für Abfragen von Hand |
-
-### Themen
-
-| Einstellung | Schlüssel | Standard | Erklärung |
-|---|---|---|---|
-| Themen je Recherche | `topic_count` | 5 | 1 bis 10 |
-| Gewichte der Priorität | `topic_weights` | Relevanz 30, Nachfrage 25, Lücke 20, lokal 15, Saison 10 | als JSON in Prozent |
+| Treffer der Websuche *(weitere)* | `ai_web_max_results` | 3 | 1 bis 10; weniger Treffer, geringere Kosten |
+| Suchmaschine *(weitere)* | `ai_web_engine` | standard | standard, native, exa, parallel, perplexity; ohne Quellen: exa oder parallel |
+| Preise *(weitere)* | `ai_prices` | – | nur für Anthropic und OpenAI direkt; OpenRouter meldet Kosten selbst |
+| OpenAI-Endpunkt *(weitere)* | `openai_endpoint` | – | zum Beispiel EU-Region |
 
 ### Beiträge
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
 | Freigegebene Themen automatisch schreiben | `production_auto` | an | der Cronjob schreibt bis zum Tageslimit |
+| Entwürfe je Tag | `drafts_per_day` | 3 | 0 bis 20; von Hand gestartete zählen mit |
 | Beanstandete Stellen nachbessern | `production_revise` | an | etwa 0,05 bis 0,10 USD je Nachbesserung |
 | Fehlende Ortsfakten recherchieren | `place_research` | an | einmal je Ort in 30 Tagen |
 | Kategorie für Ortsseiten | `local_category` | – | Name oder Titelform; leer = aus |
 | Ortsseiten auf der Blogseite ausblenden | `local_category_hide` | aus | |
-| Entwürfe je Tag | `drafts_per_day` | 3 | 0 bis 20; von Hand gestartete zählen mit |
 | Autor der Entwürfe | `draft_author` | 0 | 0 = wer das Thema freigegeben hat |
-| Länge je Beitragstyp | `draft_lengths` | Ortsseite 700–1300, Artikel 900–1600, Ratgeber 1200–2200, saisonal 700–1300 Wörter | als JSON |
-| Mindestwert je Merkmal | `quality_min_score` | 0,6 | |
-| Mindestdurchschnitt | `quality_min_average` | 0,75 | |
+| Länge je Beitragstyp *(weitere)* | `draft_lengths` | Ortsseite 700–1300, Artikel 900–1600, Ratgeber 1200–2200, saisonal 700–1300 Wörter | als JSON |
+| Mindestwert je Merkmal *(weitere)* | `quality_min_score` | 0,6 | |
+| Mindestdurchschnitt *(weitere)* | `quality_min_average` | 0,75 | |
 
 ### Bilder
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
 | Beitragsbilder | `image_mode` | library_ai | `library_ai` Mediathek, sonst KI-Bild · `library` nur Mediathek · `off` aus |
-| Modell für die Bildbeschreibung | `ai_vision_model` | Hauptmodell | muss Bilder lesen können |
 | Bildmodell | `ai_image_model` | black-forest-labs/flux-3-image | über OpenRouter; günstiger: `black-forest-labs/flux-3-image-klein` |
-| Auflösung | `image_resolution` | 1K | für Modelle mit Auflösungsstufen |
 | Seitenverhältnis | `image_aspect` | 16:9 | 16:9, 3:2, 4:3, 1:1 |
+| Modell für die Bildbeschreibung *(weitere)* | `ai_vision_model` | Hauptmodell | muss Bilder lesen können |
+| Auflösung *(weitere)* | `image_resolution` | 1K | für Modelle mit Auflösungsstufen |
 
-### Search Console
+### Recherche
+
+| Einstellung | Schlüssel | Standard | Erklärung |
+|---|---|---|---|
+| Themen je Recherche | `topic_count` | 5 | 1 bis 10 |
+| Orte und Namen erkennen | `keyword_analysis` | an | Grundlage für die Ausschlüsse; ein KI-Aufruf je 100 neue Keywords |
+| Suchvolumen nachholen | `keyword_auto_volumes` | an | 10 Keywords je Credit, 5 Credits bleiben für Abfragen von Hand |
+| Entitäten automatisch erkennen | `entity_auto_extract` | an | etwa 0,04 USD je Inhalt |
+| Entitäten erkennen für | `entity_extract_types` | Seiten, Produkte, Kategorien | Blogbeiträge einzeln: in der Beitragsliste „Entitäten erkennen“ |
+| Gewichte der Priorität *(weitere)* | `topic_weights` | Relevanz 30, Nachfrage 25, Lücke 20, lokal 15, Saison 10 | als JSON in Prozent |
+| Mindest-Sicherheit für die Anzeige *(weitere)* | `entity_min_confidence` | 0,6 | schwächere Vorschläge werden ausgeblendet |
+
+### Datenquellen
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
 | Property | `gsc_property` | – | zum Beispiel `https://example.de/` oder `sc-domain:example.de` |
 | Land | `gsc_country` | deu | `all` für alle Länder |
 | Markenbegriffe | `brand_terms` | automatisch | Wörter für Suchen nach dem eigenen Namen, durch Komma getrennt |
-| Schlüsseldatei | `gsc_credentials_file` | `private/` neben dem Webroot | die Konstante `LSEC_GSC_CREDENTIALS_FILE` hat Vorrang |
+| Sprachcode | `textfocus_lang` | – | Knopf „Sprache der Website übernehmen“ |
+| Tagesbudget | `textfocus_daily_budget` | 25 Credits | |
+| Schlüsseldatei *(weitere)* | `gsc_credentials_file` | `private/` neben dem Webroot | die Konstante `LSEC_GSC_CREDENTIALS_FILE` hat Vorrang |
+| Mindestabstand *(weitere)* | `textfocus_min_interval` | 60 Sekunden | zwischen zwei Abfragen |
+| Keywords je Aufruf *(weitere)* | `textfocus_batch_size` | 10 | |
 
-### Entitäten und Allgemein
+### System
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
-| Entitäten automatisch erkennen | `entity_auto_extract` | an | etwa 0,04 USD je Inhalt |
-| Entitäten erkennen für | `entity_extract_types` | Seiten, Produkte, Kategorien | Blogbeiträge einzeln: in der Beitragsliste „Entitäten erkennen“ |
-| Mindest-Sicherheit für die Anzeige | `entity_min_confidence` | 0,6 | schwächere Vorschläge werden ausgeblendet |
 | Gleichzeitige Abläufe | `max_parallel_runs` | 3 | |
 | Daten bei Deinstallation löschen | `delete_data_on_uninstall` | aus | Beiträge bleiben immer erhalten |
 
@@ -384,7 +376,7 @@ Die tatsächlichen Kosten stehen im Dashboard, je Ablauf auf der Seite „Abläu
 - Fehlt `private/wp-cli.phar`: in der Einrichtung „WP-CLI laden“.
 
 **Abläufe stehen auf „wartet“.**
-- Grund `ai_budget`: Monats- oder Ablaufbudget erreicht. Budget erhöhen (**Einstellungen → KI**) oder den nächsten Monat abwarten. Danach setzt der Cronjob von selbst fort, oder auf der Seite **Abläufe** „Fortsetzen“.
+- Grund `ai_budget`: Monats- oder Ablaufbudget erreicht. Budget erhöhen (**Einstellungen → KI und Kosten**) oder den nächsten Monat abwarten. Danach setzt der Cronjob von selbst fort, oder auf der Seite **Abläufe** „Fortsetzen“.
 - Textfocus-Tagesbudget erreicht: Es geht am nächsten Tag weiter.
 
 **Entwurf ist blockiert.**
@@ -397,7 +389,7 @@ Die tatsächlichen Kosten stehen im Dashboard, je Ablauf auf der Seite „Abläu
 - Bei sehr kleinen Orten gibt es oft wenig; dann blockiert `LOCAL_FACTS` nicht.
 
 **Search Console liefert keine Daten.**
-- **Einstellungen → Search Console → „Property wählen“**: Die Meldung sagt, ob die Anmeldung klappt und welche Properties freigegeben sind.
+- **Einstellungen → Datenquellen → „Property wählen“**: Die Meldung sagt, ob die Anmeldung klappt und welche Properties freigegeben sind.
 - Fehlt die Property, ist das Dienstkonto in der Search Console nicht als Nutzer eingetragen.
 - Warnung zu Dateirechten: in der Einrichtung „Nur für den Eigentümer lesbar machen“.
 - Es kommen nur Daten zu Suchanfragen mit genug Impressionen; seltene gibt Google nicht heraus.

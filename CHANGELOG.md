@@ -2,7 +2,7 @@
 
 ## 0.11.0 – 24.10.2026
 
-Betrieb ohne Shell: Der Cronjob in Plesk bleibt, alle anderen Befehle sind jetzt Knöpfe im Backend.
+Betrieb ohne Shell und aufgeräumtes Backend: Der Cronjob in Plesk bleibt, alle anderen Befehle sind jetzt Knöpfe im Backend; die Einstellungen stehen in Reitern.
 
 - **Einrichtung:** „WP-CLI laden“ legt WP-CLI für den Cronjob selbst in den Ordner `private` (mit Prüfsumme), statt curl und chown als root. Dazu „Property wählen“ (Search Console), „Nur für den Eigentümer lesbar machen“ (Schlüsseldatei), „Sprache der Website übernehmen“ (Textfocus) und „Datenbank aktualisieren“.
 - **Dashboard:** Hinweise mit Knöpfen oder Links statt Befehlen; Karte „Cronjob“ zeigt Skriptpfad und Argumente für Plesk.
@@ -12,6 +12,8 @@ Betrieb ohne Shell: Der Cronjob in Plesk bleibt, alle anderen Befehle sind jetzt
 - **Bericht:** „Offene Bilder jetzt beschreiben“.
 - **Themen:** Ähnelt ein Thema einem schon geschriebenen, fragt die Seite „Trotzdem schreiben?“.
 - **Keywords:** Die Entitäten-Tabelle einer Textfocus-Analyse wird beim Hochladen als Entitäten übernommen.
+- **Einstellungen aufgeräumt:** sechs Reiter (KI und Kosten, Beiträge, Bilder, Recherche, Datenquellen, System), je Reiter zuerst das Nötige, Seltenes eingeklappt unter „Weitere Einstellungen“; Speichern über alle Reiter mit der Leiste unten, Punkt am geänderten Reiter, Nachfrage beim Verlassen mit offenen Änderungen.
+- **Menü nach Häufigkeit geordnet:** Dashboard, Handbuch, Themen, Bericht, Keywords, Entitäten, Unternehmen, Style Mimic, Abläufe, Einrichtung, Einstellungen, Technik.
 - Meldungen nennen die Seite statt eines Befehls. Handbuch und Abnahme-Checkliste ohne Befehle; die Befehle stehen im Anhang für Administratoren.
 
 ## 0.10.7 – 24.10.2026

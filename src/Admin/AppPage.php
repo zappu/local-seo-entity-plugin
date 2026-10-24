@@ -52,7 +52,7 @@ final class AppPage {
 	public function register(): void {
 		// Vor den übrigen Seiten, damit das Hauptmenü steht, wenn sie sich als Unterseiten eintragen.
 		add_action( 'admin_menu', array( $this, 'add_menu' ), 9 );
-		// Reihenfolge im Menü: Dashboard, Unternehmen, Entitäten, Keywords, Themen, Einstellungen (30), Technik (40).
+		// Reihenfolge im Menü: siehe MENU, danach Einstellungen (30) und Technik (40).
 		add_action( 'admin_menu', array( $this, 'add_settings_menu' ), 30 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( LSEC_FILE ), array( $this, 'action_links' ) );
@@ -87,6 +87,23 @@ final class AppPage {
 	}
 
 	/**
+	 * Unterseiten in der Reihenfolge des Menüs (0.11.0, nach Häufigkeit): Überblick, tägliche Arbeit,
+	 * Grundlagen, Einrichtung und Technik. Einstellungen und Technik hängen sich danach an (Priorität 30 und 40).
+	 */
+	private const MENU = array(
+		self::SLUG          => 'Dashboard',
+		self::MANUAL_SLUG   => 'Handbuch',
+		self::TOPICS_SLUG   => 'Themen',
+		self::REPORT_SLUG   => 'Bericht',
+		self::KEYWORDS_SLUG => 'Keywords',
+		self::ENTITIES_SLUG => 'Entitäten',
+		self::PROFILE_SLUG  => 'Unternehmen',
+		self::STYLE_SLUG    => 'Style Mimic',
+		self::RUNS_SLUG     => 'Abläufe',
+		self::SETUP_SLUG    => 'Einrichtung',
+	);
+
+	/**
 	 * Menüeinträge.
 	 */
 	public function add_menu(): void {
@@ -99,86 +116,16 @@ final class AppPage {
 			'dashicons-location-alt',
 			58
 		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Dashboard', 'local-seo-entity-plugin' ),
-			__( 'Dashboard', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Handbuch', 'local-seo-entity-plugin' ),
-			__( 'Handbuch', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::MANUAL_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Einrichtung', 'local-seo-entity-plugin' ),
-			__( 'Einrichtung', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::SETUP_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Unternehmen', 'local-seo-entity-plugin' ),
-			__( 'Unternehmen', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::PROFILE_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Entitäten', 'local-seo-entity-plugin' ),
-			__( 'Entitäten', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::ENTITIES_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Keywords', 'local-seo-entity-plugin' ),
-			__( 'Keywords', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::KEYWORDS_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Themen', 'local-seo-entity-plugin' ),
-			__( 'Themen', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::TOPICS_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Style Mimic', 'local-seo-entity-plugin' ),
-			__( 'Style Mimic', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::STYLE_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Abläufe', 'local-seo-entity-plugin' ),
-			__( 'Abläufe', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::RUNS_SLUG,
-			array( $this, 'render' )
-		);
-		add_submenu_page(
-			self::SLUG,
-			__( 'Local SEO – Bericht', 'local-seo-entity-plugin' ),
-			__( 'Bericht', 'local-seo-entity-plugin' ),
-			Capabilities::MANAGE,
-			self::REPORT_SLUG,
-			array( $this, 'render' )
-		);
+		foreach ( self::MENU as $slug => $label ) {
+			add_submenu_page(
+				self::SLUG,
+				'Local SEO – ' . $label,
+				$label,
+				Capabilities::MANAGE,
+				$slug,
+				array( $this, 'render' )
+			);
+		}
 	}
 
 	/**

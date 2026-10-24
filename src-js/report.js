@@ -216,7 +216,7 @@ function ImproveCard( { items, pages, brandTerms } ) {
 						<h3>Markensuchen und Navigationssuchen</h3>
 						<p className="lsec-muted">
 							Suchen nach dem eigenen Namen oder nach Öffnungszeiten, Telefon und Adresse. Mehr Text hilft hier nicht; entscheidend sind Google-Unternehmensprofil, strukturierte Daten und gut sichtbare Angaben.
-							{ brandTerms.length > 0 && ` Als Name erkannt: ${ brandTerms.join( ', ' ) } (Einstellungen → Search Console → Markenbegriffe).` }
+							{ brandTerms.length > 0 && ` Als Name erkannt: ${ brandTerms.join( ', ' ) } (Einstellungen → Datenquellen → Markenbegriffe).` }
 						</p>
 						<PageRows pages={ other } />
 					</>

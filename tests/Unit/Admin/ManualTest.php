@@ -46,6 +46,10 @@ final class ManualTest extends TestCase {
 		$this->assertStringContainsString( '<a href="https://example.org" target="_blank" rel="noopener noreferrer">Seite</a>', $html );
 	}
 
+	public function test_kursiv(): void {
+		$this->assertSame( '<p>Preise <em>(weitere)</em> und <strong>fett</strong>, Cron <code>*/5 * * * *</code></p>', Manual::to_html( 'Preise *(weitere)* und **fett**, Cron `*/5 * * * *`' ) );
+	}
+
 	public function test_absatz_ueber_mehrere_zeilen_und_falsche_tabelle(): void {
 		$this->assertSame( "<p>Erste Zeile zweite Zeile</p>\n<p>| keine Tabelle</p>", Manual::to_html( "Erste Zeile\nzweite Zeile\n\n| keine Tabelle\n" ) );
 	}

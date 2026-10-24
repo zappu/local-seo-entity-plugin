@@ -96,7 +96,7 @@ final class AiBudget {
 			throw new WaitException( self::WAIT_CODE, $message ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 		if ( 'run' === $status['exceeded'] ) {
-			$message = sprintf( 'KI-Budget je Ablauf erreicht: %s von %s USD. Fortsetzen auf der Seite „Abläufe“, gegebenenfalls nach Erhöhung von „Budget je Ablauf“ (Einstellungen → KI).', self::usd( (float) $status['run_spent'] ), self::usd( $this->per_run ) );
+			$message = sprintf( 'KI-Budget je Ablauf erreicht: %s von %s USD. Fortsetzen auf der Seite „Abläufe“, gegebenenfalls nach Erhöhung von „Budget je Ablauf“ (Einstellungen → KI und Kosten).', self::usd( (float) $status['run_spent'] ), self::usd( $this->per_run ) );
 			throw new WaitException( self::WAIT_CODE, $message ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 	}

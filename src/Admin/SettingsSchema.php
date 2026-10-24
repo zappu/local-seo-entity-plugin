@@ -18,7 +18,8 @@ use Lsec\Core\Settings;
 final class SettingsSchema {
 
 	/**
-	 * Gruppen mit Feldern. Typen: text, number, select, toggle, json, checkboxes, readonly.
+	 * Felder nach Bereich des Plugins (Katalog). Typen: text, number, select, toggle, json, checkboxes, readonly.
+	 * Wo sie auf der Seite stehen, legt TABS fest.
 	 *
 	 * @var array<string, array{label: string, fields: array<string, array<string, mixed>>}>
 	 */
@@ -318,32 +319,185 @@ final class SettingsSchema {
 	);
 
 	/**
-	 * Gruppen mit aktuellen Werten, Auswahl und Bereichen.
+	 * Aufteilung der Seite in Reiter nach Aufgaben (Nachtrag 24.10.2026, 0.11.0, Wunsch von Thomas: „so langsam
+	 * wird es unübersichtlich“). Je Reiter zuerst die Abschnitte mit dem, was man braucht, dann eingeklappt die
+	 * weiteren Einstellungen. Jedes Feld aus GROUPS steht genau einmal hier (Unit-Test).
 	 *
-	 * @return list<array<string, mixed>>
+	 * @var array<string, array{label: string, intro: string, sections: list<array{label: string, fields: list<string>}>, advanced: list<string>}>
+	 */
+	public const TABS = array(
+		'ki'        => array(
+			'label'    => 'KI und Kosten',
+			'intro'    => 'Welche Modelle das Plugin nutzt und wie viel es ausgeben darf. Die API-Schlüssel stehen nicht hier, sondern in wp-config.php.',
+			'sections' => array(
+				array(
+					'label'  => 'Modelle',
+					'fields' => array( 'ai_provider', 'ai_model', 'ai_writing_model', 'ai_review_model', 'ai_research_model' ),
+				),
+				array(
+					'label'  => 'Budget',
+					'fields' => array( 'ai_monthly_budget', 'ai_run_budget' ),
+				),
+			),
+			'advanced' => array( 'ai_web_max_results', 'ai_web_engine', 'ai_prices', 'openai_endpoint' ),
+		),
+		'beitraege' => array(
+			'label'    => 'Beiträge',
+			'intro'    => 'Wann und wie Entwürfe entstehen. Das Plugin veröffentlicht nie selbst; jeder Beitrag bleibt Entwurf, bis du ihn veröffentlichst.',
+			'sections' => array(
+				array(
+					'label'  => 'Automatik',
+					'fields' => array( 'production_auto', 'drafts_per_day', 'production_revise', 'place_research' ),
+				),
+				array(
+					'label'  => 'Ortsseiten',
+					'fields' => array( 'local_category', 'local_category_hide' ),
+				),
+				array(
+					'label'  => 'Entwürfe',
+					'fields' => array( 'draft_author' ),
+				),
+			),
+			'advanced' => array( 'draft_lengths', 'quality_min_score', 'quality_min_average' ),
+		),
+		'bilder'    => array(
+			'label'    => 'Bilder',
+			'intro'    => 'Beitragsbilder aus der Mediathek, sonst von der KI.',
+			'sections' => array(
+				array(
+					'label'  => '',
+					'fields' => array( 'image_mode', 'ai_image_model', 'image_aspect' ),
+				),
+			),
+			'advanced' => array( 'ai_vision_model', 'image_resolution' ),
+		),
+		'recherche' => array(
+			'label'    => 'Recherche',
+			'intro'    => 'Themenvorschläge, Keywords und die Erkennung von Leistungen, Orten, Marken und Personen.',
+			'sections' => array(
+				array(
+					'label'  => 'Themen',
+					'fields' => array( 'topic_count' ),
+				),
+				array(
+					'label'  => 'Keywords',
+					'fields' => array( 'keyword_analysis', 'keyword_auto_volumes' ),
+				),
+				array(
+					'label'  => 'Entitäten',
+					'fields' => array( 'entity_auto_extract', 'entity_extract_types' ),
+				),
+			),
+			'advanced' => array( 'topic_weights', 'entity_min_confidence' ),
+		),
+		'quellen'   => array(
+			'label'    => 'Datenquellen',
+			'intro'    => 'Google Search Console (Suchanfragen, Positionen) und Textfocus (Suchvolumen, verwandte Keywords).',
+			'sections' => array(
+				array(
+					'label'  => 'Search Console',
+					'fields' => array( 'gsc_property', 'gsc_country', 'brand_terms' ),
+				),
+				array(
+					'label'  => 'Textfocus',
+					'fields' => array( 'textfocus_lang', 'textfocus_daily_budget' ),
+				),
+			),
+			'advanced' => array( 'gsc_credentials_file', 'textfocus_min_interval', 'textfocus_batch_size' ),
+		),
+		'system'    => array(
+			'label'    => 'System',
+			'intro'    => 'Betrieb im Hintergrund und Deinstallation. Prüfungen und Reparaturen stehen auf der Seite „Technik“.',
+			'sections' => array(
+				array(
+					'label'  => '',
+					'fields' => array( 'max_parallel_runs', 'delete_data_on_uninstall' ),
+				),
+			),
+			'advanced' => array(),
+		),
+	);
+
+	/**
+	 * Reiter mit Abschnitten und Feldern samt aktuellen Werten, Auswahl und Bereichen.
+	 *
+	 * @return list<array{id: string, label: string, intro: string, sections: list<array{label: string, fields: list<array<string, mixed>>}>, advanced: list<array<string, mixed>>}>
 	 */
 	public static function describe(): array {
 		$values = Settings::all();
 		$out    = array();
-		foreach ( self::GROUPS as $id => $group ) {
-			$fields = array();
-			foreach ( $group['fields'] as $key => $field ) {
-				$fields[] = $field + array(
-					'key'     => $key,
-					'value'   => $values[ $key ] ?? null,
-					'default' => Settings::DEFAULTS[ $key ],
-					'choices' => 'checkboxes' === $field['type'] ? self::checkbox_choices( $key ) : ( Settings::CHOICES[ $key ] ?? null ),
-					'min'     => Settings::RANGES[ $key ][0] ?? 0,
-					'max'     => Settings::RANGES[ $key ][1] ?? null,
+		foreach ( self::TABS as $id => $tab ) {
+			$sections = array();
+			foreach ( $tab['sections'] as $section ) {
+				$sections[] = array(
+					'label'  => $section['label'],
+					'fields' => array_map( static fn( string $key ): array => self::field( $key, $values ), $section['fields'] ),
 				);
 			}
 			$out[] = array(
-				'id'     => $id,
-				'label'  => $group['label'],
-				'fields' => $fields,
+				'id'       => $id,
+				'label'    => $tab['label'],
+				'intro'    => $tab['intro'],
+				'sections' => $sections,
+				'advanced' => array_map( static fn( string $key ): array => self::field( $key, $values ), $tab['advanced'] ),
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Alle Schlüssel, die die Seite zeigt (für Tests).
+	 *
+	 * @return list<string>
+	 */
+	public static function keys(): array {
+		$keys = array();
+		foreach ( self::GROUPS as $group ) {
+			$keys = array_merge( $keys, array_keys( $group['fields'] ) );
+		}
+		return $keys;
+	}
+
+	/**
+	 * Schlüssel in den Reitern (für Tests).
+	 *
+	 * @return list<string>
+	 */
+	public static function tab_keys(): array {
+		$keys = array();
+		foreach ( self::TABS as $tab ) {
+			foreach ( $tab['sections'] as $section ) {
+				$keys = array_merge( $keys, $section['fields'] );
+			}
+			$keys = array_merge( $keys, $tab['advanced'] );
+		}
+		return $keys;
+	}
+
+	/**
+	 * Ein Feld mit Wert.
+	 *
+	 * @param string               $key    Schlüssel.
+	 * @param array<string, mixed> $values Alle Werte.
+	 * @return array<string, mixed>
+	 */
+	private static function field( string $key, array $values ): array {
+		$field = array();
+		foreach ( self::GROUPS as $group ) {
+			if ( isset( $group['fields'][ $key ] ) ) {
+				$field = $group['fields'][ $key ];
+				break;
+			}
+		}
+		$type = (string) ( $field['type'] ?? 'text' );
+		return $field + array(
+			'key'     => $key,
+			'value'   => $values[ $key ] ?? null,
+			'default' => Settings::DEFAULTS[ $key ] ?? null,
+			'choices' => 'checkboxes' === $type ? self::checkbox_choices( $key ) : ( Settings::CHOICES[ $key ] ?? null ),
+			'min'     => Settings::RANGES[ $key ][0] ?? 0,
+			'max'     => Settings::RANGES[ $key ][1] ?? null,
+		);
 	}
 
 	/**

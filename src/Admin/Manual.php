@@ -11,7 +11,7 @@ namespace Lsec\Admin;
  * Zeigt docs/handbuch.md als Seite „Handbuch“ im Backend. Das Handbuch bleibt eine Datei
  * (Quelle für Repository und Plugin); dieser Umwandler kennt nur das Markdown, das es nutzt:
  * Überschriften, Absätze, Listen (auch verschachtelt), Tabellen, Codeblöcke, Trennlinien,
- * `Code`, **fett** und Links.
+ * `Code`, **fett**, *kursiv* und Links.
  *
  * Nachtrag 24.10.2026 (0.10.7).
  */
@@ -245,6 +245,7 @@ final class Manual {
 		);
 		$text  = self::esc( $text );
 		$text  = (string) preg_replace( '/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $text );
+		$text  = (string) preg_replace( '/(?<![*\w])\*([^*\s][^*]*?)\*(?![*\w])/u', '<em>$1</em>', $text );
 		$text  = (string) preg_replace_callback(
 			'/\[([^\]]+)\]\(([^)\s]+)\)/u',
 			static function ( array $m ): string {

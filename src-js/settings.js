@@ -238,8 +238,31 @@ function Field( { field, value, error, onChange, onReload } ) {
 	);
 }
 
+/**
+ * Alle Felder eines Reiters (Abschnitte und weitere Einstellungen).
+ *
+ * @param {Object} tab Reiter.
+ * @return {Array} Felder.
+ */
+function tabFields( tab ) {
+	return tab.sections.reduce( ( list, section ) => list.concat( section.fields ), [] ).concat( tab.advanced );
+}
+
+/**
+ * Reiter aus der Adresse (#ki, #beitraege …), sonst der erste.
+ *
+ * @param {Array} tabs Reiter.
+ * @return {string} Kennung.
+ */
+function tabFromHash( tabs ) {
+	const hash = ( window.location.hash || '' ).replace( '#', '' );
+	return tabs.some( ( t ) => t.id === hash ) ? hash : tabs[ 0 ].id;
+}
+
 export default function Settings() {
-	const [ groups, setGroups ] = useState( null );
+	const [ tabs, setTabs ] = useState( null );
+	const [ active, setActive ] = useState( '' );
+	const [ open, setOpen ] = useState( {} );
 	const [ values, setValues ] = useState( {} );
 	const [ original, setOriginal ] = useState( {} );
 	const [ errors, setErrors ] = useState( {} );
@@ -248,10 +271,11 @@ export default function Settings() {
 
 	const apply = ( described ) => {
 		const v = {};
-		described.forEach( ( g ) => g.fields.forEach( ( f ) => ( v[ f.key ] = initial( f ) ) ) );
-		setGroups( described );
+		described.forEach( ( t ) => tabFields( t ).forEach( ( f ) => ( v[ f.key ] = initial( f ) ) ) );
+		setTabs( described );
 		setValues( v );
 		setOriginal( v );
+		setActive( ( current ) => current || tabFromHash( described ) );
 	};
 
 	const reload = () =>
@@ -262,13 +286,33 @@ export default function Settings() {
 		reload();
 	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
 
-	if ( ! groups ) {
+	const fields = {};
+	( tabs || [] ).forEach( ( t ) => tabFields( t ).forEach( ( f ) => ( fields[ f.key ] = f ) ) );
+	const changed = Object.keys( values ).filter( ( k ) => fields[ k ] && ! same( values[ k ], original[ k ] ) && fields[ k ].type !== 'readonly' );
+
+	// Nicht gespeicherte Änderungen: beim Verlassen der Seite nachfragen.
+	useEffect( () => {
+		if ( ! changed.length ) {
+			return undefined;
+		}
+		const warn = ( event ) => {
+			event.preventDefault();
+			event.returnValue = '';
+		};
+		window.addEventListener( 'beforeunload', warn );
+		return () => window.removeEventListener( 'beforeunload', warn );
+	}, [ changed.length ] );
+
+	if ( ! tabs ) {
 		return notice ? <Notice status="error" isDismissible={ false }>{ notice.text }</Notice> : <Spinner />;
 	}
 
-	const fields = {};
-	groups.forEach( ( g ) => g.fields.forEach( ( f ) => ( fields[ f.key ] = f ) ) );
-	const changed = Object.keys( values ).filter( ( k ) => ! same( values[ k ], original[ k ] ) && fields[ k ].type !== 'readonly' );
+	const select = ( id ) => {
+		setActive( id );
+		if ( window.history && window.history.replaceState ) {
+			window.history.replaceState( null, '', `#${ id }` );
+		}
+	};
 
 	const onSave = () => {
 		const local = {};
@@ -280,7 +324,7 @@ export default function Settings() {
 		} );
 		setErrors( local );
 		if ( Object.keys( local ).length ) {
-			setNotice( { status: 'error', text: 'Bitte die markierten Felder prüfen.' } );
+			setNotice( { status: 'error', text: 'Bitte die markierten Felder prüfen (Punkt am Reiter).' } );
 			return;
 		}
 		const payload = {};
@@ -307,40 +351,86 @@ export default function Settings() {
 			.finally( () => setSaving( false ) );
 	};
 
+	const renderField = ( field ) => (
+		<Field
+			key={ field.key }
+			field={ field }
+			value={ values[ field.key ] }
+			error={ errors[ field.key ] }
+			onReload={ reload }
+			onChange={ ( v ) => setValues( ( prev ) => ( { ...prev, [ field.key ]: v } ) ) }
+		/>
+	);
+
+	const tab = tabs.find( ( t ) => t.id === active ) || tabs[ 0 ];
+	const marked = ( t ) => tabFields( t ).some( ( f ) => changed.includes( f.key ) || errors[ f.key ] );
+	const advancedOpen = !! open[ tab.id ] || tab.advanced.some( ( f ) => errors[ f.key ] );
+
 	return (
 		<div className="lsec-settings">
 			{ notice && <Notice status={ notice.status } onRemove={ () => setNotice( null ) }>{ notice.text }</Notice> }
-			<p className="lsec-muted">
-				API-Schlüssel stehen nicht hier, sondern als Konstanten in wp-config.php. Änderungen werden im Prüfprotokoll vermerkt.
-			</p>
-			{ groups.map( ( group ) => (
-				<Card key={ group.id } className="lsec-settings__group">
-					<CardHeader>
-						<h2>{ group.label }</h2>
-					</CardHeader>
-					<CardBody>
-						{ group.fields.map( ( field ) => (
-							<Field
-								key={ field.key }
-								field={ field }
-								value={ values[ field.key ] }
-								error={ errors[ field.key ] }
-								onReload={ reload }
-								onChange={ ( v ) => setValues( ( prev ) => ( { ...prev, [ field.key ]: v } ) ) }
-							/>
-						) ) }
-					</CardBody>
-				</Card>
-			) ) }
+			<div className="lsec-tabs" role="tablist" aria-label="Bereiche der Einstellungen">
+				{ tabs.map( ( t ) => (
+					<button
+						key={ t.id }
+						type="button"
+						role="tab"
+						aria-selected={ t.id === tab.id }
+						className={ `lsec-tabs__tab${ t.id === tab.id ? ' is-active' : '' }` }
+						onClick={ () => select( t.id ) }
+					>
+						{ t.label }
+						{ marked( t ) && <span className="lsec-tabs__dot" aria-label="geändert" /> }
+					</button>
+				) ) }
+			</div>
+			<div role="tabpanel" className="lsec-settings__panel">
+				<p className="lsec-muted lsec-settings__intro">{ tab.intro }</p>
+				{ tab.sections.map( ( section, index ) => (
+					<Card key={ index } className="lsec-settings__group">
+						{ section.label && (
+							<CardHeader>
+								<h2>{ section.label }</h2>
+							</CardHeader>
+						) }
+						<CardBody>{ section.fields.map( renderField ) }</CardBody>
+					</Card>
+				) ) }
+				{ tab.advanced.length > 0 && (
+					<Card className="lsec-settings__group lsec-settings__advanced">
+						<CardHeader>
+							<Button
+								variant="link"
+								aria-expanded={ advancedOpen }
+								onClick={ () => setOpen( ( o ) => ( { ...o, [ tab.id ]: ! advancedOpen } ) ) }
+							>
+								{ advancedOpen ? '▾' : '▸' } Weitere Einstellungen ({ tab.advanced.length })
+							</Button>
+							<span className="lsec-muted">selten nötig</span>
+						</CardHeader>
+						{ advancedOpen && <CardBody>{ tab.advanced.map( renderField ) }</CardBody> }
+					</Card>
+				) }
+			</div>
 			<div className="lsec-savebar">
 				<Button variant="primary" onClick={ onSave } isBusy={ saving } disabled={ saving || changed.length === 0 }>
 					{ changed.length > 1 ? `${ changed.length } Änderungen speichern` : 'Speichern' }
 				</Button>
 				{ changed.length > 0 && (
-					<Button variant="tertiary" disabled={ saving } onClick={ () => { setValues( original ); setErrors( {} ); } }>
+					<Button
+						variant="tertiary"
+						disabled={ saving }
+						onClick={ () => {
+							setValues( original );
+							setErrors( {} );
+						} }
+					>
 						Verwerfen
 					</Button>
 				) }
+				<span className="lsec-muted">
+					{ changed.length ? `${ changed.length === 1 ? 'Eine Änderung' : `${ changed.length } Änderungen` } noch nicht gespeichert` : 'Alles gespeichert. Änderungen werden im Prüfprotokoll vermerkt.' }
+				</span>
 			</div>
 		</div>
 	);
