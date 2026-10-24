@@ -82,20 +82,25 @@ final class ReportCommand {
 			WP_CLI::log( 'Leistungen und Orte ohne eigenen Inhalt: ' . ( array() === $e['gaps'] ? 'keine' : implode( ', ', array_column( (array) $e['gaps'], 'name' ) ) ) );
 		}
 		if ( '' === $section || 'improve' === $section ) {
-			WP_CLI::log( sprintf( 'Bestehende Seiten verbessern: %d Hinweise', count( $report['improve'] ) ) );
+			$kinds = array(
+				'content'      => 'Inhalt',
+				'brand'        => 'Marke',
+				'navigational' => 'Navigation',
+			);
+			WP_CLI::log( sprintf( 'Bestehende Seiten verbessern: %d Seiten, %d Hinweise%s', count( (array) $report['pages'] ), count( $report['improve'] ), array() === $report['brand_terms'] ? '' : ' · Markenbegriffe: ' . implode( ', ', $report['brand_terms'] ) ) );
 			Output::items(
 				'table',
 				array_map(
-					static fn( array $i ): array => array(
-						'seite'        => self::path( (string) $i['page_url'] ),
-						'keyword'      => $i['keyword'],
-						'position'     => $i['position'] ?? '',
-						'impressionen' => $i['impressions'] ?? '',
-						'hinweis'      => mb_substr( (string) $i['reason'], 0, 90 ),
+					static fn( array $p ): array => array(
+						'seite'        => self::path( (string) $p['page_url'] ) . ( $p['elementor'] ? ' (Elementor)' : '' ),
+						'art'          => $kinds[ $p['kind'] ] ?? $p['kind'],
+						'suchanfragen' => mb_substr( implode( ', ', array_map( static fn( array $q ): string => $q['keyword'] . ' (' . number_format( (float) $q['position'], 1, ',', '' ) . ')', (array) $p['queries'] ) ), 0, 80 ),
+						'impressionen' => $p['impressions'],
+						'hinweis'      => mb_substr( (string) $p['advice'], 0, 90 ),
 					),
-					$report['improve']
+					(array) $report['pages']
 				),
-				array( 'seite', 'keyword', 'position', 'impressionen', 'hinweis' )
+				array( 'seite', 'art', 'suchanfragen', 'impressionen', 'hinweis' )
 			);
 		}
 	}

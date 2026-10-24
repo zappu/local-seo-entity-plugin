@@ -36,13 +36,16 @@ final class ContentReport {
 	/**
 	 * Der ganze Bericht.
 	 *
-	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, images: array<string, mixed>, generated_at: string}
+	 * @return array{content: array<string, mixed>, entities: array<string, mixed>, improve: list<array<string, mixed>>, pages: list<array<string, mixed>>, brand_terms: string[], images: array<string, mixed>, generated_at: string}
 	 */
 	public static function build(): array {
+		$improve = self::improve();
 		return array(
 			'content'      => self::content(),
 			'entities'     => self::entities(),
-			'improve'      => self::improve(),
+			'improve'      => $improve,
+			'pages'        => self::pages( $improve ),
+			'brand_terms'  => self::brand_terms(),
 			'images'       => self::images(),
 			'generated_at' => gmdate( 'c' ),
 		);
@@ -160,15 +163,19 @@ final class ContentReport {
 	/**
 	 * Hinweise „bestehende Seite verbessern“, nach Impressionen bzw. Priorität.
 	 *
-	 * @return list<array{source: string, page_url: string, post_id: int, title: string, keyword: string, position: float|null, impressions: int|null, clicks: int|null, reason: string, topic_id: int}>
+	 * Nachtrag 24.10. (0.10.5): je Zeile auch kind (content, brand, navigational), type (Seite, Beitrag, Produkt) und
+	 * elementor; Marken- und Navigationssuchen bekommen ihren eigenen Hinweis.
+	 *
+	 * @return list<array{source: string, page_url: string, post_id: int, title: string, keyword: string, position: float|null, impressions: int|null, clicks: int|null, reason: string, topic_id: int, kind: string, type: string, elementor: bool}>
 	 */
 	public static function improve(): array {
 		global $wpdb;
-		$out  = array();
-		$seen = array();
-		$t    = Schema::table( $wpdb->prefix, 'topics' );
-		$k    = Schema::table( $wpdb->prefix, 'keywords' );
-		$km   = Schema::table( $wpdb->prefix, 'keyword_metrics' );
+		$out   = array();
+		$seen  = array();
+		$brand = self::brand_terms();
+		$t     = Schema::table( $wpdb->prefix, 'topics' );
+		$k     = Schema::table( $wpdb->prefix, 'keywords' );
+		$km    = Schema::table( $wpdb->prefix, 'keyword_metrics' );
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$latest = (string) $wpdb->get_var( "SELECT MAX(period_end) FROM {$km} WHERE source = 'gsc'" );
 		$rows   = '' === $latest ? array() : (array) $wpdb->get_results(
@@ -197,6 +204,7 @@ final class ContentReport {
 			}
 			$seen[ $key ] = true;
 			$position     = round( (float) $row['position'], 1 );
+			$kind         = QueryKind::classify( (string) $row['keyword'], $brand );
 			$out[]        = array(
 				'source'      => 'gsc',
 				'page_url'    => $local,
@@ -206,9 +214,9 @@ final class ContentReport {
 				'position'    => $position,
 				'impressions' => (int) $row['impressions'],
 				'clicks'      => (int) $row['clicks'],
-				'reason'      => sprintf( 'Position %s für „%s“ bei %d Impressionen: %s', number_format( $position, 1, ',', '' ), $row['keyword'], (int) $row['impressions'], $position <= 10.0 ? 'auf Seite 1, aber nicht oben – Titel, Beschreibung und Inhalt zur Anfrage schärfen' : 'knapp hinter Seite 1 – Inhalt zur Anfrage ausbauen' ),
+				'reason'      => sprintf( 'Position %s für „%s“ bei %d Impressionen: %s', number_format( $position, 1, ',', '' ), $row['keyword'], (int) $row['impressions'], self::advice( $kind, $position ) ),
 				'topic_id'    => 0,
-			);
+			) + self::page_info( $post_id ) + array( 'kind' => $kind );
 		}
 		foreach ( $topics as $topic ) {
 			$overlap = json_decode( (string) $topic['overlap'], true );
@@ -234,9 +242,131 @@ final class ContentReport {
 					'clicks'      => null,
 					'reason'      => sprintf( 'Thema „%s“ nicht neu geschrieben: %s – stattdessen diese Seite ausbauen', $topic['title'], (string) ( $item['reason'] ?? '' ) ),
 					'topic_id'    => (int) $topic['id'],
-				);
+				) + self::page_info( $post_id ) + array( 'kind' => QueryKind::CONTENT );
 			}
 		}
+		return $out;
+	}
+
+	/**
+	 * Hinweis je Art und Position.
+	 *
+	 * @param string $kind     Art der Anfrage.
+	 * @param float  $position Position.
+	 */
+	public static function advice( string $kind, float $position ): string {
+		if ( QueryKind::BRAND === $kind ) {
+			return 'Suche nach dem eigenen Namen – mehr Text hilft hier nicht; Google-Unternehmensprofil, strukturierte Daten für Unternehmen und Personen (Rank Math) und Seitentitel mit vollem Namen und Ort prüfen';
+		}
+		if ( QueryKind::NAVIGATIONAL === $kind ) {
+			return 'Navigationssuche – die gesuchte Angabe (Öffnungszeiten, Telefon, Adresse) gut sichtbar auf der Seite, in den strukturierten Daten und im Google-Unternehmensprofil';
+		}
+		return $position <= 10.0 ? 'auf Seite 1, aber nicht oben – Titel, Beschreibung und Inhalt zur Anfrage schärfen' : 'knapp hinter Seite 1 – Inhalt zur Anfrage ausbauen';
+	}
+
+	/**
+	 * Art des Inhalts und Elementor.
+	 *
+	 * @param int $post_id Inhalt.
+	 * @return array{type: string, elementor: bool}
+	 */
+	private static function page_info( int $post_id ): array {
+		$types = array(
+			'page'    => 'Seite',
+			'post'    => 'Beitrag',
+			'product' => 'Produkt',
+		);
+		$type  = $post_id > 0 ? (string) get_post_type( $post_id ) : '';
+		return array(
+			'type'      => $types[ $type ] ?? ( '' !== $type ? $type : 'Archiv' ),
+			'elementor' => $post_id > 0 && 'builder' === (string) get_post_meta( $post_id, '_elementor_edit_mode', true ),
+		);
+	}
+
+	/**
+	 * Markenbegriffe: Einstellung brand_terms oder aus Unternehmensname und Personen (QueryKind).
+	 *
+	 * @return string[]
+	 */
+	public static function brand_terms(): array {
+		$setting = trim( (string) \Lsec\Core\Settings::get( 'brand_terms' ) );
+		if ( '' !== $setting ) {
+			return QueryKind::parse_terms( $setting );
+		}
+		global $wpdb;
+		$profile = ( new \Lsec\Entities\BusinessProfile() )->get();
+		$e       = Schema::table( $wpdb->prefix, 'entities' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$people = array_map( 'strval', (array) $wpdb->get_col( "SELECT canonical_name FROM {$e} WHERE type = 'person' AND ( status IN ('confirmed', 'probable') OR origin = 'business_profile' )" ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$places  = array_map( 'strval', (array) $wpdb->get_col( "SELECT canonical_name FROM {$e} WHERE type IN ('place', 'service_area') AND status IN ('confirmed', 'probable')" ) );
+		$exclude = array_merge(
+			$places,
+			array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['services'] ?? array() ) ),
+			array_map( static fn( array $s ): string => (string) $s['name'], (array) ( $profile['locations'] ?? array() ) )
+		);
+		return QueryKind::brand_terms( array_merge( array( (string) ( $profile['organization']['name'] ?? '' ) ), $people ), $exclude );
+	}
+
+	/**
+	 * Hinweise je Seite: eine Gruppe je Seite und Art, mit allen Suchanfragen; Inhalt zuerst, nach Impressionen.
+	 *
+	 * @param list<array<string, mixed>> $items Hinweise aus improve().
+	 * @return list<array<string, mixed>>
+	 */
+	public static function pages( array $items ): array {
+		$groups = array();
+		foreach ( $items as $item ) {
+			$kind = (string) ( $item['kind'] ?? QueryKind::CONTENT );
+			$key  = $kind . '|' . (string) $item['page_url'];
+			if ( ! isset( $groups[ $key ] ) ) {
+				$groups[ $key ] = array(
+					'kind'        => $kind,
+					'page_url'    => (string) $item['page_url'],
+					'post_id'     => (int) $item['post_id'],
+					'title'       => (string) $item['title'],
+					'type'        => (string) ( $item['type'] ?? '' ),
+					'elementor'   => ! empty( $item['elementor'] ),
+					'impressions' => 0,
+					'position'    => null,
+					'queries'     => array(),
+					'topics'      => array(),
+				);
+			}
+			if ( 'topic' === (string) $item['source'] ) {
+				$groups[ $key ]['topics'][] = (string) $item['reason'];
+				continue;
+			}
+			$groups[ $key ]['queries'][]    = array(
+				'keyword'     => (string) $item['keyword'],
+				'position'    => $item['position'],
+				'impressions' => (int) $item['impressions'],
+			);
+			$groups[ $key ]['impressions'] += (int) $item['impressions'];
+			$best                           = $groups[ $key ]['position'];
+			$groups[ $key ]['position']     = null === $best ? (float) $item['position'] : min( (float) $best, (float) $item['position'] );
+		}
+		$out = array();
+		foreach ( $groups as $group ) {
+			$advice = array();
+			if ( array() !== $group['queries'] ) {
+				$advice[] = ucfirst( self::advice( $group['kind'], (float) $group['position'] ) ) . '.';
+			}
+			if ( array() !== $group['topics'] ) {
+				$advice[] = implode( ' ', array_map( static fn( string $t ): string => $t . '.', $group['topics'] ) );
+			}
+			if ( $group['elementor'] && QueryKind::CONTENT === $group['kind'] ) {
+				$advice[] = 'Mit Elementor gebaut: Änderungen im Elementor-Editor.';
+			}
+			$group['advice'] = implode( ' ', $advice );
+			$out[]           = $group;
+		}
+		$order = array(
+			QueryKind::CONTENT      => 0,
+			QueryKind::NAVIGATIONAL => 1,
+			QueryKind::BRAND        => 2,
+		);
+		usort( $out, static fn( array $a, array $b ): int => array( $order[ $a['kind'] ] ?? 3, - $a['impressions'] ) <=> array( $order[ $b['kind'] ] ?? 3, - $b['impressions'] ) );
 		return $out;
 	}
 
@@ -246,9 +376,14 @@ final class ContentReport {
 	 * @param list<array<string, mixed>> $items Hinweise.
 	 */
 	public static function csv( array $items ): string {
-		$lines = array( 'Seite;Titel;Keyword;Position;Impressionen;Klicks;Hinweis' );
+		$kinds = array(
+			QueryKind::CONTENT      => 'Inhalt',
+			QueryKind::BRAND        => 'Markensuche',
+			QueryKind::NAVIGATIONAL => 'Navigationssuche',
+		);
+		$lines = array( 'Seite;Titel;Art;Elementor;Keyword;Position;Impressionen;Klicks;Hinweis' );
 		foreach ( $items as $item ) {
-			$cells   = array( $item['page_url'], $item['title'], $item['keyword'], null === $item['position'] ? '' : number_format( (float) $item['position'], 1, ',', '' ), (string) ( $item['impressions'] ?? '' ), (string) ( $item['clicks'] ?? '' ), $item['reason'] );
+			$cells   = array( $item['page_url'], $item['title'], $kinds[ (string) ( $item['kind'] ?? '' ) ] ?? '', empty( $item['elementor'] ) ? '' : 'ja', $item['keyword'], null === $item['position'] ? '' : number_format( (float) $item['position'], 1, ',', '' ), (string) ( $item['impressions'] ?? '' ), (string) ( $item['clicks'] ?? '' ), $item['reason'] );
 			$lines[] = implode( ';', array_map( static fn( $c ): string => '"' . str_replace( '"', '""', (string) $c ) . '"', $cells ) );
 		}
 		return "\u{FEFF}" . implode( "\r\n", $lines ) . "\r\n";

@@ -65,6 +65,7 @@ final class Settings {
 		'gsc_credentials_file'     => '',
 		'gsc_property'             => '',
 		'gsc_country'              => 'deu',
+		'brand_terms'              => '',
 	);
 
 	/**

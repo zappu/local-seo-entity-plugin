@@ -23,6 +23,7 @@
 #            F5 Beitragsbilder: Beschreibung, Wahl aus der Mediathek, KI-Bild speichern; Sammelausschluss Keywords (0.10.0)
 #            F6 Kategorie für Ortsseiten (0.10.1)
 #            F7 Empfehlung bei doppelten Themen (0.10.2)
+#            F3 ergänzt: Hinweise je Seite, Marken- und Navigationssuchen (0.10.5)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -666,7 +667,12 @@ OUT=$(wpc lsec report 2>&1)
 contains "Inhalte im Bericht" "Entwürfe des Plugins:" "$OUT"
 contains "Entitäten im Bericht" "Leistungen und Orte ohne eigenen Inhalt" "$OUT"
 contains "Hinweis aus der Search Console" "lsectest bericht keyword" "$OUT"
-contains "CSV für Excel" "Seite;Titel;Keyword;Position" "$(wpc lsec report --format=csv)"
+contains "CSV für Excel" "Seite;Titel;Art;Elementor;Keyword;Position" "$(wpc lsec report --format=csv)"
+contains "Hinweis je Seite als Inhalt" "Inhalt" "$(wpc lsec report --section=improve)"
+wpc lsec settings set brand_terms lsectest >/dev/null
+contains "Markenbegriff aus der Einstellung" "Markenbegriffe: lsectest" "$(wpc lsec report --section=improve)"
+contains "Suche nach dem eigenen Namen erkannt" "Marke" "$(wpc lsec report --section=improve)"
+wpc lsec settings set brand_terms "" >/dev/null
 wpc db query "DELETE FROM ${PREFIX}lsec_keyword_metrics WHERE keyword_id = $K3" >/dev/null
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Bericht" "/lsec/v1/report" "$OUT"

@@ -12,10 +12,12 @@ import { dateTime, ENTITY_STATUS, ENTITY_TYPES, number, usd } from './format';
 
 const POST_STATUS = { draft: 'Entwurf', publish: 'veröffentlicht', pending: 'zur Prüfung', future: 'geplant', private: 'privat' };
 
+const KINDS = { content: 'Inhalt', brand: 'Markensuche', navigational: 'Navigationssuche' };
+
 function csvDownload( items ) {
 	const cell = ( v ) => `"${ String( null === v || undefined === v ? '' : v ).replace( /"/g, '""' ) }"`;
-	const rows = [ [ 'Seite', 'Titel', 'Keyword', 'Position', 'Impressionen', 'Klicks', 'Hinweis' ] ].concat(
-		items.map( ( i ) => [ i.page_url, i.title, i.keyword, null === i.position ? '' : String( i.position ).replace( '.', ',' ), i.impressions, i.clicks, i.reason ] )
+	const rows = [ [ 'Seite', 'Titel', 'Art', 'Elementor', 'Keyword', 'Position', 'Impressionen', 'Klicks', 'Hinweis' ] ].concat(
+		items.map( ( i ) => [ i.page_url, i.title, KINDS[ i.kind ] || '', i.elementor ? 'ja' : '', i.keyword, null === i.position ? '' : String( i.position ).replace( '.', ',' ), i.impressions, i.clicks, i.reason ] )
 	);
 	const blob = new window.Blob( [ '﻿' + rows.map( ( r ) => r.map( cell ).join( ';' ) ).join( '\r\n' ) ], { type: 'text/csv;charset=utf-8' } );
 	const link = document.createElement( 'a' );
@@ -146,7 +148,51 @@ function EntitiesCard( { entities } ) {
 	);
 }
 
-function ImproveCard( { items } ) {
+// Nachtrag 24.10. (0.10.5): eine Zeile je Seite mit ihren Suchanfragen; Markensuchen und Navigationssuchen getrennt.
+function PageRows( { pages } ) {
+	return (
+		<div className="lsec-table-wrap">
+			<table className="widefat striped lsec-table">
+				<thead>
+					<tr>
+						<th>Seite</th>
+						<th>Suchanfragen (Position, Impressionen)</th>
+						<th>Hinweis</th>
+					</tr>
+				</thead>
+				<tbody>
+					{ pages.map( ( p ) => (
+						<tr key={ `${ p.kind }-${ p.page_url }` }>
+							<td>
+								<a href={ p.page_url }>{ p.title || p.page_url }</a>
+								<br />
+								<span className="lsec-muted">{ p.type }</span>
+								{ p.elementor && <span className="lsec-tag">Elementor</span> }
+							</td>
+							<td>
+								{ p.queries.length === 0 && <span className="lsec-muted">–</span> }
+								{ p.queries.length > 0 && (
+									<ul className="lsec-queries">
+										{ p.queries.map( ( q ) => (
+											<li key={ q.keyword }>
+												{ q.keyword } <span className="lsec-muted">· { number( q.position ) } · { q.impressions }</span>
+											</li>
+										) ) }
+									</ul>
+								) }
+							</td>
+							<td>{ p.advice }</td>
+						</tr>
+					) ) }
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+function ImproveCard( { items, pages, brandTerms } ) {
+	const content = pages.filter( ( p ) => p.kind === 'content' );
+	const other = pages.filter( ( p ) => p.kind !== 'content' );
 	return (
 		<Card className="lsec-wide">
 			<CardHeader>
@@ -162,33 +208,17 @@ function ImproveCard( { items } ) {
 					Eigene Seiten auf Position 4 bis 20 in der Search Console (mindestens 10 Impressionen) und verworfene Themen, für die schon eine passende Seite rankt. Hier bringt der Ausbau der bestehenden Seite meist mehr als ein neuer Beitrag.
 				</p>
 				{ items.length === 0 && <p>Keine Hinweise. Ohne Search Console gibt es nur Hinweise aus verworfenen Themen.</p> }
-				{ items.length > 0 && (
-					<div className="lsec-table-wrap">
-						<table className="widefat striped lsec-table">
-							<thead>
-								<tr>
-									<th>Seite</th>
-									<th>Keyword</th>
-									<th className="lsec-num">Position</th>
-									<th className="lsec-num">Impressionen</th>
-									<th>Hinweis</th>
-								</tr>
-							</thead>
-							<tbody>
-								{ items.map( ( i, index ) => (
-									<tr key={ index }>
-										<td>
-											<a href={ i.page_url }>{ i.title || i.page_url }</a>
-										</td>
-										<td>{ i.keyword }</td>
-										<td className="lsec-num">{ null === i.position ? '–' : number( i.position ) }</td>
-										<td className="lsec-num">{ null === i.impressions ? '–' : i.impressions }</td>
-										<td>{ i.reason }</td>
-									</tr>
-								) ) }
-							</tbody>
-						</table>
-					</div>
+				{ content.length > 0 && <PageRows pages={ content } /> }
+				{ items.length > 0 && content.length === 0 && <p>Keine Seite, bei der mehr Inhalt hilft.</p> }
+				{ other.length > 0 && (
+					<>
+						<h3>Markensuchen und Navigationssuchen</h3>
+						<p className="lsec-muted">
+							Suchen nach dem eigenen Namen oder nach Öffnungszeiten, Telefon und Adresse. Mehr Text hilft hier nicht; entscheidend sind Google-Unternehmensprofil, strukturierte Daten und gut sichtbare Angaben.
+							{ brandTerms.length > 0 && ` Als Name erkannt: ${ brandTerms.join( ', ' ) } (Einstellungen → Search Console → Markenbegriffe).` }
+						</p>
+						<PageRows pages={ other } />
+					</>
 				) }
 			</CardBody>
 		</Card>
@@ -269,7 +299,7 @@ export default function Report() {
 	}
 	return (
 		<div className="lsec-grid">
-			<ImproveCard items={ data.improve } />
+			<ImproveCard items={ data.improve } pages={ data.pages || [] } brandTerms={ data.brand_terms || [] } />
 			<ContentCard content={ data.content } />
 			<EntitiesCard entities={ data.entities } />
 			{ data.images && <ImagesCard images={ data.images } /> }

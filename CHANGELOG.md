@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## 0.10.5 – 24.10.2026
+
+- **Bericht „Bestehende Seiten verbessern“:**
+  - eine Zeile je Seite mit allen Suchanfragen,
+  - Seiten mit Elementor gekennzeichnet,
+  - Suchen nach dem eigenen Namen und nach Öffnungszeiten oder Telefon im eigenen Abschnitt, mit passendem Hinweis statt „Inhalt schärfen“.
+- **Neue Einstellung „Markenbegriffe“** (Search Console). Leer bedeutet automatisch aus dem Unternehmensnamen und den Personen.
+
 ## 0.10.4 – 24.10.2026
 
 - **Keyword-Platzierung:** SEO-Titel möglichst mit dem Haupt-Keyword am Anfang, kurze Titelform (höchstens fünf Wörter, keine Jahreszahl), Haupt-Keyword in den ersten 100 Wörtern. Der Text hält sich daran; neue Hinweise im Prüfbericht, falls nicht.

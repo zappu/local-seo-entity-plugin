@@ -19,6 +19,15 @@ Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8, **Keyword-Platzierung** (0.1
 
 ## Ideen
 
+### 0. Knopf „Seite verbessern“ im Bericht (Wunsch von Thomas, 24.10.2026)
+
+- Live-Seiten nie direkt überschreiben; der Knopf erzeugt einen Vorschlag zur Prüfung.
+- SEO-Titel und Meta-Beschreibung für die Suchanfragen der Seite, mit einem Klick in Rank Math übernehmbar.
+- Neue oder erweiterte Abschnitte zu den Suchanfragen, nach denselben Regeln wie neue Entwürfe, mit Prüfbericht.
+- Elementor-Seiten: Abschnitte zum Einfügen von Hand. Normale Beiträge und Seiten: überarbeitete Fassung als Entwurf zum Vergleichen und Übernehmen.
+- Fehlende interne Links von und zu der Seite.
+- Bei Markensuchen keine Textänderung, sondern eine Prüfliste: Unternehmensprofil, Schema für Organisation und Personen, Seitentitel.
+
 ### 1. Leistungs-Landkarte (aus 1, 7, 8) – Vorschlag als erster Baustein von Ausbau 2
 
 - Je Leistung aus dem Profil recherchiert die KI mit Websuche: Materialien und Bauteile, Probleme und Ursachen, Verfahren, verwandte Leistungen, typische Kundenfragen. Ablage als Entitäten vom Typ „Begriff“ mit Beziehungen (`lsec_relations`), Bestätigen und Ablehnen wie bei den Entitäten.

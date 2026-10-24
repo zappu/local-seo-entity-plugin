@@ -251,6 +251,11 @@ final class SettingsSchema {
 					'type'  => 'text',
 					'help'  => 'ISO-Code mit drei Buchstaben: deu, aut, che.',
 				),
+				'brand_terms'          => array(
+					'label' => 'Markenbegriffe',
+					'type'  => 'text',
+					'help'  => 'Suchanfragen mit diesen Wörtern gelten im Bericht als Suche nach dem eigenen Namen (durch Komma getrennt, z. B. rust, staats). Leer = automatisch aus dem Namen des Unternehmens und den Personen des Betriebs; der Bericht zeigt, welche Begriffe erkannt wurden.',
+				),
 				'gsc_credentials_file' => array(
 					'label' => 'Schlüsseldatei',
 					'type'  => 'text',

@@ -1264,6 +1264,17 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
   - `KEYWORD_INTRO`: Keyword nicht in den ersten 100 Wörtern.
 - H1 bleibt der Beitragstitel; die Regel „Haupt-Keyword im Titel“ gilt schon.
 
+**Nachtrag 24.10.2026 (0.10.5), Bericht „Bestehende Seiten verbessern“ nach dem Test auf der Zahnarzt-Website:** 13 von 19 Zeilen waren Suchen nach dem eigenen Namen („dr rust“, „kai rust“), eine nach Öffnungszeiten, die Startseite stand 14-mal in der Liste, und viele Seiten sind mit Elementor gebaut.
+- **Art der Suchanfrage (`Lsec\Report\QueryKind`):**
+  - **Markensuche:** Die Anfrage enthält einen Markenbegriff (ganzes Wort). Markenbegriffe sind die Wörter aus dem Unternehmensnamen und aus Personen des Betriebs (bestätigt, wahrscheinlich oder aus dem Profil). Nicht dazu gehören Titel, Rechtsformen und allgemeine Wörter (Praxis, Kanzlei, Service …), Wörter aus Leistungen und Orten sowie Wörter ab 12 Buchstaben (zusammengesetzte Gattungswörter wie „Flächenreinigung“).
+  - **Einstellung `brand_terms`:** durch Komma getrennte Begriffe. Sie ersetzt die automatische Liste; der Bericht zeigt die erkannten Begriffe.
+  - **Navigationssuche:** Wortanfänge Öffnungszeit, Sprechzeit, Telefon, Nummer, Adresse, Anfahrt, Kontakt, E-Mail, Impressum, Bewertung, Erfahrung, Login, Job, Karriere, Stellenangebot, Wegbeschreibung.
+  - **Hinweise:** Bei einer Markensuche hilft mehr Text nicht; zu prüfen sind Google-Unternehmensprofil, strukturierte Daten für Unternehmen und Personen sowie ein Seitentitel mit vollem Namen und Ort. Bei einer Navigationssuche soll die Angabe gut sichtbar auf der Seite, in den strukturierten Daten und im Unternehmensprofil stehen.
+- **Eine Zeile je Seite und Art** (`ContentReport::pages`) mit allen Suchanfragen (Position, Impressionen), Summe der Impressionen, bester Position, Art des Inhalts (Seite, Beitrag, Produkt) und Kennzeichen „Elementor“ (`_elementor_edit_mode = builder`). Bei Elementor-Seiten lautet der Zusatz „Änderungen im Elementor-Editor“.
+- **Reihenfolge:** Inhalt zuerst, nach Impressionen, darunter der Abschnitt „Markensuchen und Navigationssuchen“.
+- **CSV** mit den Spalten Art und Elementor. `wp lsec report --section=improve` zeigt die Seiten.
+- Der Knopf „Seite verbessern“ bleibt Ausbau 2: Vorschläge für Elementor-Seiten, eine überarbeitete Fassung als Entwurf für normale Beiträge, Titel und Beschreibung mit einem Klick in Rank Math.
+
 **Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
 - **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.
 - **Cronjob bei Plesk:** Auf der ersten Testwebsite stand nur die Aufgabe des WP Toolkits für `wp-cron.php`; der Cronjob des Plugins fehlte. Eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements. Zuverlässig ist: WP-CLI als `private/wp-cli.phar` neben dem Webroot (Befehle für root zum Kopieren, solange die Datei fehlt) und eine Aufgabe „PHP-Skript ausführen“ mit Skriptpfad (voller Pfad, ohne Leerzeichen davor) und Argumenten `--path=<WordPress> lsec cron`, Zeitplan `*/5 * * * *`. Assistent und Dashboard zeigen diese Anleitung; Einträge zum Kopieren können mehrere Blöcke haben.
