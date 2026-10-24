@@ -57,6 +57,7 @@ final class DraftGenerator {
 			. "- Was das Unternehmen selbst tut (Ablauf, Verfahren, Geräte, Zusagen), nur aus den Angaben des Unternehmens zu seinen Leistungen. Fehlen sie, beschreibe Verfahren allgemein als Fachwissen der Branche („Üblich ist …“, „In der Regel wird …“), nicht als feste Schritte oder Zusage des Unternehmens.\n"
 			. "- Erkläre die Fachbegriffe und Verfahren des Themas gründlich und konkret (was es ist, wie und warum es wirkt, Vor- und Nachteile, wann es sinnvoll ist). Allgemeines Fachwissen braucht keinen Beleg; nur Zahlen, Zusagen und Angaben über das Unternehmen oder den Ort brauchen einen.\n"
 			. "- Arbeitsschritte, die nach allgemeinem Fachwissen zwingend zu einer Leistung aus dem Profil gehören (z. B. das neue Einsanden der Fugen nach einer Pflasterreinigung), darfst du dieser Leistung zuordnen, als fachlich notwendigen Teil, nicht als Garantie.\n"
+			. "- Keine Sätze, die erklären, was etwas nicht ist (z. B. „kein festes Verfahren eines bestimmten Betriebs“, „ein allgemeiner Ablauf“); schreibe einfach, wie es üblicherweise abläuft.\n"
 			. "- Sprich im Text nie über deine Quellen oder diese Vorgaben: keine Sätze wie „Das ist allgemeines Fachwissen“, „laut Profil“, „nicht belegt“ oder „Angaben des Unternehmens“. Der Leser sieht nur den Beitrag.\n"
 			. "- Keine Versprechen zu Dauer, Ergebnis, Schonung oder Garantie.\n"
 			. "- Jeden internen Link höchstens einmal setzen.\n"

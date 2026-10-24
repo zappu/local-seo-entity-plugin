@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 1.1.1 – 24.10.2026
+
+Nach dem ersten Entwurf mit 1.1.0 (Fassadenreinigung Celle):
+
+- **Servicegebiet im Schema mit Umkreis:** `areaServed` nennt den Ort und zusätzlich einen Kreis um den Mittelpunkt (zum Beispiel 60 km), statt nur den Ort.
+- **Eigenes Unternehmen in `mentions`** verweist jetzt auf die Organisation von Rank Math, statt eine zweite Organisation gleichen Namens anzulegen.
+- **Namen ohne HTML-Zeichen** („&amp;“) im Schema.
+- **Keine Abgrenzungssätze** mehr wie „kein festes Verfahren eines bestimmten Betriebs“: Regel im Schreibauftrag, und die Prüfung erkennt solche Sätze und lässt sie nachbessern.
+
 ## 1.1.0 – 24.10.2026
 
 Ausbau 2, erster Teil: Entity SEO nach Casey Keith.

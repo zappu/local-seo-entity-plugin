@@ -71,6 +71,8 @@ final class EntitySchema {
 				$post_id = (int) get_queried_object_id();
 				if ( $post_id > 0 && '' !== (string) get_post_meta( $post_id, '_lsec_topic_id', true ) ) {
 					$found = self::for_post( $post_id );
+					// Das eigene Unternehmen nicht als zweite Organisation, sondern als Verweis auf den Herausgeber.
+					$found['mentions'] = self::link_publisher( $found['mentions'], is_array( $data['publisher'] ?? null ) ? $data['publisher'] : array() );
 					foreach ( $data as $key => $node ) {
 						if ( is_array( $node ) && self::is_type( $node, self::ARTICLES ) ) {
 							$data[ $key ] = self::article( $node, $found['about'], $found['mentions'] );
@@ -97,7 +99,8 @@ final class EntitySchema {
 	public static function node( array $entity ): array {
 		$node = array(
 			'@type' => self::TYPES[ $entity['type'] ] ?? 'Thing',
-			'name'  => $entity['name'],
+			// Namen aus Seitentiteln stehen teils mit HTML-Entitäten („&amp;“) in der Datenbank.
+			'name'  => html_entity_decode( $entity['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8' ),
 		);
 		$qid  = (string) ( $entity['wikidata'] ?? '' );
 		if ( 1 === preg_match( '/^Q\d+$/', $qid ) ) {
@@ -162,6 +165,37 @@ final class EntitySchema {
 			'about'    => $about,
 			'mentions' => array_slice( array_values( $mentions ), 0, self::MAX_MENTIONS ),
 		);
+	}
+
+	/**
+	 * Ersetzt in mentions das eigene Unternehmen durch einen Verweis auf den Herausgeber (@id), damit Google
+	 * nicht zwei Organisationen gleichen Namens sieht.
+	 *
+	 * @param list<array<string, mixed>> $mentions  Weitere Entitäten.
+	 * @param array<string, mixed>       $publisher Knoten publisher von Rank Math.
+	 * @return list<array<string, mixed>>
+	 */
+	public static function link_publisher( array $mentions, array $publisher ): array {
+		$id   = (string) ( $publisher['@id'] ?? '' );
+		$name = self::fold( html_entity_decode( (string) ( $publisher['name'] ?? '' ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		if ( '' === $id || '' === $name ) {
+			return $mentions;
+		}
+		foreach ( $mentions as $i => $node ) {
+			if ( 'Organization' === ( $node['@type'] ?? '' ) && self::fold( (string) ( $node['name'] ?? '' ) ) === $name ) {
+				$mentions[ $i ] = array( '@id' => $id );
+			}
+		}
+		return $mentions;
+	}
+
+	/**
+	 * Name zum Vergleich: klein, ohne Satzzeichen und doppelte Leerzeichen.
+	 *
+	 * @param string $name Name.
+	 */
+	private static function fold( string $name ): string {
+		return trim( (string) preg_replace( '/\s+/u', ' ', (string) preg_replace( '/[^\p{L}\p{N}]+/u', ' ', mb_strtolower( $name ) ) ) );
 	}
 
 	/**
@@ -303,12 +337,22 @@ final class EntitySchema {
 	 * @return list<array<string, mixed>>
 	 */
 	private static function area(): array {
-		$area = (array) Settings::get( 'service_area' );
+		return self::area_nodes( (array) Settings::get( 'service_area' ) );
+	}
+
+	/**
+	 * Servicegebiet als Knoten: der Ort und, bei einem Umkreis, ein Kreis um den Mittelpunkt (GeoCircle,
+	 * Radius in Metern), damit „Uetze und 60 km Umkreis“ nicht nur als Uetze erscheint.
+	 *
+	 * @param array<string, mixed> $area Einstellung service_area.
+	 * @return list<array<string, mixed>>
+	 */
+	public static function area_nodes( array $area ): array {
 		if ( '' === (string) ( $area['label'] ?? '' ) ) {
 			return array();
 		}
-		$qid = (string) ( ( (array) ( $area['wikidata'] ?? array() ) )[0] ?? '' );
-		return array(
+		$qid    = (string) ( ( (array) ( $area['wikidata'] ?? array() ) )[0] ?? '' );
+		$out    = array(
 			self::node(
 				array(
 					'type'     => 'place',
@@ -317,5 +361,19 @@ final class EntitySchema {
 				)
 			),
 		);
+		$center = (array) ( $area['center'] ?? array() );
+		$radius = (float) ( $area['radius_km'] ?? 0 );
+		if ( $radius > 0 && isset( $center[0], $center[1] ) && is_numeric( $center[0] ) && is_numeric( $center[1] ) ) {
+			$out[] = array(
+				'@type'       => 'GeoCircle',
+				'geoMidpoint' => array(
+					'@type'     => 'GeoCoordinates',
+					'latitude'  => round( (float) $center[0], 4 ),
+					'longitude' => round( (float) $center[1], 4 ),
+				),
+				'geoRadius'   => (int) round( $radius * 1000 ),
+			);
+		}
+		return $out;
 	}
 }

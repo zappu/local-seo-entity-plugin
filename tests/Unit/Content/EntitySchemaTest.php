@@ -116,4 +116,53 @@ final class EntitySchemaTest extends TestCase {
 			)['areaServed']
 		);
 	}
+
+	public function test_servicegebiet_mit_umkreis(): void {
+		$nodes = EntitySchema::area_nodes(
+			array(
+				'label'     => 'Uetze',
+				'wikidata'  => array( 'Q519647' ),
+				'center'    => array( 52.4653, 10.2034 ),
+				'radius_km' => 60,
+			)
+		);
+		$this->assertSame( 'Uetze', $nodes[0]['name'] );
+		$this->assertSame( 'GeoCircle', $nodes[1]['@type'] );
+		$this->assertSame( 60000, $nodes[1]['geoRadius'] );
+		$this->assertCount(
+			1,
+			EntitySchema::area_nodes(
+				array(
+					'label'     => 'Region Hannover',
+					'radius_km' => 0,
+				)
+			)
+		);
+		$this->assertSame( array(), EntitySchema::area_nodes( array() ) );
+	}
+
+	public function test_eigenes_unternehmen_als_verweis_und_entitaeten_dekodiert(): void {
+		$mentions = array(
+			EntitySchema::node(
+				array(
+					'type' => 'organization',
+					'name' => 'Staats Flächenreinigung &amp; Wassertechnik',
+				)
+			),
+			array(
+				'@type' => 'Place',
+				'name'  => 'Celle',
+			),
+		);
+		$this->assertSame( 'Staats Flächenreinigung & Wassertechnik', $mentions[0]['name'] );
+		$linked = EntitySchema::link_publisher(
+			$mentions,
+			array(
+				'@id'  => 'https://example.de/#organization',
+				'name' => 'Staats Flächenreinigung &amp; Wassertechnik',
+			)
+		);
+		$this->assertSame( array( '@id' => 'https://example.de/#organization' ), $linked[0] );
+		$this->assertSame( 'Celle', $linked[1]['name'] );
+	}
 }

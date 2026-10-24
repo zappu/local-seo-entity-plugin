@@ -497,7 +497,7 @@ final class QualityChecker {
 	 */
 	public static function prompt_leaks( string $text ): array {
 		// Nur Wendungen, die in keiner Branche zum Thema gehören („Briefing“, „nicht belegt“ oder „Schreibstil“ können es).
-		$pattern = '/allgemeine[sn]? Fachwissen|Fachwissen der Branche|Angabe(n)? des (Unternehmens|Betriebs)|belegte Angabe|laut (Unternehmens)?profil|geprüfte[nr]? (Tatsache|Aussage)|Style Mimic/iu';
+		$pattern = '/allgemeine[sn]? Fachwissen|Fachwissen der Branche|Angabe(n)? des (Unternehmens|Betriebs)|belegte Angabe|laut (Unternehmens)?profil|geprüfte[nr]? (Tatsache|Aussage)|Style Mimic|eines bestimmten (Betriebs|Unternehmens|Anbieters)|kein(en)? feste[snr]? (Verfahren|Ablauf) (des|eines|unseres)/iu';
 		$out     = array();
 		$parts   = preg_split( '/(?<=[.!?])\s+|\n/u', $text );
 		foreach ( false === $parts ? array() : $parts as $sentence ) {
