@@ -223,6 +223,7 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AppPage() )->register();
 			( new StatusPage( $this ) )->register();
+			( new \Lsec\Admin\PostActions( $this ) )->register();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

@@ -165,6 +165,7 @@ final class RestController {
 		( new SetupController( $this->plugin ) )->register( $permission );
 		( new RunsController( $this->plugin ) )->register( $permission );
 		( new ReportController() )->register( $permission );
+		( new ToolsController( $this->plugin ) )->register( $permission );
 	}
 
 	/**
@@ -256,9 +257,15 @@ final class RestController {
 				$errors[ $key ] = $e->getMessage();
 			}
 		}
+		$notes = array();
+		// Nachtrag 24.10.2026 (0.11.0): Die Kategorie für Ortsseiten gilt sofort auch für vorhandene Ortsseiten.
+		if ( in_array( 'local_category', $saved, true ) && '' !== trim( (string) Settings::get( 'local_category' ) ) ) {
+			$notes[] = \Lsec\Admin\Tools::local_category()['message'];
+		}
 		return new \WP_REST_Response(
 			array(
 				'saved'    => $saved,
+				'notes'    => $notes,
 				'errors'   => (object) $errors,
 				'settings' => SettingsSchema::describe(),
 			),

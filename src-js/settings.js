@@ -18,7 +18,56 @@ import {
 	TextareaControl,
 	ToggleControl,
 } from '@wordpress/components';
-import { getSettings, saveSettings } from './api';
+import { getModels, getSettings, saveSettings } from './api';
+import ToolAction from './tools';
+
+// Modelllisten je Art (text, image), einmal je Seitenaufruf geladen.
+const modelLists = {};
+
+/**
+ * Lädt die Modellliste für die Vorschläge beim Tippen (0.11.0).
+ *
+ * @param {string}   kind     text oder image.
+ * @param {Function} setList  Setzt die Liste.
+ * @param {Function} setNote  Setzt einen Hinweis, wenn es keine Liste gibt.
+ */
+function loadModels( kind, setList, setNote ) {
+	if ( ! modelLists[ kind ] ) {
+		modelLists[ kind ] = getModels( kind );
+	}
+	modelLists[ kind ]
+		.then( ( out ) => {
+			setList( out.models || [] );
+			setNote( out.ok ? '' : out.message );
+		} )
+		.catch( () => setNote( 'Die Modellliste ließ sich nicht laden.' ) );
+}
+
+function ModelInput( { field, label, help, value, onChange } ) {
+	const [ list, setList ] = useState( [] );
+	const [ note, setNote ] = useState( '' );
+	const id = `lsec-models-${ field.key }`;
+	return (
+		<>
+			<TextControl
+				label={ label }
+				help={ note ? <>{ help } { note }</> : help }
+				__nextHasNoMarginBottom
+				__next40pxDefaultSize
+				value={ value || '' }
+				list={ id }
+				autoComplete="off"
+				onFocus={ () => ! list.length && loadModels( field.suggest, setList, setNote ) }
+				onChange={ onChange }
+			/>
+			<datalist id={ id }>
+				{ list.map( ( model ) => (
+					<option key={ model } value={ model } />
+				) ) }
+			</datalist>
+		</>
+	);
+}
 
 /**
  * Wert für das Eingabefeld.
@@ -97,7 +146,7 @@ function outgoing( field, value ) {
 	return value;
 }
 
-function Field( { field, value, error, onChange } ) {
+function Field( { field, value, error, onChange, onReload } ) {
 	// Ohne JSX-Spread: Der würde bei klassischer Übersetzung @babel/runtime verlangen.
 	const label = field.label;
 	const help = field.help || field.unit ? (
@@ -174,13 +223,16 @@ function Field( { field, value, error, onChange } ) {
 			);
 			break;
 		default:
-			control = (
+			control = field.suggest ? (
+				<ModelInput field={ field } label={ label } help={ help } value={ value } onChange={ onChange } />
+			) : (
 				<TextControl label={ label } help={ help } __nextHasNoMarginBottom __next40pxDefaultSize value={ value || '' } onChange={ onChange } />
 			);
 	}
 	return (
 		<div className={ error ? 'lsec-field lsec-field--error' : 'lsec-field' }>
 			{ control }
+			{ field.action && <ToolAction action={ field.action } onDone={ onReload } /> }
 			{ error && <p className="lsec-field__error" role="alert">{ error }</p> }
 		</div>
 	);
@@ -202,11 +254,13 @@ export default function Settings() {
 		setOriginal( v );
 	};
 
-	useEffect( () => {
+	const reload = () =>
 		getSettings()
 			.then( apply )
 			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) );
-	}, [] );
+	useEffect( () => {
+		reload();
+	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	if ( ! groups ) {
 		return notice ? <Notice status="error" isDismissible={ false }>{ notice.text }</Notice> : <Spinner />;
@@ -242,10 +296,11 @@ export default function Settings() {
 				setValues( ( v ) => ( { ...v, ...kept } ) );
 				setErrors( serverErrors );
 				const n = ( result.saved || [] ).length;
+				const notes = ( result.notes || [] ).length ? ` ${ result.notes.join( ' ' ) }` : '';
 				setNotice(
 					Object.keys( serverErrors ).length
-						? { status: 'warning', text: `${ n } gespeichert, ${ Object.keys( serverErrors ).length } abgelehnt.` }
-						: { status: 'success', text: n === 1 ? 'Einstellung gespeichert.' : `${ n } Einstellungen gespeichert.` }
+						? { status: 'warning', text: `${ n } gespeichert, ${ Object.keys( serverErrors ).length } abgelehnt.${ notes }` }
+						: { status: 'success', text: ( n === 1 ? 'Einstellung gespeichert.' : `${ n } Einstellungen gespeichert.` ) + notes }
 				);
 			} )
 			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
@@ -270,6 +325,7 @@ export default function Settings() {
 								field={ field }
 								value={ values[ field.key ] }
 								error={ errors[ field.key ] }
+								onReload={ reload }
 								onChange={ ( v ) => setValues( ( prev ) => ( { ...prev, [ field.key ]: v } ) ) }
 							/>
 						) ) }

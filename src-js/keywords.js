@@ -184,6 +184,12 @@ function ImportCard( { onDone, setNotice } ) {
 		setBusy( true );
 		previewImport( file )
 			.then( ( out ) => {
+				if ( out.entities ) {
+					// Entitäten-Tabelle einer Textfocus-Analyse: gleich als Entitäten übernommen (0.11.0).
+					setNotice( { status: 'success', text: `Das war die Entitäten-Tabelle einer Textfocus-Analyse: ${ number( out.entities.rows ) } Zeilen als Entitäten übernommen (${ number( out.entities.created ) } neue Vorschläge, ${ number( out.entities.reused ) } vorhandene). Zu bestätigen auf der Seite „Entitäten“.` } );
+					reset();
+					return;
+				}
 				setPreview( out );
 				setMapping( out.mapping || {} );
 				setSource( '' );

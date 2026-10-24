@@ -113,9 +113,9 @@ final class SetupWizard {
 			self::gsc_item( ! empty( $data['gsc']['credentials'] ), (string) $data['gsc']['property'] ),
 			self::textfocus_item( 'none' !== (string) $data['textfocus']['key_source'], '' !== (string) $data['textfocus']['lang'] ),
 			self::item( 'Rank Math', ! empty( $data['integrations']['rank_math'] ), ! empty( $data['integrations']['rank_math'] ) ? 'aktiv' : 'nicht aktiv; SEO-Angaben landen dann als Vorschlag am Entwurf', '', true ),
-			self::item( 'Datenbank', ! empty( $data['plugin']['schema_ok'] ), ! empty( $data['plugin']['schema_ok'] ) ? 'auf dem Stand' : 'wp lsec migrate', '' ),
+			self::item( 'Datenbank', ! empty( $data['plugin']['schema_ok'] ), ! empty( $data['plugin']['schema_ok'] ) ? 'auf dem Stand' : 'nicht auf dem Stand des Plugins', '', false, ! empty( $data['plugin']['schema_ok'] ) ? null : DashboardData::action( 'migrate', 'Datenbank aktualisieren' ) ),
 		);
-		return self::step( 'technik', $key && $data['cron']['ok'] && ! empty( $data['plugin']['schema_ok'] ), $items, null, 'Von Hand bleiben der Schlüssel in wp-config.php, der Cronjob in Plesk und die Freigabe des Dienstkontos in der Search Console.' );
+		return self::step( 'technik', $key && $data['cron']['ok'] && ! empty( $data['plugin']['schema_ok'] ), $items, null, 'Von Hand bleiben die Schlüssel in wp-config.php (Plesk-Dateimanager), die geplante Aufgabe in Plesk und die Freigabe des Dienstkontos in der Search Console. Alles andere erledigen die Knöpfe.' );
 	}
 
 	/**
@@ -124,26 +124,29 @@ final class SetupWizard {
 	 * Zuverlässig ist WP-CLI im Ordner private und eine Aufgabe „PHP-Skript ausführen“ mit vollem Pfad.
 	 *
 	 * @param bool $ok Cronjob läuft.
-	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool, action: array{tool: string, label: string, kind: string}|null}
 	 */
 	private static function cron_item( bool $ok ): array {
 		if ( $ok ) {
 			return self::item( 'Cronjob alle 5 Minuten', true, 'läuft' );
 		}
 		$paths = self::cron_paths();
-		$paste = array();
-		$intro = '';
 		if ( ! file_exists( $paths['phar'] ) ) {
-			$intro   = 'Zuerst WP-CLI als root in den Ordner private legen (erster Block), dann ';
-			$paste[] = 'curl -sSL -o ' . $paths['phar'] . " https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar\nchown --reference=" . $paths['site'] . ' ' . $paths['phar'] . "\nchmod 644 " . $paths['phar'];
+			// Seit 0.11.0 lädt das Plugin WP-CLI selbst (vorher curl, chown und chmod als root).
+			return self::item(
+				'Cronjob alle 5 Minuten',
+				false,
+				'Der Cronjob braucht WP-CLI als Datei im Ordner private neben dem Webroot (' . $paths['phar'] . '). Erst laden, danach steht hier, was in Plesk einzutragen ist.',
+				array(),
+				false,
+				DashboardData::action( 'wp-cli', 'WP-CLI laden (etwa 7 MB)' )
+			);
 		}
-		$paste[] = $paths['phar'];
-		$paste[] = '--path=' . $paths['site'] . ' lsec cron';
 		return self::item(
 			'Cronjob alle 5 Minuten',
 			false,
-			$intro . 'in Plesk unter „Geplante Aufgaben“ des Abonnements eine Aufgabe „PHP-Skript ausführen“ anlegen: Skriptpfad und Argumente wie unten, ohne Leerzeichen davor; Zeitplan Cron-Stil */5 * * * *; Benachrichtigen „Nur Fehler“. Die Aufgabe des WP Toolkits für wp-cron.php allein reicht nicht.',
-			$paste
+			'In Plesk unter „Geplante Aufgaben“ des Abonnements eine Aufgabe „PHP-Skript ausführen“ anlegen: Skriptpfad (erstes Feld) und Argumente (zweites Feld) wie unten, ohne Leerzeichen davor; Zeitplan Cron-Stil */5 * * * *; Benachrichtigen „Nur Fehler“. Die Aufgabe des WP Toolkits für wp-cron.php allein reicht nicht.',
+			array( $paths['phar'], '--path=' . $paths['site'] . ' lsec cron' )
 		);
 	}
 
@@ -165,16 +168,17 @@ final class SetupWizard {
 	 *
 	 * @param bool   $readable Schlüsseldatei lesbar.
 	 * @param string $property Property.
-	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool, action: array{tool: string, label: string, kind: string}|null}
 	 */
 	private static function gsc_item( bool $readable, string $property ): array {
 		if ( ! $readable ) {
 			return self::item( 'Search Console', false, 'Schlüsseldatei des Dienstkontos fehlt (JSON-Datei im Ordner private neben dem Webroot); empfohlen, nicht zwingend', array(), true );
 		}
 		$file   = \Lsec\Cli\GscCommand::credentials_file();
-		$detail = '' === $property ? 'Schlüsseldatei gefunden (' . basename( $file ) . '). Property festlegen: wp lsec gsc sites' : 'verbunden: ' . $property;
+		$detail = '' === $property ? 'Schlüsseldatei gefunden (' . basename( $file ) . ').' : 'verbunden: ' . $property;
 		$paste  = array();
 		$open   = false;
+		$action = '' === $property ? DashboardData::action( 'gsc-property', 'Property wählen', 'choose' ) : null;
 		if ( '' === $property ) {
 			$email = \Lsec\Cli\GscCommand::client_email( $file );
 			if ( '' !== $email ) {
@@ -185,10 +189,10 @@ final class SetupWizard {
 		$mode = @fileperms( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		if ( false !== $mode && 0 !== ( $mode & 0044 ) ) {
 			$open    = true;
-			$detail .= ' Achtung: Die Schlüsseldatei ist für andere lesbar; nur der Eigentümer sollte sie lesen dürfen:';
-			$paste[] = 'chmod 600 ' . $file;
+			$detail .= ' Achtung: Die Schlüsseldatei ist für andere lesbar; nur der Eigentümer sollte sie lesen dürfen.';
+			$action  = DashboardData::action( 'gsc-protect', 'Nur für den Eigentümer lesbar machen' );
 		}
-		return self::item( 'Search Console', '' !== $property && ! $open, $detail, $paste, true );
+		return self::item( 'Search Console', '' !== $property && ! $open, $detail, $paste, true, $action );
 	}
 
 	/**
@@ -197,14 +201,14 @@ final class SetupWizard {
 	 *
 	 * @param bool $key  Schlüssel vorhanden.
 	 * @param bool $lang Sprachcode gespeichert.
-	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool, action: array{tool: string, label: string, kind: string}|null}
 	 */
 	private static function textfocus_item( bool $key, bool $lang ): array {
 		if ( ! $key ) {
 			return self::item( 'Textfocus (Suchvolumen)', false, 'empfohlen: Schlüssel in wp-config.php eintragen; ohne ihn fehlen Suchvolumen und verwandte Keywords', "define( 'LSEC_TEXTFOCUS_API_KEY', 'hier-den-Schlüssel-einsetzen' );", true );
 		}
 		if ( ! $lang ) {
-			return self::item( 'Textfocus (Suchvolumen)', false, 'Schlüssel hinterlegt; Sprachcode noch nicht gespeichert', 'wp lsec textfocus langs --search=german --save=de', true );
+			return self::item( 'Textfocus (Suchvolumen)', false, 'Schlüssel hinterlegt; Sprache noch nicht festgelegt', array(), true, DashboardData::action( 'textfocus-lang', 'Sprache der Website übernehmen' ) );
 		}
 		return self::item( 'Textfocus (Suchvolumen)', true, 'eingerichtet', array(), true );
 	}
@@ -776,20 +780,22 @@ final class SetupWizard {
 	/**
 	 * Punkt eines Schritts.
 	 *
-	 * @param string          $label    Bezeichnung.
-	 * @param bool            $ok       Erledigt.
-	 * @param string          $detail   Stand oder Hinweis.
-	 * @param string|string[] $paste    Texte zum Einfügen (Befehl, Zeile für wp-config.php), je Eintrag ein Block.
-	 * @param bool            $optional Empfohlen, aber für den Schritt nicht nötig.
-	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool}
+	 * @param string                                                $label    Bezeichnung.
+	 * @param bool                                                  $ok       Erledigt.
+	 * @param string                                                $detail   Stand oder Hinweis.
+	 * @param string|string[]                                       $paste    Texte zum Einfügen (Zeile für wp-config.php, Felder in Plesk), je Eintrag ein Block.
+	 * @param bool                                                  $optional Empfohlen, aber für den Schritt nicht nötig.
+	 * @param array{tool: string, label: string, kind: string}|null $action Knopf (Werkzeug).
+	 * @return array{label: string, ok: bool, detail: string, paste: list<string>, optional: bool, action: array{tool: string, label: string, kind: string}|null}
 	 */
-	private static function item( string $label, bool $ok, string $detail, string|array $paste = array(), bool $optional = false ): array {
+	private static function item( string $label, bool $ok, string $detail, string|array $paste = array(), bool $optional = false, ?array $action = null ): array {
 		return array(
 			'label'    => $label,
 			'ok'       => $ok,
 			'detail'   => $detail,
 			'paste'    => array_values( array_filter( array_map( 'strval', (array) $paste ), static fn( string $p ): bool => '' !== $p ) ),
 			'optional' => $optional,
+			'action'   => $action,
 		);
 	}
 

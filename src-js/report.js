@@ -9,6 +9,7 @@ import { createElement, Fragment, useEffect, useState } from '@wordpress/element
 import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/components';
 import { getReport } from './api';
 import { dateTime, ENTITY_STATUS, ENTITY_TYPES, number, usd } from './format';
+import ToolAction from './tools';
 
 const POST_STATUS = { draft: 'Entwurf', publish: 'veröffentlicht', pending: 'zur Prüfung', future: 'geplant', private: 'privat' };
 
@@ -271,9 +272,10 @@ function ImagesCard( { images } ) {
 					</div>
 				</div>
 				<p className="lsec-muted">
-					Neue Bilder beschreibt der Cronjob innerhalb von etwa 15 Minuten. Logos, Symbole, Grafiken mit Text, Bilder mit Wasserzeichen und Bilder unter 800 Pixel Breite kommen nicht als Beitragsbild infrage.
+					Neue Bilder beschreibt der Cronjob innerhalb von etwa 15 Minuten. Logos, Symbole, Grafiken mit Text, Bilder mit Wasserzeichen und Bilder unter 800 Pixel Breite kommen nicht als Beitragsbild infrage. Für einen vorhandenen Beitrag ohne Bild: in der Beitragsliste unter dem Titel „Beitragsbild suchen“.
 					{ images.free < 5 && images.mode !== 'off' && ' Es sind nur noch wenige freie Bilder da; neue Fotos in die Mediathek laden spart KI-Bilder.' }
 				</p>
+				{ images.pending > 0 && <ToolAction action={ { tool: 'images-describe', label: 'Offene Bilder jetzt beschreiben', kind: 'run' } } /> }
 			</CardBody>
 		</Card>
 	);

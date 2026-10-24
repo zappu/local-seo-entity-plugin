@@ -404,7 +404,7 @@ final class TextfocusService {
 					'credits_used' => 0.0,
 				)
 			);
-			throw new TextfocusException( 'budget_exceeded', sprintf( 'Textfocus-Tagesbudget von %d Credits erreicht. Weiter am nächsten Tag oder Budget erhöhen (wp lsec settings set textfocus_daily_budget …).', $this->daily_budget ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new TextfocusException( 'budget_exceeded', sprintf( 'Textfocus-Tagesbudget von %d Credits erreicht. Weiter am nächsten Tag oder Budget erhöhen (Einstellungen → Textfocus).', $this->daily_budget ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
 		$this->respect_interval( $wait );

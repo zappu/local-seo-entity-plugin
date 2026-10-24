@@ -50,6 +50,16 @@ final class ImportProfile {
 	) {}
 
 	/**
+	 * Ob die Kopfzeile zur Entitäten-Tabelle einer Textfocus-Analyse gehört (keine Keyword-Liste).
+	 *
+	 * @param string[] $header Kopfzeile.
+	 */
+	public static function is_entity_table( array $header ): bool {
+		$keys = array_map( array( self::class, 'header_key' ), $header );
+		return in_array( 'entity detected on the page', $keys, true ) && in_array( 'wikidata id', $keys, true );
+	}
+
+	/**
 	 * Wählt die Vorlage anhand der Kopfzeile.
 	 *
 	 * @param string[] $header    Kopfzeile.
@@ -63,8 +73,8 @@ final class ImportProfile {
 		$revealer = in_array( 'keywordsinclude', $keys, true ) && in_array( 'historical_volume', $keys, true );
 		$chef     = array() === array_diff( array( 'keyword', 'avg', 'high', 'low' ), $keys );
 		$tf_vol   = in_array( 'expression', $keys, true ) && in_array( 'monthly volume', $keys, true );
-		if ( in_array( 'entity detected on the page', $keys, true ) && in_array( 'wikidata id', $keys, true ) ) {
-			throw new \InvalidArgumentException( 'Das ist die Entitäten-Tabelle einer Textfocus-Analyse, keine Keyword-Liste. Import mit: wp lsec entities import <Datei>' );
+		if ( self::is_entity_table( $header ) ) {
+			throw new \InvalidArgumentException( 'Das ist die Entitäten-Tabelle einer Textfocus-Analyse, keine Keyword-Liste. Auf der Seite „Keywords“ hochgeladen, übernimmt das Plugin sie als Entitäten.' );
 		}
 
 		if ( '' === $requested ) {

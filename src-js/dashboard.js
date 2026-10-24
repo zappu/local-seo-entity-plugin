@@ -8,6 +8,7 @@ import { createElement, Fragment, useCallback, useEffect, useState } from '@word
 import { Button, Card, CardBody, CardHeader, Notice, Spinner } from '@wordpress/components';
 import { getDashboard, getSetup, refreshTextfocus, runAction, runIndex, stopIndex } from './api';
 import { ago, dateTime, number, RUN_STATUS, usd } from './format';
+import ToolAction from './tools';
 
 const REFRESH_MS = 60000;
 
@@ -73,7 +74,7 @@ function State( { ok, yes = 'ja', no = 'nein' } ) {
 	return <span className={ ok ? 'lsec-state lsec-state--ok' : 'lsec-state lsec-state--no' }>{ ok ? yes : no }</span>;
 }
 
-function Hints( { hints } ) {
+function Hints( { hints, onDone } ) {
 	if ( ! hints.length ) {
 		return null;
 	}
@@ -86,11 +87,12 @@ function Hints( { hints } ) {
 						{ hint.link && (
 							<>
 								{ ' ' }
-								<a href={ hint.link }>Öffnen</a>
+								<a href={ hint.link }>{ hint.link_label || 'Öffnen' }</a>
 							</>
 						) }
 					</p>
 					{ hint.command && <code className="lsec-command">{ hint.command }</code> }
+					{ hint.action && <ToolAction action={ hint.action } onDone={ onDone } /> }
 				</Notice>
 			) ) }
 		</div>
@@ -251,8 +253,11 @@ function CronCard( { cron } ) {
 						{ cron.last_run ? `${ ago( cron.last_run ) } (${ dateTime( cron.last_run ) })` : 'noch nie' }
 					</Row>
 				</dl>
-				<p className="lsec-muted">Alle 5 Minuten als Benutzer des Abonnements:</p>
-				<code className="lsec-command">{ cron.command }</code>
+				<p className="lsec-muted">In Plesk unter „Geplante Aufgaben“: „PHP-Skript ausführen“, alle 5 Minuten.</p>
+				<p className="lsec-muted">Skriptpfad:</p>
+				<code className="lsec-command">{ cron.script }</code>
+				<p className="lsec-muted">Argumente:</p>
+				<code className="lsec-command">{ cron.args }</code>
 			</CardBody>
 		</Card>
 	);
@@ -477,7 +482,7 @@ export default function Dashboard() {
 				<Notice status={ message.status } onRemove={ () => setMessage( null ) }>{ message.text }</Notice>
 			) }
 			<SetupNotice />
-			<Hints hints={ data.hints } />
+			<Hints hints={ data.hints } onDone={ load } />
 			<div className="lsec-grid">
 				<AiCard ai={ data.ai } />
 				<ContentCard content={ data.content } onRunIndex={ onRunIndex } onStopIndex={ onStopIndex } busy={ indexBusy } />

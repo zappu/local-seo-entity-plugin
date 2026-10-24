@@ -112,6 +112,7 @@ final class ContentProductionWorkflow {
 	 * @param int                  $topic_id Thema.
 	 * @param array<string, mixed> $options  model (Vergleich), again (neuer Entwurf), reason; für Tests stub.
 	 * @return array{run_id: int, created: bool}
+	 * @throws DuplicateTopicException Wenn es zu einem sehr ähnlichen Thema schon einen Entwurf gibt.
 	 * @throws \RuntimeException Wenn das Thema nicht freigegeben ist.
 	 */
 	public static function start( Plugin $plugin, int $topic_id, array $options = array() ): array {
@@ -129,7 +130,7 @@ final class ContentProductionWorkflow {
 			$probe   = $topic + array( 'primary_keywords' => array_column( array_filter( (array) $topic['keywords'], static fn( array $k ): bool => 'primary' === $k['role'] ), 'keyword' ) );
 			$twin    = \Lsec\Topics\TopicSimilarity::find( $probe, $written, \Lsec\Topics\TopicResearchWorkflow::profile_services() );
 			if ( null !== $twin ) {
-				throw new \RuntimeException( sprintf( 'Thema %d ähnelt Thema %d („%s“), zu dem es schon einen Entwurf gibt. Trotzdem schreiben: --allow-duplicate.', $topic_id, $twin['id'], $twin['title'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+				throw new DuplicateTopicException( sprintf( 'Thema %d ähnelt Thema %d („%s“), zu dem es schon einen Entwurf gibt.', $topic_id, $twin['id'], $twin['title'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 		}
 		if ( $again ) {

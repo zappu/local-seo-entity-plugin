@@ -31,24 +31,28 @@ final class SettingsSchema {
 					'type'  => 'select',
 				),
 				'ai_model'           => array(
-					'label' => 'Hauptmodell',
-					'type'  => 'text',
-					'help'  => 'Gilt für alle Aufgaben, für die unten kein eigenes Modell eingetragen ist. Bei OpenRouter z. B. openai/gpt-6-luna; Liste mit wp lsec ai models.',
+					'label'   => 'Hauptmodell',
+					'type'    => 'text',
+					'help'    => 'Gilt für alle Aufgaben, für die unten kein eigenes Modell eingetragen ist. Bei OpenRouter z. B. openai/gpt-6-luna; beim Tippen erscheinen die passenden Modelle.',
+					'suggest' => 'text',
 				),
 				'ai_writing_model'   => array(
-					'label' => 'Schreibmodell',
-					'type'  => 'text',
-					'help'  => 'Nur für den Text der Beiträge, beim selben Anbieter; Briefing und Bewertung laufen mit dem Hauptmodell. Leer = Hauptmodell. Empfehlung: anthropic/claude-sonnet-5.5 (liest sich natürlicher, etwa 0,12 USD je Text).',
+					'label'   => 'Schreibmodell',
+					'type'    => 'text',
+					'help'    => 'Nur für den Text der Beiträge, beim selben Anbieter; Briefing und Bewertung laufen mit dem Hauptmodell. Leer = Hauptmodell. Empfehlung: anthropic/claude-sonnet-5.5 (liest sich natürlicher, etwa 0,12 USD je Text).',
+					'suggest' => 'text',
 				),
 				'ai_review_model'    => array(
-					'label' => 'Prüfmodell',
-					'type'  => 'text',
-					'help'  => 'Nur für die KI-Bewertung der Entwürfe, beim selben Anbieter. Leer = Hauptmodell. Vergleich an einem vorhandenen Entwurf: wp lsec production review <entwurf> --model=<modell>.',
+					'label'   => 'Prüfmodell',
+					'type'    => 'text',
+					'help'    => 'Nur für die KI-Bewertung der Entwürfe, beim selben Anbieter. Leer = Hauptmodell.',
+					'suggest' => 'text',
 				),
 				'ai_research_model'  => array(
-					'label' => 'Recherchemodell',
-					'type'  => 'text',
-					'help'  => 'Nur für die Recherche mit Websuche, beim selben Anbieter. Leer = Hauptmodell. Empfehlung bei OpenRouter: perplexity/sonar-pro (Suchmaschine dann „standard“).',
+					'label'   => 'Recherchemodell',
+					'type'    => 'text',
+					'help'    => 'Nur für die Recherche mit Websuche, beim selben Anbieter. Leer = Hauptmodell. Empfehlung bei OpenRouter: perplexity/sonar-pro (Suchmaschine dann „standard“).',
+					'suggest' => 'text',
 				),
 				'ai_web_max_results' => array(
 					'label' => 'Treffer der Websuche',
@@ -91,9 +95,14 @@ final class SettingsSchema {
 			'label'  => 'Textfocus',
 			'fields' => array(
 				'textfocus_lang'         => array(
-					'label' => 'Sprachcode',
-					'type'  => 'readonly',
-					'help'  => 'Festlegen mit wp lsec textfocus langs --search=german --save=de.',
+					'label'  => 'Sprachcode',
+					'type'   => 'readonly',
+					'help'   => 'Wird mit dem Knopf aus der Sprache der Website übernommen.',
+					'action' => array(
+						'tool'  => 'textfocus-lang',
+						'label' => 'Sprache der Website übernehmen',
+						'kind'  => 'run',
+					),
 				),
 				'textfocus_daily_budget' => array(
 					'label' => 'Tagesbudget',
@@ -166,7 +175,7 @@ final class SettingsSchema {
 				'local_category'      => array(
 					'label' => 'Kategorie für Ortsseiten',
 					'type'  => 'text',
-					'help'  => 'Lokale Seiten bekommen zusätzlich diese Kategorie (Name oder Titelform, z. B. regional-service; fehlt sie, wird sie angelegt). So lassen sie sich in Theme- und Elementor-Beitragslisten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Leer = aus. Vorhandene Ortsseiten nachträglich: wp lsec production local-category.',
+					'help'  => 'Lokale Seiten bekommen zusätzlich diese Kategorie (Name oder Titelform, z. B. regional-service; fehlt sie, wird sie angelegt). So lassen sie sich in Theme- und Elementor-Beitragslisten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Leer = aus. Beim Speichern kommen auch vorhandene Ortsseiten in die Kategorie.',
 				),
 				'local_category_hide' => array(
 					'label' => 'Ortsseiten auf der Blogseite ausblenden',
@@ -218,14 +227,16 @@ final class SettingsSchema {
 					'help'          => 'Jeder neue Entwurf bekommt das passendste Bild aus der Mediathek, ungenutzte zuerst. Passt keines, erzeugt die KI ein Bild (etwa 0,05 USD). Neue Bilder der Mediathek beschreibt der Cronjob einmal auf Deutsch (Alternativtext und Stichworte, etwa 0,0002 USD je Bild); einen vorhandenen Alternativtext überschreibt das Plugin nicht.',
 				),
 				'ai_vision_model'  => array(
-					'label' => 'Modell für die Bildbeschreibung',
-					'type'  => 'text',
-					'help'  => 'Muss Bilder lesen können. Leer = Hauptmodell (openai/gpt-6-luna kann das).',
+					'label'   => 'Modell für die Bildbeschreibung',
+					'type'    => 'text',
+					'help'    => 'Muss Bilder lesen können. Leer = Hauptmodell (openai/gpt-6-luna kann das).',
+					'suggest' => 'text',
 				),
 				'ai_image_model'   => array(
-					'label' => 'Bildmodell',
-					'type'  => 'text',
-					'help'  => 'Über OpenRouter, auch wenn für Texte ein anderer Anbieter eingestellt ist. Empfehlung: black-forest-labs/flux-3-image (etwa 0,05 USD bei 1K); günstiger: black-forest-labs/flux-3-image-klein (etwa 0,01 USD). Liste: wp lsec images models.',
+					'label'   => 'Bildmodell',
+					'type'    => 'text',
+					'help'    => 'Über OpenRouter, auch wenn für Texte ein anderer Anbieter eingestellt ist. Empfehlung: black-forest-labs/flux-3-image (etwa 0,05 USD bei 1K); günstiger: black-forest-labs/flux-3-image-klein (etwa 0,01 USD). Beim Tippen erscheinen die Bildmodelle von OpenRouter.',
+					'suggest' => 'image',
 				),
 				'image_resolution' => array(
 					'label' => 'Auflösung',
@@ -242,9 +253,14 @@ final class SettingsSchema {
 			'label'  => 'Search Console',
 			'fields' => array(
 				'gsc_property'         => array(
-					'label' => 'Property',
-					'type'  => 'text',
-					'help'  => 'z. B. https://example.de/ oder sc-domain:example.de. Freigegebene Properties: wp lsec gsc sites.',
+					'label'  => 'Property',
+					'type'   => 'text',
+					'help'   => 'z. B. https://example.de/ oder sc-domain:example.de. Der Knopf zeigt die Properties, die das Dienstkonto sehen darf.',
+					'action' => array(
+						'tool'  => 'gsc-property',
+						'label' => 'Property wählen',
+						'kind'  => 'choose',
+					),
 				),
 				'gsc_country'          => array(
 					'label' => 'Land',
@@ -274,7 +290,7 @@ final class SettingsSchema {
 				'entity_extract_types'  => array(
 					'label' => 'Entitäten erkennen für',
 					'type'  => 'checkboxes',
-					'help'  => 'Gelesen werden immer alle Inhalte (kostenlos, für Dublettenprüfung und interne Links). Die KI-Erkennung lohnt sich vor allem für Seiten, Produkte und Kategorien. Einzelne Blogbeiträge: wp lsec entities extract <id> --queue.',
+					'help'  => 'Gelesen werden immer alle Inhalte (kostenlos, für Dublettenprüfung und interne Links). Die KI-Erkennung lohnt sich vor allem für Seiten, Produkte und Kategorien. Einzelne Blogbeiträge: in der Beitragsliste unter dem Titel „Entitäten erkennen“.',
 				),
 				'entity_min_confidence' => array(
 					'label' => 'Mindest-Sicherheit für die Anzeige',

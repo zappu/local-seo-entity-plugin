@@ -14,7 +14,7 @@ Dieses Handbuch beschreibt Installation, Einrichtung und Betrieb des Plugins. Im
 6. [Die Seiten im Backend](#6-die-seiten-im-backend)
 7. [Der Prüfbericht eines Entwurfs](#7-der-prüfbericht-eines-entwurfs)
 8. [Einstellungen](#8-einstellungen)
-9. [Befehle (WP-CLI)](#9-befehle-wp-cli)
+9. [Anhang: Befehle für Administratoren](#9-anhang-befehle-für-administratoren)
 10. [Kosten](#10-kosten)
 11. [Fehlerbehebung](#11-fehlerbehebung)
 12. [Sicherheit und Datenschutz](#12-sicherheit-und-datenschutz)
@@ -45,8 +45,8 @@ Das Plugin plant und schreibt Beiträge für die Website eines lokalen Unternehm
 |---|---|---|
 | PHP 8.1 oder neuer | ja | getestet bis PHP 8.4 |
 | WordPress 6.4 oder neuer | ja | |
-| WP-CLI auf dem Server | ja | für den Cronjob; bei Plesk als Datei `private/wp-cli.phar` |
-| Cronjob alle 5 Minuten | ja | `wp lsec cron` |
+| WP-CLI auf dem Server | ja | nur für den Cronjob; das Plugin lädt es selbst als Datei `private/wp-cli.phar` (3.3) |
+| Cronjob alle 5 Minuten | ja | geplante Aufgabe in Plesk (3.4) |
 | KI-Anbieter mit API-Schlüssel | ja | empfohlen: OpenRouter (alle Modelle, Kosten werden genau gemeldet, Bilder nur dort) |
 | Rank Math | empfohlen | Ohne Rank Math speichert das Plugin Titel, Beschreibung und Fokus-Keyword als Vorschlag am Entwurf. |
 | Google Search Console | empfohlen | über ein Dienstkonto; ohne sie fehlen Suchanfragen, Positionen und der Teil „bestehende Seiten verbessern“ |
@@ -75,18 +75,11 @@ define( 'LSEC_TEXTFOCUS_API_KEY', '…' );          // optional
 
 Das Plugin gibt Schlüssel nie aus, auch nicht in Fehlermeldungen oder Protokollen.
 
-### 3.3 WP-CLI bereitstellen (Plesk)
+### 3.3 WP-CLI bereitstellen
 
-Hat das Abonnement keinen Shell-Zugang, liegt WP-CLI als Datei neben dem Webroot. Als root auf dem Server (Pfad und Domain anpassen):
+Der Cronjob braucht WP-CLI als Datei im Ordner `private` neben dem Webroot. Unter **Local SEO → Einrichtung**, Schritt „Technik“, steht dafür der Knopf **„WP-CLI laden“**. Das Plugin lädt die Datei von GitHub, prüft die Prüfsumme und legt sie als `private/wp-cli.phar` ab. Eine Shell ist dafür nicht nötig.
 
-```bash
-cd /var/www/vhosts/example.de
-mkdir -p private
-curl -sSo private/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-chown "$(stat -c %U httpdocs)":psacln private/wp-cli.phar
-```
-
-Der Einrichtungsassistent zeigt diese Befehle mit den richtigen Pfaden der Website an.
+Ist der Ordner `private` nicht beschreibbar, meldet der Knopf das. Dann in Plesk im Dateimanager neben `httpdocs` einen Ordner `private` anlegen und den Knopf noch einmal drücken.
 
 ### 3.4 Cronjob anlegen (Plesk)
 
@@ -103,30 +96,26 @@ In Plesk im Abonnement unter **Geplante Aufgaben → Aufgabe hinzufügen**:
 
 Die Aufgabe des WP Toolkits für `wp-cron.php` bleibt bestehen; sie bedient die übrigen Plugins. Sie allein reicht für dieses Plugin aber nicht.
 
-Kontrolle: **Local SEO → Dashboard**, Karte „Cronjob“ zeigt „läuft“. Von Hand: `wp lsec cron` muss ohne Fehler enden („Success: … geplante Aufgaben abgeschlossen“).
+Skriptpfad und Argumente mit den richtigen Pfaden der Website stehen zum Kopieren auf der Seite **Einrichtung** und auf dem Dashboard (Karte „Cronjob“).
 
-Mit Shell-Zugang geht auch ein gewöhnlicher Cronjob: `*/5 * * * * wp --path=/pfad/zu/httpdocs lsec cron`.
+Kontrolle: **Local SEO → Dashboard**, Karte „Cronjob“ zeigt nach spätestens 5 Minuten „läuft“. In Plesk lässt sich die Aufgabe mit „Jetzt ausführen“ sofort testen.
 
 ### 3.5 Google Search Console (empfohlen)
 
 1. In der Google Cloud Console ein **Dienstkonto** anlegen, die Search Console API aktivieren und einen **JSON-Schlüssel** herunterladen.
-2. Die Datei als `private/gsc-service-account.json` neben den Webroot legen. Ein anderer Dateiname in `private` geht auch, wenn es die einzige JSON-Datei dort ist. Rechte setzen: `chmod 600`.
+2. Die Datei mit dem Plesk-Dateimanager als `private/gsc-service-account.json` neben den Webroot legen. Ein anderer Dateiname in `private` geht auch, wenn es die einzige JSON-Datei dort ist. Ist sie für andere lesbar, zeigt die Einrichtung den Knopf **„Nur für den Eigentümer lesbar machen“**.
 3. In der Search Console unter **Einstellungen → Nutzer und Berechtigungen** die E-Mail-Adresse des Dienstkontos als Nutzer eintragen. Der Assistent zeigt diese Adresse an.
-4. Property einstellen: `wp lsec gsc sites` zeigt die freigegebenen Properties, dann im Assistenten oder unter **Einstellungen → Search Console** übernehmen.
+4. Property wählen: Knopf **„Property wählen“** in der Einrichtung, auf dem Dashboard oder unter **Einstellungen → Search Console**. Er zeigt die Properties, die das Dienstkonto sehen darf.
 
 Die Schlüsseldatei nie per E-Mail oder Chat weitergeben.
 
 ### 3.6 Textfocus (optional)
 
-Schlüssel als Konstante (3.2), dann den Sprachcode festlegen:
-
-```bash
-wp lsec textfocus langs --search=german --save=de
-```
+Schlüssel als Konstante (3.2), dann in der Einrichtung oder unter **Einstellungen → Textfocus** den Knopf **„Sprache der Website übernehmen“** drücken.
 
 ## 4. Einrichtung mit dem Assistenten
 
-**Local SEO → Einrichtung** führt in sechs Schritten durch die Einrichtung. Erledigte Schritte sind abgehakt. Fällt später etwas weg (zum Beispiel der Cronjob), ist der Schritt wieder offen. Dasselbe per Befehl: `wp lsec setup` zeigt den Stand, `wp lsec setup website|ki|stil|start` führt einen Schritt aus.
+**Local SEO → Einrichtung** führt in sechs Schritten durch die Einrichtung. Erledigte Schritte sind abgehakt. Fällt später etwas weg (zum Beispiel der Cronjob), ist der Schritt wieder offen. Was sich per Knopf erledigen lässt, steht als Knopf beim jeweiligen Punkt.
 
 1. **Technik prüfen:** Schlüssel, Cronjob, Search Console, Rank Math, Textfocus. Was fehlt, steht mit dem passenden Befehl oder der Plesk-Anleitung da. Schlüssel, Cronjob und Freigabe in der Search Console bleiben Handarbeit.
 2. **KI-Einstellungen:** übernimmt erprobte Werte. Hauptmodell `openai/gpt-6-luna`, Schreib- und Prüfmodell `anthropic/claude-sonnet-5.5`, Recherche `perplexity/sonar-pro`.
@@ -162,7 +151,7 @@ wp lsec textfocus langs --search=german --save=de
 
 ### 5.3 Eine neue Themenrecherche
 
-Auf der Seite **Themen** unter „Neue Recherche“: Leistung (oder alle), Ort und Anzahl wählen, dann „Recherche starten“. Kosten etwa 0,05 bis 0,20 USD. Derselbe Schwerpunkt (Leistung und Ort) wird frühestens nach 14 Tagen erneut recherchiert, außer mit „trotzdem“. Per Befehl: `wp lsec topics research --service=<leistung> [--region=<ort>] [--force]`.
+Auf der Seite **Themen** unter „Neue Recherche“: Leistung (oder alle), Ort und Anzahl wählen, dann „Recherche starten“. Kosten etwa 0,05 bis 0,20 USD. Derselbe Schwerpunkt (Leistung und Ort) wird frühestens nach 14 Tagen erneut recherchiert, außer mit „trotzdem“.
 
 ### 5.4 Mehrere Entwürfe auf einmal
 
@@ -174,13 +163,14 @@ Auf der Seite **Themen** unter „freigegeben“ die gewünschten Themen anhaken
 - Passt keines, erzeugt die KI ein Bild (Einstellung „Beitragsbilder“). Es wird als WebP mit deutschem Dateinamen und Alternativtext gespeichert und in der Mediathek als KI-Bild vermerkt.
 - Neue Bilder beschreibt das Plugin einmal auf Deutsch (Alternativtext und Stichworte), damit auch Stockfotos mit englischen Dateinamen gefunden werden. Einen vorhandenen Alternativtext überschreibt es nicht.
 - Nicht als Beitragsbild infrage kommen Logos, Symbole, Grafiken mit viel Schrift, Bilder mit Wasserzeichen und Bilder unter 800 Pixel Breite.
-- Für vorhandene Beiträge: `wp lsec images assign <beitrag>`.
+- Für vorhandene Beiträge ohne Bild: in **Beiträge → Alle Beiträge** unter dem Titel **„Beitragsbild suchen“**.
+- Neue Bilder beschreibt der Cronjob. Sofort geht es im **Bericht**, Karte „Bilder“, mit **„Offene Bilder jetzt beschreiben“**.
 
 Stockfotos (zum Beispiel Envato Elements) für die jeweilige Website lizenzieren. Bei Envato wird jeder Download einem Projekt zugeordnet.
 
 ### 5.6 Ortsseiten in einer eigenen Kategorie
 
-Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel `regional-service`) bekommen lokale Seiten zusätzlich diese Kategorie. So lassen sie sich in Theme- und Elementor-Listen ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Wenn die Ortsseiten in keiner Blogansicht mehr stehen, das Archiv verlinken (Menü oder Leistungsseite), damit Google sie findet. Vorhandene Ortsseiten nachträglich zuordnen: `wp lsec production local-category`.
+Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel `regional-service`) bekommen lokale Seiten zusätzlich diese Kategorie. So lassen sie sich in Theme- und Elementor-Listen ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Wenn die Ortsseiten in keiner Blogansicht mehr stehen, das Archiv verlinken (Menü oder Leistungsseite), damit Google sie findet. Beim Speichern der Einstellung kommen auch die vorhandenen Ortsseiten in die Kategorie.
 
 ## 6. Die Seiten im Backend
 
@@ -197,7 +187,8 @@ Mit **Einstellungen → Beiträge → Kategorie für Ortsseiten** (zum Beispiel 
 | **Abläufe** | alle Hintergrund-Abläufe mit Status, Kosten und Fehlern; Schritte und KI-Aufrufe aufklappbar; Fortsetzen und Abbrechen |
 | **Bericht** | bestehende Seiten verbessern (je Seite, mit Marken- und Navigationssuchen getrennt, CSV), Inhalte des Plugins mit Prüfung, Kosten und Beitragsbild, Entitäten mit Lücken, Bilder |
 | **Einstellungen** | Abschnitt 8 |
-| **Technik** | Systemstatus, Schemaversion, Warteschlange, Protokoll |
+| **Technik** | Knöpfe „Sicherheit prüfen“, „Datenbank aktualisieren“ und „Hängengebliebene Abläufe aufnehmen“; Systemstatus, Schemaversion, Warteschlange, letzte Abläufe |
+| **Beiträge, Seiten, Produkte** (WordPress-Listen) | unter dem Titel „Beitragsbild suchen“ (Beiträge ohne Bild) und „Entitäten erkennen“ (veröffentlichte Inhalte) |
 
 ## 7. Der Prüfbericht eines Entwurfs
 
@@ -237,11 +228,11 @@ Scheitert ein Entwurf nur an einzelnen Stellen (unbelegte Zahl, unbelegte Aussag
 | `FOCUS_TAKEN` | Das Fokus-Keyword hat schon ein anderer Beitrag. |
 | `REPETITION` | Der Text wiederholt Sätze oder Floskeln. |
 
-Einen Entwurf ohne Neuschreiben noch einmal prüfen: `wp lsec production review <entwurf>`. Den ganzen Bericht als Text: `wp lsec production report <entwurf>`.
+Den Prüfbericht zeigt die Themen-Seite beim Thema.
 
 ## 8. Einstellungen
 
-**Local SEO → Einstellungen**, oder per Befehl: `wp lsec settings list` und `wp lsec settings set <schlüssel> <wert>`.
+**Local SEO → Einstellungen**. Bei den Modellfeldern erscheinen beim Tippen die passenden Modelle von OpenRouter. Die Schlüssel in der zweiten Spalte braucht nur, wer mit WP-CLI arbeitet (Anhang).
 
 ### KI
 
@@ -263,7 +254,7 @@ Einen Entwurf ohne Neuschreiben noch einmal prüfen: `wp lsec production review 
 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
-| Sprachcode | `textfocus_lang` | – | per `wp lsec textfocus langs --search=german --save=de` |
+| Sprachcode | `textfocus_lang` | – | Knopf „Sprache der Website übernehmen“ |
 | Tagesbudget | `textfocus_daily_budget` | 25 Credits | |
 | Mindestabstand | `textfocus_min_interval` | 60 Sekunden | zwischen zwei Abfragen |
 | Keywords je Aufruf | `textfocus_batch_size` | 10 | |
@@ -321,12 +312,14 @@ Einen Entwurf ohne Neuschreiben noch einmal prüfen: `wp lsec production review 
 | Einstellung | Schlüssel | Standard | Erklärung |
 |---|---|---|---|
 | Entitäten automatisch erkennen | `entity_auto_extract` | an | etwa 0,04 USD je Inhalt |
-| Entitäten erkennen für | `entity_extract_types` | Seiten, Produkte, Kategorien | Blogbeiträge einzeln: `wp lsec entities extract <id> --queue` |
+| Entitäten erkennen für | `entity_extract_types` | Seiten, Produkte, Kategorien | Blogbeiträge einzeln: in der Beitragsliste „Entitäten erkennen“ |
 | Mindest-Sicherheit für die Anzeige | `entity_min_confidence` | 0,6 | schwächere Vorschläge werden ausgeblendet |
 | Gleichzeitige Abläufe | `max_parallel_runs` | 3 | |
 | Daten bei Deinstallation löschen | `delete_data_on_uninstall` | aus | Beiträge bleiben immer erhalten |
 
-## 9. Befehle (WP-CLI)
+## 9. Anhang: Befehle für Administratoren
+
+Für den Betrieb ist keine Shell nötig: Alles Nötige geht über die Seiten des Plugins, die Einrichtung und die Seite **Technik** (Sicherheit prüfen, Datenbank aktualisieren, hängengebliebene Abläufe aufnehmen). Die Befehle bleiben für Administratoren mit Serverzugang, für Tests und zur Fehlersuche.
 
 Alle Befehle beginnen mit `wp lsec`. Bei Plesk ohne Shell des Abonnements als root zum Beispiel so:
 
@@ -380,36 +373,37 @@ Richtwerte mit den empfohlenen Modellen über OpenRouter (Oktober 2026):
 | KI-Bild | etwa 0,05 USD (FLUX 3, 1K) |
 | Textfocus | Credits laut Tarif; 10 Suchvolumina je Credit, verwandte Keywords 1 Credit |
 
-Die tatsächlichen Kosten stehen im Dashboard, je Ablauf auf der Seite „Abläufe“ und je Entwurf im Bericht. `wp lsec ai budget` zeigt den Monat. Das Plugin-Budget ist eine zusätzliche Bremse; ein Limit beim Anbieter (OpenRouter) bleibt sinnvoll.
+Die tatsächlichen Kosten stehen im Dashboard, je Ablauf auf der Seite „Abläufe“ und je Entwurf im Bericht. Die Karte „KI-Kosten“ auf dem Dashboard zeigt den Monat. Das Plugin-Budget ist eine zusätzliche Bremse; ein Limit beim Anbieter (OpenRouter) bleibt sinnvoll.
 
 ## 11. Fehlerbehebung
 
 **Cronjob läuft nicht.**
 - „Could not open input file“: Der Skriptpfad in Plesk stimmt nicht oder hat Leerzeichen am Anfang. Die Datei `private/wp-cli.phar` muss existieren.
 - Nur die Aufgabe für `wp-cron.php` angelegt? Die reicht nicht; zusätzlich die Aufgabe aus 3.4 anlegen.
-- Von Hand testen: `wp lsec cron`.
+- In Plesk bei der Aufgabe „Jetzt ausführen“ wählen und die Ausgabe lesen.
+- Fehlt `private/wp-cli.phar`: in der Einrichtung „WP-CLI laden“.
 
 **Abläufe stehen auf „wartet“.**
-- Grund `ai_budget`: Monats- oder Ablaufbudget erreicht. Budget erhöhen (`wp lsec settings set ai_monthly_budget 30`) oder den nächsten Monat abwarten. Danach setzt der Cronjob von selbst fort, oder `wp lsec runs resume <id>`.
+- Grund `ai_budget`: Monats- oder Ablaufbudget erreicht. Budget erhöhen (**Einstellungen → KI**) oder den nächsten Monat abwarten. Danach setzt der Cronjob von selbst fort, oder auf der Seite **Abläufe** „Fortsetzen“.
 - Textfocus-Tagesbudget erreicht: Es geht am nächsten Tag weiter.
 
 **Entwurf ist blockiert.**
-- Den Prüfbericht ansehen (Themen-Seite oder `wp lsec production report <entwurf>`).
+- Den Prüfbericht auf der Themen-Seite ansehen.
 - Unbelegte Angaben im Text streichen oder belegen: Tatsache bestätigen, Leistungsbeschreibung im Profil ergänzen.
-- Danach `wp lsec production review <entwurf>`, oder neu schreiben lassen („neu schreiben“ auf der Themen-Seite).
+- Danach neu schreiben lassen („neu schreiben“ auf der Themen-Seite).
 
 **Recherche liefert keine Quellen oder Tatsachen.**
 - Suchmaschine auf `exa` oder `parallel` stellen.
 - Bei sehr kleinen Orten gibt es oft wenig; dann blockiert `LOCAL_FACTS` nicht.
 
 **Search Console liefert keine Daten.**
-- `wp lsec gsc sites` aufrufen.
+- **Einstellungen → Search Console → „Property wählen“**: Die Meldung sagt, ob die Anmeldung klappt und welche Properties freigegeben sind.
 - Fehlt die Property, ist das Dienstkonto in der Search Console nicht als Nutzer eingetragen.
-- Warnung zu Dateirechten: `chmod 600` auf die Schlüsseldatei.
+- Warnung zu Dateirechten: in der Einrichtung „Nur für den Eigentümer lesbar machen“.
 - Es kommen nur Daten zu Suchanfragen mit genug Impressionen; seltene gibt Google nicht heraus.
 
 **Keine Beitragsbilder.**
-- `wp lsec images status` zeigt, ob Bilder beschrieben und geeignet sind.
+- Der **Bericht**, Karte „Bilder“, zeigt, wie viele Bilder beschrieben und geeignet sind.
 - KI-Bilder brauchen `LSEC_OPENROUTER_API_KEY` und die Einstellung „Beitragsbilder“ auf „Mediathek, sonst KI-Bild“.
 - Der Grund steht im Prüfbericht des Entwurfs unter „Beitragsbild“.
 
@@ -419,13 +413,13 @@ Die tatsächlichen Kosten stehen im Dashboard, je Ablauf auf der Seite „Abläu
 
 **Elementor-Seiten im Bericht.** Das Plugin ändert keine bestehenden Seiten. Hinweise zu Elementor-Seiten setzt man im Elementor-Editor um.
 
-**Thema lässt sich nicht schreiben („ähnelt Thema …“).** Zu einem sehr ähnlichen Thema gibt es schon einen Entwurf. Mit `--allow-duplicate` trotzdem schreiben, oder das Thema ablehnen.
+**Thema lässt sich nicht schreiben („ähnelt Thema …“).** Zu einem sehr ähnlichen Thema gibt es schon einen Entwurf. Das Plugin fragt, ob es trotzdem schreiben soll. Sonst das Thema ablehnen.
 
 ## 12. Sicherheit und Datenschutz
 
-- **Schlüssel** stehen als Konstanten in `wp-config.php`. Das Plugin schwärzt sie in Protokollen, Fehlermeldungen und Exporten; `wp lsec check secrets` sucht sie im Klartext in Datenbank und Protokoll.
-- **Search-Console-Schlüssel** außerhalb des Webroots in `private/`, mit `chmod 600`.
+- **Schlüssel** stehen als Konstanten in `wp-config.php`. Das Plugin schwärzt sie in Protokollen, Fehlermeldungen und Exporten; **Technik → „Sicherheit prüfen“** sucht sie im Klartext in Datenbank und Protokollen.
+- **Search-Console-Schlüssel** außerhalb des Webroots in `private/`, nur für den Eigentümer lesbar.
 - **Text-Anfragen** über OpenRouter gehen nur an Anbieter, die keine Daten zum Training speichern (`data_collection: deny`). An die KI gehen Inhalte der eigenen Website, das Unternehmensprofil, Bilder der Mediathek (zur Beschreibung) und öffentliche Rechercheergebnisse, keine Daten von Besuchern.
-- **Rechte:** Alle Seiten und Schnittstellen des Plugins sind nur für Benutzer mit der Berechtigung des Plugins zugänglich (Administratoren); `wp lsec check rest` prüft das.
+- **Rechte:** Alle Seiten und Schnittstellen des Plugins sind nur für Benutzer mit der Berechtigung des Plugins zugänglich (Administratoren); **Technik → „Sicherheit prüfen“** prüft das.
 - **Veröffentlichung:** In Version 1.0 erstellt das Plugin nur Entwürfe.
 - **Deinstallation:** Mit „Daten bei Deinstallation löschen“ entfernt das Plugin seine Tabellen und Einstellungen; Beiträge und Bilder bleiben.

@@ -65,10 +65,13 @@ final class ProductionController {
 				$this->plugin,
 				(int) $request['id'],
 				array(
-					'again'  => (bool) $request->get_param( 'again' ),
-					'reason' => 'backend',
+					'again'           => (bool) $request->get_param( 'again' ),
+					'allow_duplicate' => (bool) $request->get_param( 'allow_duplicate' ),
+					'reason'          => 'backend',
 				)
 			);
+		} catch ( \Lsec\Production\DuplicateTopicException $e ) {
+			return new \WP_Error( 'lsec_duplicate', $e->getMessage(), array( 'status' => 409 ) );
 		} catch ( \RuntimeException $e ) {
 			return new \WP_Error( 'lsec_not_approved', $e->getMessage(), array( 'status' => 409 ) );
 		}

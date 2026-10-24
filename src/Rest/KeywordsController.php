@@ -307,7 +307,30 @@ final class KeywordsController {
 			HOUR_IN_SECONDS
 		);
 		try {
-			$table   = TableReader::read( $path, $name );
+			$table = TableReader::read( $path, $name );
+			// Nachtrag 24.10.2026 (0.11.0): Die Entitäten-Tabelle einer Textfocus-Analyse übernimmt das Plugin
+			// gleich als Entitäten (vorher nur per wp lsec entities import).
+			if ( ImportProfile::is_entity_table( $table['header'] ) ) {
+				$rows  = \Lsec\Entities\TextfocusEntityImport::from_file( $path, $name );
+				$saved = ( new \Lsec\Entities\EntityRepository() )->save_textfocus( $rows );
+				self::discard( $token );
+				$this->plugin->logger->audit(
+					'Entitäten aus Textfocus importiert',
+					array(
+						'rows'    => count( $rows ),
+						'user_id' => get_current_user_id(),
+					)
+				);
+				return new \WP_REST_Response(
+					array(
+						'entities' => array(
+							'rows'    => count( $rows ),
+							'created' => (int) $saved['created'],
+							'reused'  => (int) $saved['reused'],
+						),
+					)
+				);
+			}
 			$profile = ImportProfile::detect( $table['header'], 'xlsx' === $ext ? 'xlsx' : 'csv' );
 		} catch ( \RuntimeException | \InvalidArgumentException $e ) {
 			self::discard( $token );

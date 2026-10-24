@@ -128,7 +128,8 @@ export const decideTopic = ( id, decision ) =>
 export const startResearch = ( data ) => apiFetch( { path: `${ base }/topics/research`, method: 'POST', data } );
 export const decideClaim = ( id, decision ) =>
 	apiFetch( { path: `${ base }/claims/${ id }/decision`, method: 'POST', data: { decision } } );
-export const produceTopic = ( id, again = false ) => apiFetch( { path: `${ base }/topics/${ id }/produce`, method: 'POST', data: { again } } );
+export const produceTopic = ( id, again = false, allowDuplicate = false ) =>
+	apiFetch( { path: `${ base }/topics/${ id }/produce`, method: 'POST', data: { again, allow_duplicate: allowDuplicate } } );
 export const getProduction = ( runId ) => apiFetch( { path: `${ base }/production/${ runId }` } );
 export const getStyle = () => apiFetch( { path: `${ base }/style` } );
 export const buildStyle = ( data ) => apiFetch( { path: `${ base }/style/build`, method: 'POST', data } );
@@ -147,3 +148,12 @@ export const getRun = ( id ) => apiFetch( { path: `${ base }/runs/${ id }` } );
 export const batchProduce = ( topicIds, start ) =>
 	apiFetch( { path: `${ base }/production/batch`, method: 'POST', data: { topic_ids: topicIds, start } } );
 export const getReport = () => apiFetch( { path: `${ base }/report` } );
+
+/**
+ * Werkzeuge (0.11.0): Knöpfe statt Befehlen für die Shell.
+ */
+export const runTool = ( tool ) => apiFetch( { path: `${ base }/tools/${ tool }`, method: 'POST' } );
+export const getToolOptions = ( tool ) => apiFetch( { path: `${ base }/tools/${ tool }` } );
+export const saveToolOption = ( tool, value ) =>
+	apiFetch( { path: `${ base }/tools/${ tool }`, method: 'POST', data: { value } } );
+export const getModels = ( kind ) => apiFetch( { path: `${ base }/tools/models?kind=${ kind }` } );

@@ -212,7 +212,7 @@ final class KeywordImportTest extends TestCase {
 
 	public function test_textfocus_entity_table_is_redirected(): void {
 		$this->expectException( \InvalidArgumentException::class );
-		$this->expectExceptionMessage( 'wp lsec entities import' );
+		$this->expectExceptionMessage( 'als Entitäten' );
 		KeywordImporter::from_file( self::FIXTURES . 'textfocus-entities.xlsx' );
 	}
 }

@@ -1,5 +1,19 @@
 # Änderungsprotokoll
 
+## 0.11.0 – 24.10.2026
+
+Betrieb ohne Shell: Der Cronjob in Plesk bleibt, alle anderen Befehle sind jetzt Knöpfe im Backend.
+
+- **Einrichtung:** „WP-CLI laden“ legt WP-CLI für den Cronjob selbst in den Ordner `private` (mit Prüfsumme), statt curl und chown als root. Dazu „Property wählen“ (Search Console), „Nur für den Eigentümer lesbar machen“ (Schlüsseldatei), „Sprache der Website übernehmen“ (Textfocus) und „Datenbank aktualisieren“.
+- **Dashboard:** Hinweise mit Knöpfen oder Links statt Befehlen; Karte „Cronjob“ zeigt Skriptpfad und Argumente für Plesk.
+- **Technik:** „Sicherheit prüfen“ (Schlüssel im Klartext, Zugriffsschutz), „Datenbank aktualisieren“, „Hängengebliebene Abläufe aufnehmen“.
+- **Einstellungen:** Modellfelder schlagen beim Tippen die Modelle von OpenRouter vor; Knöpfe bei Textfocus-Sprache und Property; die Kategorie für Ortsseiten gilt beim Speichern sofort auch für vorhandene Ortsseiten.
+- **Beiträge, Seiten, Produkte:** unter dem Titel „Beitragsbild suchen“ und „Entitäten erkennen“.
+- **Bericht:** „Offene Bilder jetzt beschreiben“.
+- **Themen:** Ähnelt ein Thema einem schon geschriebenen, fragt die Seite „Trotzdem schreiben?“.
+- **Keywords:** Die Entitäten-Tabelle einer Textfocus-Analyse wird beim Hochladen als Entitäten übernommen.
+- Meldungen nennen die Seite statt eines Befehls. Handbuch und Abnahme-Checkliste ohne Befehle; die Befehle stehen im Anhang für Administratoren.
+
 ## 0.10.7 – 24.10.2026
 
 - **Handbuch im Plugin:** neuer Menüpunkt **Local SEO → Handbuch** gleich nach dem Dashboard, mit Inhaltsverzeichnis zum Anspringen. Knopf „Handbuch“ neben dem Titel jeder Seite (Einrichtung, Einstellungen und Abläufe öffnen den passenden Abschnitt), Hinweis „Neu hier?“ auf dem Dashboard und Link „Handbuch“ in der Plugin-Liste. Das Handbuch liegt dafür jetzt in der ZIP-Datei.

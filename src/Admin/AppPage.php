@@ -43,6 +43,7 @@ final class AppPage {
 		self::RUNS_SLUG     => 'runs',
 		self::REPORT_SLUG   => 'report',
 		self::SETTINGS_SLUG => 'settings',
+		StatusPage::SLUG    => 'technik',
 	);
 
 	/**

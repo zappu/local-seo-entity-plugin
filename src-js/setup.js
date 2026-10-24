@@ -8,6 +8,7 @@
 import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
 import { Button, Card, CardBody, CardHeader, CheckboxControl, Notice, Spinner, TextareaControl, TextControl } from '@wordpress/components';
 import { getSetup, runSetup } from './api';
+import ToolAction from './tools';
 
 const pages = ( window.lsecAdmin && window.lsecAdmin.pages ) || {};
 
@@ -43,7 +44,7 @@ function Paste( { text } ) {
 	);
 }
 
-function Item( { item } ) {
+function Item( { item, onDone } ) {
 	let mark = '○';
 	let cls = 'is-open';
 	if ( item.ok ) {
@@ -65,6 +66,7 @@ function Item( { item } ) {
 					.map( ( text, index ) => (
 						<Paste key={ index } text={ text } />
 					) ) }
+				{ item.action && <ToolAction action={ item.action } onDone={ onDone } /> }
 			</div>
 		</li>
 	);
@@ -130,7 +132,7 @@ function Action( { step, busy, onRun } ) {
 	);
 }
 
-function Step( { step, number, busy, onRun } ) {
+function Step( { step, number, busy, onRun, onReload } ) {
 	const links = LINKS[ step.key ] || [];
 	return (
 		<Card className={ `lsec-setup-step ${ step.done ? 'is-done' : 'is-open' }` }>
@@ -143,7 +145,7 @@ function Step( { step, number, busy, onRun } ) {
 			<CardBody>
 				<ul className="lsec-setup-items">
 					{ step.items.map( ( item, index ) => (
-						<Item key={ index } item={ item } />
+						<Item key={ item.label } item={ item } onDone={ onReload } />
 					) ) }
 				</ul>
 				{ step.note && <p className="lsec-muted">{ step.note }</p> }
@@ -218,7 +220,7 @@ export default function Setup() {
 			) }
 			<div className="lsec-setup">
 				{ data.steps.map( ( step, index ) => (
-					<Step key={ step.key } step={ step } number={ index + 1 } busy={ busy === step.key } onRun={ onRun } />
+					<Step key={ step.key } step={ step } number={ index + 1 } busy={ busy === step.key } onRun={ onRun } onReload={ load } />
 				) ) }
 			</div>
 		</>

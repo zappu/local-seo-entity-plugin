@@ -16,6 +16,7 @@ import Runs from './runs';
 import Settings from './settings';
 import Setup from './setup';
 import Style from './style';
+import Technik from './technik';
 import Topics from './topics';
 import './admin.scss';
 
@@ -30,6 +31,7 @@ const VIEWS = {
 	report: Report,
 	style: Style,
 	settings: Settings,
+	technik: Technik,
 };
 
 const root = document.getElementById( 'lsec-app' );

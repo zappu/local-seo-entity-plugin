@@ -64,9 +64,10 @@ final class StatusPage {
 			return;
 		}
 		printf(
-			'<div class="notice notice-warning"><p>%s</p><p><code>%s</code></p></div>',
-			esc_html__( 'Der Server-Cronjob für Local SEO ist seit über 15 Minuten nicht gelaufen oder noch nicht eingerichtet. Bitte in Plesk unter "Geplante Aufgaben" alle 5 Minuten ausführen:', 'local-seo-entity-plugin' ),
-			esc_html( 'wp --path=' . untrailingslashit( ABSPATH ) . ' lsec cron' )
+			'<div class="notice notice-warning"><p>%s <a href="%s">%s</a></p></div>',
+			esc_html__( 'Der Cronjob für Local SEO ist seit über 15 Minuten nicht gelaufen oder noch nicht eingerichtet. Wie er in Plesk angelegt wird, steht auf der Seite „Einrichtung“.', 'local-seo-entity-plugin' ),
+			esc_url( admin_url( 'admin.php?page=' . AppPage::SETUP_SLUG ) ),
+			esc_html__( 'Zur Einrichtung', 'local-seo-entity-plugin' )
 		);
 	}
 
@@ -100,6 +101,8 @@ final class StatusPage {
 		);
 
 		echo '<div class="wrap"><h1>' . esc_html__( 'Local SEO – Technik', 'local-seo-entity-plugin' ) . '</h1>';
+		// Knöpfe für Prüfungen und Reparaturen (React, 0.11.0).
+		echo '<div id="lsec-app" class="lsec-app" data-view="technik"></div>';
 		echo '<table class="widefat striped" style="max-width:900px"><tbody>';
 		foreach ( $status as $key => $value ) {
 			if ( is_bool( $value ) ) {

@@ -200,7 +200,7 @@ echo "A4 Dashboard-Daten"
 ADMIN=$(wpc user list --role=administrator --field=ID --number=1 | last_number)
 D=$(wpj --user="$ADMIN" eval '$r = rest_do_request( "/lsec/v1/dashboard" ); echo wp_json_encode( $r->get_data() ), "\n";')
 check "Budget je Ablauf im Dashboard" "5" "$(echo "$D" | json ai.budget.run_limit)"
-check "Cronjob-Befehl" "1" "$(echo "$D" | json cron.command | grep -c 'lsec cron')"
+check "Cronjob-Befehl" "1" "$(echo "$D" | json cron.args | grep -c 'lsec cron')"
 check "keine Schlüssel in den Daten" "0" "$(echo "$D" | grep -c 'sk-')"
 S=$(wpj --user="$ADMIN" eval '$q = new WP_REST_Request( "POST", "/lsec/v1/settings" ); $q->set_param( "values", array( "ai_web_max_results" => 11 ) ); $r = rest_do_request( $q ); echo wp_json_encode( array( "status" => $r->get_status(), "data" => $r->get_data() ) ), "\n";')
 check "ungültiger Wert wird abgelehnt (422)" "422" "$(echo "$S" | json status)"
@@ -755,6 +755,24 @@ contains "Handbuch wird gelesen" 'id="3-installation"' "$OUT"
 contains "Tabellen und Code werden umgesetzt" "<pre><code>" "$OUT"
 OUT=$(wpc eval 'require_once ABSPATH . "wp-admin/includes/plugin.php"; wp_set_current_user(1); (new \Lsec\Admin\AppPage())->add_menu(); global $submenu; echo PHP_EOL, implode(",", array_column($submenu["lsec"] ?? array(), 2)), PHP_EOL;')
 contains "Menüpunkt gleich nach dem Dashboard" "lsec,lsec-manual,lsec-setup" "$OUT"
+
+echo "F9 Knöpfe statt Befehle (0.11.0)"
+OUT=$(rest POST tools/checks "{}")
+check "Sicherheit prüfen im Backend" "true" "$(printf '%s' "$OUT" | json ok)"
+contains "Schnittstellen geprüft" "Schnittstellen geprüft: nur für Administratoren erreichbar" "$OUT"
+check "Datenbank aktualisieren im Backend" "true" "$(rest POST tools/migrate "{}" | json ok)"
+check "Hängengebliebene Abläufe im Backend" "true" "$(rest POST tools/watchdog "{}" | json ok)"
+check "Dashboard-Hinweise ohne Shell-Befehle" "0" "$(rest GET dashboard "{}" | json hints | grep -c 'wp lsec')"
+check "Einrichtung ohne Shell-Befehle" "0" "$(rest GET setup "{}" | grep -c 'wp lsec\|curl -\|chmod ')"
+OUT=$(rest POST settings '{"values":{"local_category":"LSECTEST Regional"}}')
+contains "Kategorie gilt beim Speichern auch für vorhandene Ortsseiten" "LSECTEST Regional" "$(printf '%s' "$OUT" | json notes)"
+rest POST settings '{"values":{"local_category":""}}' >/dev/null
+for t in $(wpc term list category --name="LSECTEST Regional" --field=term_id); do wpc term delete category "$t" >/dev/null; done
+PX=$(wpc post create --post_type=post --post_status=publish --post_title="LSECTEST Liste" --porcelain)
+OUT=$(wpc eval 'wp_set_current_user(1); $a = ( new \Lsec\Admin\PostActions( \Lsec\Core\Plugin::instance() ) )->row_actions( array(), get_post( '"$PX"' ) ); echo PHP_EOL, implode( " | ", array_map( "wp_strip_all_tags", $a ) ), PHP_EOL;')
+contains "Beitragsliste: Beitragsbild suchen" "Beitragsbild suchen" "$OUT"
+contains "Beitragsliste: Entitäten erkennen" "Entitäten erkennen" "$OUT"
+wpc post delete "$PX" --force >/dev/null
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

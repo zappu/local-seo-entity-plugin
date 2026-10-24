@@ -95,6 +95,8 @@ final class ProductionCommand {
 		}
 		try {
 			$run = ContentProductionWorkflow::start( $this->plugin, (int) ( $args[0] ?? 0 ), $options );
+		} catch ( \Lsec\Production\DuplicateTopicException $e ) {
+			WP_CLI::error( $e->getMessage() . ' Trotzdem schreiben: --allow-duplicate.' );
 		} catch ( \RuntimeException $e ) {
 			WP_CLI::error( $e->getMessage() );
 		}

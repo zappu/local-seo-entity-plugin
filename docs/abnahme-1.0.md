@@ -11,12 +11,13 @@ Grundlage: Anforderungsspezifikation 1.0 und technische Spezifikation 1.0, Absch
 
 | | Prüfen | Erwartet | S | Z |
 |---|---|---|---|---|
-| 1.1 | Neueste ZIP installieren (Update über die bestehende Version) | Plugin aktiv, keine Fehlermeldung, `wp lsec status` zeigt die neue Version und das aktuelle Schema | ☐ | ☐ |
+| 1.1 | Neueste ZIP installieren (Update über die bestehende Version) | Plugin aktiv, keine Fehlermeldung, Seite **Technik** zeigt die neue Version und das aktuelle Schema | ☐ | ☐ |
 | 1.2 | Dashboard, Karte „Cronjob“ | „läuft“, letzter Lauf vor höchstens 5 Minuten | ☐ | ☐ |
 | 1.3 | Einrichtung | alle sechs Schritte erledigt oder nur bewusst Offenes (z. B. Textfocus) | ☐ | ☐ |
-| 1.4 | `wp lsec check secrets` | keine Schlüssel im Klartext | ☐ | ☐ |
-| 1.5 | `wp lsec check rest` | alle Routen für Besucher und Abonnenten gesperrt | ☐ | ☐ |
-| 1.6 | `wp lsec ai budget` | Kosten des Monats plausibel, unter dem Budget | ☐ | ☐ |
+| 1.4 | **Technik → „Sicherheit prüfen“** | keine Schlüssel im Klartext | ☐ | ☐ |
+| 1.5 | dieselbe Prüfung | alle Schnittstellen nur für Administratoren erreichbar | ☐ | ☐ |
+| 1.6 | Dashboard, Karte „KI-Kosten“ | Kosten des Monats plausibel, unter dem Budget | ☐ | ☐ |
+| 1.7 | Einrichtung, Dashboard und Einstellungen durchsehen | nirgends ein Befehl für die Shell; nur Zeilen für wp-config.php und die Felder der Aufgabe in Plesk zum Kopieren; Knöpfe (z. B. „Property wählen“, „Sprache der Website übernehmen“, Modellvorschläge beim Tippen) funktionieren | ☐ | ☐ |
 
 ## 2. Unternehmen, Entitäten, Keywords
 
@@ -55,8 +56,8 @@ Grundlage: Anforderungsspezifikation 1.0 und technische Spezifikation 1.0, Absch
 
 | | Prüfen | Erwartet | S | Z |
 |---|---|---|---|---|
-| 5.1 | Ein paar Stockfotos hochladen, 15–20 Minuten warten | `wp lsec images status`: beschrieben; Alternativtext auf Deutsch, wo keiner war | ☐ | ☐ |
-| 5.2 | `wp lsec images assign <beitrag>` für einen vorhandenen Beitrag ohne Bild | passendes Bild gesetzt, Grund wird angezeigt | ☐ | ☐ |
+| 5.1 | Ein paar Stockfotos hochladen, im **Bericht** (Karte „Bilder“) „Offene Bilder jetzt beschreiben“ oder 15–20 Minuten warten | Karte zeigt sie als beschrieben; Alternativtext auf Deutsch, wo keiner war | ☐ | ☐ |
+| 5.2 | **Beiträge → Alle Beiträge**: bei einem Beitrag ohne Bild unter dem Titel „Beitragsbild suchen“ | passendes Bild gesetzt, Meldung oben nennt die Quelle | ☐ | ☐ |
 
 ## 6. Bericht und Abläufe
 

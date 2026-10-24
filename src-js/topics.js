@@ -522,18 +522,26 @@ export default function Topics() {
 		return () => clearInterval( timer );
 	}, [ load ] );
 
-	const onProduce = ( id, again ) => {
+	const onProduce = ( id, again, allowDuplicate = false ) => {
 		// eslint-disable-next-line no-alert
-		if ( ! window.confirm( `${ again ? 'Neuen Entwurf' : 'Entwurf' } schreiben? Briefing, Text und Prüfung kosten zusammen etwa 0,05 bis 0,30 USD (im Rahmen des KI-Budgets).` ) ) {
+		if ( ! allowDuplicate && ! window.confirm( `${ again ? 'Neuen Entwurf' : 'Entwurf' } schreiben? Briefing, Text und Prüfung kosten zusammen etwa 0,05 bis 0,30 USD (im Rahmen des KI-Budgets).` ) ) {
 			return;
 		}
 		setBusy( true );
-		produceTopic( id, again )
+		produceTopic( id, again, allowDuplicate )
 			.then( ( run ) => {
 				setNotice( { status: 'success', text: `Entwurf eingeplant (Ablauf ${ run.run_id }). Er entsteht über den Cronjob in einigen Minuten.` } );
 				load();
 			} )
-			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
+			.catch( ( e ) => {
+				// Ähnliches Thema schon geschrieben (0.11.0): nachfragen statt auf --allow-duplicate zu verweisen.
+				// eslint-disable-next-line no-alert
+				if ( e.code === 'lsec_duplicate' && window.confirm( `${ e.message } Trotzdem schreiben?` ) ) {
+					onProduce( id, again, true );
+					return;
+				}
+				setNotice( { status: 'error', text: e.message } );
+			} )
 			.finally( () => setBusy( false ) );
 	};
 
