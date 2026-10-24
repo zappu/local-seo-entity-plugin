@@ -21,6 +21,7 @@
 #            F3 Bericht: Inhalte, Entitäten, Hinweise „bestehende Seite verbessern“ (Search Console Position 4–20), CSV (0.9.1)
 #            F4 Sammelentscheidung über Entitäten (0.9.2)
 #            F5 Beitragsbilder: Beschreibung, Wahl aus der Mediathek, KI-Bild speichern; Sammelausschluss Keywords (0.10.0)
+#            F6 Kategorie für Ortsseiten (0.10.1)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -717,6 +718,18 @@ else
 fi
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Sammelausschluss Keywords" "/lsec/v1/keywords/exclusion" "$OUT"
+
+echo "F6 Kategorie für Ortsseiten (0.10.1)"
+wpc lsec settings set local_category "LSECTEST Regional" >/dev/null
+OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e1.json" --now 2>&1)
+R6=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
+P6=$(wpj lsec production report "$R6" --format=json | json post_id)
+contains "neue Ortsseite in der Kategorie" "LSECTEST Regional" "$(wpc post term list "$P6" category --field=name)"
+OUT=$(wpc lsec production local-category 2>&1)
+contains "vorhandene Ortsseiten nachträglich" "Ortsseiten neu in „LSECTEST Regional“" "$OUT"
+contains "Ortsseite aus E1 nachträglich zugeordnet" "LSECTEST Regional" "$(wpc post term list "$P1" category --field=name)"
+wpc lsec settings set local_category "" >/dev/null
+for t in $(wpc term list category --name="LSECTEST Regional" --field=term_id); do wpc term delete category "$t" >/dev/null; done
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

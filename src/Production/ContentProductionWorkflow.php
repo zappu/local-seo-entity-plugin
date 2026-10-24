@@ -961,6 +961,9 @@ final class ContentProductionWorkflow {
 		update_post_meta( $post_id, '_lsec_used_claims', wp_slash( (string) wp_json_encode( array_values( (array) $quality['used_claim_ids'] ) ) ) );
 		update_post_meta( $post_id, '_lsec_brief_id', (int) $context->output_of( 'create_brief' )['brief_id'] );
 		( new QualityReportRepository() )->attach( (int) $quality['report_id'], $post_id );
+		if ( 'local_landing' === (string) $ctx['topic']['format'] && \Lsec\Content\LocalCategory::assign( $post_id ) ) {
+			$result['local_category'] = \Lsec\Content\LocalCategory::term_id( false );
+		}
 		return StepResult::done( $result );
 	}
 

@@ -211,6 +211,7 @@ final class Plugin {
 		);
 		add_action( self::HEARTBEAT_HOOK, array( $this, 'heartbeat' ) );
 		add_action( 'save_post', array( ContentIndex::class, 'mark_dirty' ), 10, 2 );
+		add_action( 'pre_get_posts', array( \Lsec\Content\LocalCategory::class, 'hide_on_blog' ) );
 		add_action( 'deleted_post', array( EntityRepository::class, 'forget_post' ) );
 		add_action( 'created_term', array( ContentIndex::class, 'mark_term_dirty' ), 10, 3 );
 		add_action( 'edited_term', array( ContentIndex::class, 'mark_term_dirty' ), 10, 3 );

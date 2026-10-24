@@ -48,6 +48,8 @@ final class Settings {
 		'production_auto'          => true,
 		'production_revise'        => true,
 		'place_research'           => true,
+		'local_category'           => '',
+		'local_category_hide'      => false,
 		'image_mode'               => 'library_ai',
 		'ai_vision_model'          => '',
 		'ai_image_model'           => 'black-forest-labs/flux-3-image',

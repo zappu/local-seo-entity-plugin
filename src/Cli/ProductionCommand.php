@@ -443,4 +443,36 @@ final class ProductionCommand {
 		Output::items( (string) ( $assoc_args['format'] ?? 'table' ), $rows, array( 'thema', 'titel', 'status', 'beitrag', 'prüfung', 'bewertung' ) );
 		WP_CLI::log( sprintf( 'Heute gestartet: %d von %d (Einstellung drafts_per_day).', ContentProductionWorkflow::started_today(), (int) \Lsec\Core\Settings::get( 'drafts_per_day' ) ) );
 	}
+
+	/**
+	 * Ordnet vorhandene Ortsseiten des Plugins der Kategorie für Ortsseiten zu (Einstellung local_category).
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Nur anzeigen.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp lsec settings set local_category regional-service
+	 *     wp lsec production local-category
+	 *
+	 * @subcommand local-category
+	 * @param string[]              $args       Argumente.
+	 * @param array<string, string> $assoc_args Optionen.
+	 */
+	public function local_category( array $args, array $assoc_args ): void {
+		unset( $args );
+		if ( '' === trim( (string) \Lsec\Core\Settings::get( 'local_category' ) ) ) {
+			WP_CLI::error( 'Keine Kategorie eingestellt: wp lsec settings set local_category <name>' );
+		}
+		$posts = \Lsec\Content\LocalCategory::local_posts();
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::success( sprintf( '%d Ortsseiten gefunden: %s (Probelauf).', count( $posts ), implode( ', ', $posts ) ) );
+			return;
+		}
+		$changed = array_values( array_filter( $posts, array( \Lsec\Content\LocalCategory::class, 'assign' ) ) );
+		$term    = get_term( \Lsec\Content\LocalCategory::term_id( false ), 'category' );
+		WP_CLI::success( sprintf( '%d von %d Ortsseiten neu in „%s“%s.', count( $changed ), count( $posts ), $term instanceof \WP_Term ? $term->name : '', array() !== $changed ? ': ' . implode( ', ', $changed ) : '' ) );
+	}
 }

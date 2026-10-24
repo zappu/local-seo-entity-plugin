@@ -163,6 +163,16 @@ final class SettingsSchema {
 					'type'  => 'toggle',
 					'help'  => 'Hat eine lokale Seite weniger als zwei geprüfte Tatsachen zum Ort, recherchiert das Plugin sie vor dem Briefing und prüft sie an den Quellen; einmal je Ort in 30 Tagen (etwa 0,02 bis 0,05 USD).',
 				),
+				'local_category'      => array(
+					'label' => 'Kategorie für Ortsseiten',
+					'type'  => 'text',
+					'help'  => 'Lokale Seiten bekommen zusätzlich diese Kategorie (Name oder Titelform, z. B. regional-service; fehlt sie, wird sie angelegt). So lassen sie sich in Theme- und Elementor-Beitragslisten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Leer = aus. Vorhandene Ortsseiten nachträglich: wp lsec production local-category.',
+				),
+				'local_category_hide' => array(
+					'label' => 'Ortsseiten auf der Blogseite ausblenden',
+					'type'  => 'toggle',
+					'help'  => 'Blendet die Kategorie oben auf der Blogseite von WordPress aus. Elementor-Listen und Widgets des Themes stellt man dort selbst ein (Kategorie ausschließen).',
+				),
 				'drafts_per_day'      => array(
 					'label' => 'Entwürfe je Tag',
 					'type'  => 'number',

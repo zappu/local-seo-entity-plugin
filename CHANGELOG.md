@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.10.1 – 24.10.2026
+
+- **Kategorie für Ortsseiten:** Lokale Seiten bekommen zusätzlich eine feste Kategorie (Einstellungen → Beiträge, z. B. `regional-service`). So lassen sie sich in Blogansichten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Wahlweise blendet das Plugin sie auf der Blogseite selbst aus. Vorhandene Ortsseiten ordnet `wp lsec production local-category` nachträglich zu.
+
 ## 0.10.0 – 24.10.2026
 
 - **Beitragsbilder:** Jeder neue Entwurf bekommt das passendste Bild aus der Mediathek, ungenutzte zuerst. Passt keines, erzeugt die KI ein Bild über OpenRouter (Standard FLUX 3, etwa 0,05 USD), als WebP mit deutschem Dateinamen und Alternativtext. Einstellung „Bilder“: Mediathek und KI, nur Mediathek oder aus.
