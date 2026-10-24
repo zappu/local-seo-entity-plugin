@@ -151,6 +151,12 @@ final class QualityChecker {
 		$d_rng = (array) ( $site['seo_description'] ?? array( 120, 160 ) );
 		$add( 'SEO_META', 'SEO-Titel und Meta-Beschreibung in der Länge', $t_len >= $t_rng[0] && $t_len <= $t_rng[1] && $d_len >= $d_rng[0] && $d_len <= $d_rng[1], false, sprintf( 'Titel %d Zeichen (%d–%d), Beschreibung %d (%d–%d)', $t_len, $t_rng[0], $t_rng[1], $d_len, $d_rng[0], $d_rng[1] ) );
 
+		// Nachtrag 24.10. (0.10.4, Keyword-Platzierung nach Casey Keith): Hinweise, keine Blocker.
+		$placement = self::keyword_placement( (string) $seo['focus_keyword'], (string) $seo['title'], (string) ( $seo['slug'] ?? '' ), (string) $draft['title'], $text );
+		$add( 'KEYWORD_TITLE', 'SEO-Titel beginnt mit dem Haupt-Keyword', '' === $placement['title'], false, $placement['title'] );
+		$add( 'SLUG', 'Kurze Titelform ohne Jahreszahl', '' === $placement['slug'], false, $placement['slug'] );
+		$add( 'KEYWORD_INTRO', 'Haupt-Keyword in den ersten 100 Wörtern', '' === $placement['intro'], false, $placement['intro'] );
+
 		$focus = KeywordFilter::fold( (string) $seo['focus_keyword'] );
 		$taken = '' !== $focus && in_array( $focus, array_map( array( KeywordFilter::class, 'fold' ), (array) ( $site['focus_keywords'] ?? array() ) ), true );
 		$add( 'FOCUS_TAKEN', 'Fokus-Keyword nicht schon bei einem anderen Beitrag', ! $taken, false, $taken ? (string) $seo['focus_keyword'] : '' );
@@ -434,6 +440,68 @@ final class QualityChecker {
 			}
 		}
 		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Keyword-Platzierung: SEO-Titel, Titelform (Slug), erste 100 Wörter. Je Stelle leer oder der Grund.
+	 *
+	 * Ein Keyword gilt als enthalten, wenn jedes Wort ab vier Buchstaben mit seinen ersten sechs Buchstaben als
+	 * Wortanfang vorkommt (Pflasterreinigung → „pflast“; auch „Pflasterreinigungen“).
+	 *
+	 * @param string $focus     Haupt-Keyword.
+	 * @param string $seo_title SEO-Titel.
+	 * @param string $slug      Titelform; leer = aus dem Titel.
+	 * @param string $title     Titel des Beitrags.
+	 * @param string $text      Text ohne HTML.
+	 * @return array{title: string, slug: string, intro: string}
+	 */
+	public static function keyword_placement( string $focus, string $seo_title, string $slug, string $title, string $text ): array {
+		$out   = array(
+			'title' => '',
+			'slug'  => '',
+			'intro' => '',
+		);
+		$words = '' !== trim( $slug ) ? explode( '-', strtolower( trim( $slug ) ) ) : explode( ' ', KeywordFilter::fold( $title ) );
+		$words = array_values( array_filter( $words, static fn( string $w ): bool => '' !== $w ) );
+		if ( count( $words ) > 5 ) {
+			$out['slug'] = sprintf( '%d Wörter (höchstens 5): %s', count( $words ), implode( '-', $words ) ) . ( '' === trim( $slug ) ? ' – aus dem Titel, keine eigene Titelform' : '' );
+		}
+		if ( preg_match( '/(^|\D)(19|20)\d{2}(\D|$)/', implode( '-', $words ) ) ) {
+			$out['slug'] = trim( $out['slug'] . ' Jahreszahl in der Titelform.' );
+		}
+		$stems = array();
+		foreach ( explode( ' ', KeywordFilter::fold( $focus ) ) as $word ) {
+			if ( mb_strlen( $word ) >= 4 ) {
+				$stems[] = mb_substr( $word, 0, 6 );
+			}
+		}
+		if ( array() === $stems ) {
+			return $out;
+		}
+		$hay = ' ' . KeywordFilter::fold( $seo_title ) . ' ';
+		$pos = array();
+		foreach ( $stems as $stem ) {
+			$at = mb_strpos( $hay, ' ' . $stem );
+			if ( false === $at ) {
+				$pos = array();
+				break;
+			}
+			$pos[] = $at;
+		}
+		if ( array() === $pos ) {
+			$out['title'] = 'Haupt-Keyword „' . $focus . '“ fehlt im SEO-Titel.';
+		} elseif ( min( $pos ) > 25 ) {
+			$out['title'] = 'Haupt-Keyword „' . $focus . '“ steht erst spät im SEO-Titel.';
+		}
+		$split = preg_split( '/\s+/u', trim( $text ) );
+		$intro = ' ' . KeywordFilter::fold( implode( ' ', array_slice( false === $split ? array() : $split, 0, 100 ) ) ) . ' ';
+		foreach ( $stems as $stem ) {
+			if ( ! str_contains( $intro, ' ' . $stem ) ) {
+				$out['intro'] = 'Haupt-Keyword „' . $focus . '“ nicht in den ersten 100 Wörtern.';
+				break;
+			}
+		}
+		return $out;
 	}
 
 	/**

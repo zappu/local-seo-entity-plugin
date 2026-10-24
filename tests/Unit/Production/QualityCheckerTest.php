@@ -372,4 +372,23 @@ final class QualityCheckerTest extends TestCase {
 		$this->assertStringContainsString( 'Ankündigung', QualityChecker::answer_first( array( self::node( 'paragraph', 'Heutzutage legen viele Wert auf saubere Flächen.' ) ) ) );
 		$this->assertStringContainsString( 'Ankündigung', QualityChecker::answer_first( array( self::node( 'paragraph', 'Wie das geht, erfahren Sie in diesem Ratgeber.' ) ) ) );
 	}
+
+	public function test_keyword_placement(): void {
+		$ok = QualityChecker::keyword_placement( 'pflasterreinigung uetze', 'Pflasterreinigung in Uetze: Moos und Flecken entfernen', 'pflasterreinigung-uetze', 'Titel', 'Pflasterreinigung in Uetze entfernt Moos und Grünbelag schonend.' );
+		$this->assertSame(
+			array(
+				'title' => '',
+				'slug'  => '',
+				'intro' => '',
+			),
+			$ok
+		);
+		$late = QualityChecker::keyword_placement( 'pflasterreinigung uetze', 'Saubere Einfahrten und Höfe: Pflasterreinigung in Uetze', '', 'Saubere Einfahrten und Höfe für alle in Uetze 2026', str_repeat( 'Wort ', 120 ) . 'Pflasterreinigung Uetze' );
+		$this->assertStringContainsString( 'spät', $late['title'] );
+		$this->assertStringContainsString( 'Wörter (höchstens 5)', $late['slug'] );
+		$this->assertStringContainsString( 'Jahreszahl', $late['slug'] );
+		$this->assertStringContainsString( 'ersten 100 Wörtern', $late['intro'] );
+		$this->assertStringContainsString( 'fehlt', QualityChecker::keyword_placement( 'ölflecken entfernen', 'Pflaster reinigen', 'oelflecken-entfernen', '', 'Ölflecken entfernen geht so.' )['title'] );
+		$this->assertSame( '', QualityChecker::keyword_placement( 'ölflecken entfernen', 'Pflaster reinigen', 'oelflecken-entfernen', '', 'Ölflecken entfernen geht so.' )['intro'], 'Umlaut gefaltet' );
+	}
 }

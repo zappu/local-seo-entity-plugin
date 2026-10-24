@@ -15,7 +15,7 @@ Gesammelt nach MVP 1, noch nicht beschlossen. Grundlage für die Planung von Aus
 | 7 | Rank and Rent HVAC Websites | 05.11.2025 | Leistung × Ort mit eigener lokaler Information, ein Cluster je Leistung, NAP überall gleich, LocalBusiness-Schema, saisonale Auffrischung, Anruf-Knopf und kurzes Formular je Leistungsseite |
 | 8 | The Semantic Lie | 30.07.2025 | Eine klare Absicht je Seite, Ziel im ersten Satz, benannte Entitäten und ausdrückliche Beziehungen, Schema; die Thesen zu Common Crawl, C4 und Updates sind unbelegt und keine Grundlage für Funktionen |
 
-Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8.
+Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8, **Keyword-Platzierung** (0.10.4) aus 5.
 
 ## Ideen
 
@@ -57,7 +57,7 @@ Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8.
 - Ortsverwechslung erkennen: Suchanfragen mit anderem Ort, die auf eine Ortsseite fallen, als Hinweis „eigene Seite für Ort X?“.
 - Kannibalisierung: Keywords, für die zwei eigene Seiten Impressionen bekommen, im Bericht nennen (ergänzt den Dublettenschutz bei Themen).
 
-### 6. Keyword an den vier Stellen (aus 5)
+### 6. Keyword an den vier Stellen (aus 5) – umgesetzt in 0.10.4
 
 Heute gilt: Haupt-Keyword im Titel, in der Einleitung und in einer Zwischenüberschrift; SEO-Titel 30 bis 60 Zeichen. Ergänzungen:
 - SEO-Titel: Haupt-Keyword möglichst am Anfang.

@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+## 0.10.4 – 24.10.2026
+
+- **Keyword-Platzierung:** SEO-Titel möglichst mit dem Haupt-Keyword am Anfang, kurze Titelform (höchstens fünf Wörter, keine Jahreszahl), Haupt-Keyword in den ersten 100 Wörtern. Der Text hält sich daran; neue Hinweise im Prüfbericht, falls nicht.
+
 ## 0.10.3 – 24.10.2026
 
 - **Antwort zuerst:** Briefing und Text beantworten die Suchanfrage gleich im ersten Absatz, ohne Ankündigung oder Allgemeinplatz. Die KI-Bewertung achtet darauf, und eine neue Regelprüfung gibt einen Hinweis, wenn der Einstieg fehlt oder mit „In diesem Beitrag erfahren Sie …“ beginnt.

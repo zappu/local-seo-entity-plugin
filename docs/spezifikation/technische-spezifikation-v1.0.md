@@ -1256,6 +1256,14 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 - **KI-Bewertung:** Das Merkmal `intent` bewertet ausdrücklich, ob der erste Absatz die Suchanfrage direkt beantwortet. Neuer Hinweis-Code `LATE_ANSWER`.
 - **Regelprüfung `ANSWER_FIRST`** (Hinweis, blockiert nicht): Vor der ersten Überschrift steht ein Absatz, und er beginnt nicht mit einer Ankündigung oder einem Allgemeinplatz (`QualityChecker::answer_first`).
 
+**Nachtrag 24.10.2026 (0.10.4), Keyword-Platzierung (nach Casey Keith, „SEO Keyword Placement“):**
+- **Text:** SEO-Titel möglichst mit dem Haupt-Keyword am Anfang. Titelform (Slug) mit höchstens fünf Wörtern, dem Haupt-Keyword (bei lokalen Seiten mit Ort), ohne Füllwörter und ohne Jahreszahl. Das Haupt-Keyword steht in den ersten 100 Wörtern, dazu natürliche Varianten.
+- **Regelprüfungen als Hinweis** (`QualityChecker::keyword_placement`). Ein Keyword gilt als enthalten, wenn jedes Wort ab vier Buchstaben mit seinen ersten sechs Buchstaben als Wortanfang vorkommt, Umlaute gefaltet.
+  - `KEYWORD_TITLE`: Keyword fehlt im SEO-Titel oder beginnt erst nach dem 25. Zeichen.
+  - `SLUG`: mehr als fünf Wörter (ohne eigene Titelform zählt der Titel) oder eine Jahreszahl.
+  - `KEYWORD_INTRO`: Keyword nicht in den ersten 100 Wörtern.
+- H1 bleibt der Beitragstitel; die Regel „Haupt-Keyword im Titel“ gilt schon.
+
 **Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
 - **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.
 - **Cronjob bei Plesk:** Auf der ersten Testwebsite stand nur die Aufgabe des WP Toolkits für `wp-cron.php`; der Cronjob des Plugins fehlte. Eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements. Zuverlässig ist: WP-CLI als `private/wp-cli.phar` neben dem Webroot (Befehle für root zum Kopieren, solange die Datei fehlt) und eine Aufgabe „PHP-Skript ausführen“ mit Skriptpfad (voller Pfad, ohne Leerzeichen davor) und Argumenten `--path=<WordPress> lsec cron`, Zeitplan `*/5 * * * *`. Assistent und Dashboard zeigen diese Anleitung; Einträge zum Kopieren können mehrere Blöcke haben.
