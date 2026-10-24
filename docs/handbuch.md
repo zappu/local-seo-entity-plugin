@@ -239,7 +239,9 @@ Den Prüfbericht zeigt die Themen-Seite beim Thema.
 
 Jedes Briefing enthält einen **Steckbrief** (nach Casey Keith, „Step-by-Step Entity SEO“): die Haupt-Entität, eine Ein-Satz-Definition für Laien, die Zielgruppe, bis zu fünf verwandte Entitäten, drei Kundenfragen, die internen Links und die Handlungsaufforderung. Der Text richtet sich danach: Die Definition steht im ersten Absatz, die Entitäten werden beim Namen genannt, die Fragen beantwortet. Auf der Themen-Seite steht der Steckbrief aufklappbar beim Entwurf.
 
-**Strukturierte Daten:** Das Plugin ergänzt das Schema von Rank Math bei seinen Beiträgen um `about` (die Haupt-Entität) und `mentions` (weitere bestätigte Entitäten), jeweils mit dem Link zu Wikidata, wo eine ID hinterlegt ist. Es nimmt nur Entitäten, die im Text stehen; ändert man den Text, passt sich das Schema an. Beim Unternehmen ergänzt es die Leistungen (`knowsAbout`) und das Servicegebiet (`areaServed`), nicht aber, wenn Rank Math die Website als Person führt (Rank Math → Titel & Meta → Lokales SEO → „Person oder Unternehmen“). Vorhandene Angaben bleiben. Beides lässt sich unter **Einstellungen → Beiträge → Strukturierte Daten** abschalten. Prüfen lässt sich das Ergebnis mit dem Test für Rich-Suchergebnisse von Google oder dem Schema-Validator von schema.org.
+**Strukturierte Daten:** Das Plugin ergänzt das Schema von Rank Math bei seinen Beiträgen um `about` (die Haupt-Entität) und `mentions` (weitere bestätigte Entitäten), jeweils mit dem Link zu Wikidata, wo eine ID hinterlegt ist. Es nimmt nur Entitäten, die im Text stehen; ändert man den Text, passt sich das Schema an. Beim Unternehmen ergänzt es die Leistungen (`knowsAbout`) und das Servicegebiet (`areaServed`), nicht aber, wenn Rank Math die Website als Person führt (Rank Math → Titel & Meta → Lokales SEO → „Person oder Unternehmen“). Vorhandene Angaben bleiben. Beides lässt sich unter **Einstellungen → Beiträge → Strukturierte Daten und Schlagwörter** abschalten.
+
+**Schlagwörter:** Ist der Thoka Auto Tagger ab Version 1.8.0 aktiv, bekommt er dieselben Entitäten als Schlagwörter vorgeschlagen (ohne das eigene Unternehmen), für alle Beiträge. Ab drei Entitäten nimmt er nur diese, sonst ergänzt er eigene Begriffe. Schlagwörter, Schema und Entitäten passen so zusammen. Prüfen lässt sich das Ergebnis mit dem Test für Rich-Suchergebnisse von Google oder dem Schema-Validator von schema.org.
 
 **Handlungsaufforderung:** mit Verb und Ergebnis („Besichtigungstermin anfragen“) statt „Kontakt“; keine künstliche Dringlichkeit, keine Rabatte oder Fristen, die nicht im Profil stehen.
 
@@ -276,6 +278,7 @@ Jedes Briefing enthält einen **Steckbrief** (nach Casey Keith, „Step-by-Step 
 | Autor der Entwürfe | `draft_author` | 0 | 0 = wer das Thema freigegeben hat |
 | Entitäten in den strukturierten Daten | `schema_entities` | an | `about` und `mentions` bei Beiträgen des Plugins (Abschnitt 7.1) |
 | Leistungen und Servicegebiet beim Unternehmen | `schema_organization` | an | `knowsAbout` und `areaServed` (Abschnitt 7.1) |
+| Entitäten als Schlagwörter (Thoka Auto Tagger) | `auto_tagger_entities` | an | Abschnitt 7.1 |
 | Länge je Beitragstyp *(weitere)* | `draft_lengths` | Ortsseite 700–1300, Artikel 900–1600, Ratgeber 1200–2200, saisonal 700–1300 Wörter | als JSON |
 | Mindestwert je Merkmal *(weitere)* | `quality_min_score` | 0,6 | |
 | Mindestdurchschnitt *(weitere)* | `quality_min_average` | 0,75 | |

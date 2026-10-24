@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 1.1.2 – 24.10.2026
+
+- **Entitäten als Schlagwörter für den Thoka Auto Tagger (ab 1.8.0):** Das Plugin schlägt ihm die bestätigten Entitäten eines Beitrags vor (Leistungen, Orte, Marken; ohne das eigene Unternehmen), dieselben wie in den strukturierten Daten. Gilt für alle Beiträge. Ab drei Entitäten nimmt der Auto Tagger nur diese, sonst ergänzt er eigene Begriffe. Einstellung unter Einstellungen → Beiträge → Strukturierte Daten und Schlagwörter.
+- Filter `lsec_post_entities` für andere Plugins.
+
 ## 1.1.1 – 24.10.2026
 
 Nach dem ersten Entwurf mit 1.1.0 (Fassadenreinigung Celle):

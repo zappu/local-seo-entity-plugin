@@ -783,6 +783,8 @@ wpc post meta update "$PX" _lsec_topic_id 1 >/dev/null
 wpc post meta update "$PX" _lsec_primary_entities "[$E10]" >/dev/null
 OUT=$(wpc eval 'echo PHP_EOL, wp_json_encode( \Lsec\Content\EntitySchema::for_post( '"$PX"' ), JSON_UNESCAPED_UNICODE ), PHP_EOL;')
 contains "Schema: Haupt-Entität als about" '"about":[{"@type":"Service","name":"LSECTEST Fugenpflege"}]' "$OUT"
+OUT=$(wpc eval 'echo PHP_EOL, implode( "|", (array) apply_filters( "thoka_auto_tagger_priority_terms", array(), get_post( '"$PX"' ) ) ), PHP_EOL;')
+contains "Entitäten als Schlagwörter für den Auto Tagger" "LSECTEST Fugenpflege" "$OUT"
 wpc post delete "$PX" --force >/dev/null
 OUT=$(wpc eval '$c = array( array( "type" => "paragraph", "text" => "Mehr dazu <a href=\"/x\">hier</a>, nur heute." ) ); echo PHP_EOL, implode( ",", \Lsec\Production\QualityChecker::generic_anchors( $c ) ), "|", implode( ",", \Lsec\Production\QualityChecker::urgency( "Nur heute!" ) ), PHP_EOL;')
 contains "Hinweis bei Ankertext „hier“ und künstlicher Dringlichkeit" "hier|nur heute" "$OUT"

@@ -52,6 +52,62 @@ final class EntitySchema {
 	 */
 	public static function register(): void {
 		add_filter( 'rank_math/json_ld', array( self::class, 'filter' ), 100, 2 );
+		// Thoka Auto Tagger (ab 1.8.0) nimmt diese Begriffe als Schlagwörter, vor seiner eigenen Erkennung.
+		add_filter( 'thoka_auto_tagger_priority_terms', array( self::class, 'auto_tagger_terms' ), 10, 2 );
+	}
+
+	/**
+	 * Begriffe für den Auto Tagger: Haupt-Entitäten, dann weitere bestätigte Entitäten im Text, ohne das eigene
+	 * Unternehmen. Abschaltbar mit der Einstellung auto_tagger_entities.
+	 *
+	 * @param mixed $terms Bisherige Begriffe.
+	 * @param mixed $post  Beitrag.
+	 * @return mixed
+	 */
+	public static function auto_tagger_terms( mixed $terms, mixed $post = null ): mixed {
+		if ( ! is_array( $terms ) || ! $post instanceof \WP_Post || ! Settings::get( 'auto_tagger_entities' ) ) {
+			return $terms;
+		}
+		try {
+			return array_values( array_unique( array_merge( $terms, self::terms_for_post( $post->ID ) ) ) );
+		} catch ( \Throwable $e ) {
+			unset( $e );
+			return $terms;
+		}
+	}
+
+	/**
+	 * Namen der Entitäten eines Beitrags für Schlagwörter (Filter lsec_post_entities für andere Plugins).
+	 *
+	 * @param int $post_id Beitrag.
+	 * @return list<string>
+	 */
+	public static function terms_for_post( int $post_id ): array {
+		$found = self::for_post( $post_id );
+		$org   = ( new BusinessProfile() )->get()['organization']['name'] ?? '';
+		$names = self::term_names( array_merge( $found['about'], $found['mentions'] ), (string) $org );
+		$names = apply_filters( 'lsec_post_entities', $names, $post_id );
+		return is_array( $names ) ? array_values( array_map( 'strval', $names ) ) : array();
+	}
+
+	/**
+	 * Namen aus Knoten, ohne das eigene Unternehmen.
+	 *
+	 * @param list<array<string, mixed>> $nodes Knoten (about, dann mentions).
+	 * @param string                     $org   Name des eigenen Unternehmens.
+	 * @return list<string>
+	 */
+	public static function term_names( array $nodes, string $org ): array {
+		$own   = self::fold( html_entity_decode( $org, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$names = array();
+		foreach ( $nodes as $node ) {
+			$name = (string) ( $node['name'] ?? '' );
+			if ( '' === $name || ( 'Organization' === ( $node['@type'] ?? '' ) && '' !== $own && self::fold( $name ) === $own ) ) {
+				continue;
+			}
+			$names[] = $name;
+		}
+		return array_values( array_unique( $names ) );
 	}
 
 	/**

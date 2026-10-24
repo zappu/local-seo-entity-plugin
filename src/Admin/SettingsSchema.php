@@ -158,65 +158,70 @@ final class SettingsSchema {
 		'production' => array(
 			'label'  => 'Beiträge',
 			'fields' => array(
-				'production_auto'     => array(
+				'production_auto'      => array(
 					'label' => 'Freigegebene Themen automatisch schreiben',
 					'type'  => 'toggle',
 					'help'  => 'Der Cronjob erstellt Entwürfe zu freigegebenen Themen, höchstens so viele am Tag wie unten eingestellt. Ein Entwurf kostet etwa 0,05 bis 0,30 USD.',
 				),
-				'production_revise'   => array(
+				'production_revise'    => array(
 					'label' => 'Beanstandete Stellen automatisch nachbessern',
 					'type'  => 'toggle',
 					'help'  => 'Scheitert ein Entwurf nur an einzelnen unbelegten Sätzen oder Zahlen, ersetzt das Schreibmodell genau diese Stellen und der Entwurf wird einmal neu geprüft (etwa 0,05 bis 0,10 USD).',
 				),
-				'place_research'      => array(
+				'place_research'       => array(
 					'label' => 'Fehlende Ortsfakten recherchieren',
 					'type'  => 'toggle',
 					'help'  => 'Hat eine lokale Seite weniger als zwei geprüfte Tatsachen zum Ort, recherchiert das Plugin sie vor dem Briefing und prüft sie an den Quellen; einmal je Ort in 30 Tagen (etwa 0,02 bis 0,05 USD).',
 				),
-				'local_category'      => array(
+				'local_category'       => array(
 					'label' => 'Kategorie für Ortsseiten',
 					'type'  => 'text',
 					'help'  => 'Lokale Seiten bekommen zusätzlich diese Kategorie (Name oder Titelform, z. B. regional-service; fehlt sie, wird sie angelegt). So lassen sie sich in Theme- und Elementor-Beitragslisten ausschließen, und das Kategorie-Archiv verlinkt alle Ortsseiten. Leer = aus. Beim Speichern kommen auch vorhandene Ortsseiten in die Kategorie.',
 				),
-				'local_category_hide' => array(
+				'local_category_hide'  => array(
 					'label' => 'Ortsseiten auf der Blogseite ausblenden',
 					'type'  => 'toggle',
 					'help'  => 'Blendet die Kategorie oben auf der Blogseite von WordPress aus. Elementor-Listen und Widgets des Themes stellt man dort selbst ein (Kategorie ausschließen).',
 				),
-				'schema_entities'     => array(
+				'schema_entities'      => array(
 					'label' => 'Entitäten in den strukturierten Daten',
 					'type'  => 'toggle',
 					'help'  => 'Ergänzt das Schema von Rank Math bei Beiträgen des Plugins um „about“ (Hauptthema) und „mentions“ (weitere bestätigte Entitäten, mit Wikidata, wo hinterlegt). Nur Entitäten, die im Text stehen; Vorhandenes bleibt.',
 				),
-				'schema_organization' => array(
+				'schema_organization'  => array(
 					'label' => 'Leistungen und Servicegebiet beim Unternehmen',
 					'type'  => 'toggle',
 					'help'  => 'Ergänzt die Organisation im Schema von Rank Math um die Leistungen aus dem Profil („knowsAbout“) und das Servicegebiet („areaServed“). Gilt auf allen Seiten; nicht, wenn Rank Math die Website als Person führt.',
 				),
-				'drafts_per_day'      => array(
+				'auto_tagger_entities' => array(
+					'label' => 'Entitäten als Schlagwörter (Thoka Auto Tagger)',
+					'type'  => 'toggle',
+					'help'  => 'Ist der Thoka Auto Tagger (ab 1.8.0) aktiv, schlägt das Plugin ihm die bestätigten Entitäten eines Beitrags als Schlagwörter vor: Leistungen, Orte, Marken – dieselben wie in den strukturierten Daten, ohne das eigene Unternehmen. Gilt für alle Beiträge, nicht nur die des Plugins.',
+				),
+				'drafts_per_day'       => array(
 					'label' => 'Entwürfe je Tag',
 					'type'  => 'number',
 					'step'  => 1,
 					'help'  => 'Obergrenze für automatisch gestartete Entwürfe (0 bis 20). Von Hand gestartete zählen mit.',
 				),
-				'draft_author'        => array(
+				'draft_author'         => array(
 					'label' => 'Autor der Entwürfe (Benutzer-ID)',
 					'type'  => 'number',
 					'step'  => 1,
 					'help'  => '0 = wer das Thema freigegeben hat, sonst der erste Administrator.',
 				),
-				'draft_lengths'       => array(
+				'draft_lengths'        => array(
 					'label' => 'Länge je Beitragstyp (Wörter)',
 					'type'  => 'json',
 					'help'  => 'Leer = Standard: {"local_landing":[700,1300],"article":[900,1600],"guide":[1200,2200],"seasonal":[700,1300],"other":[700,1500]}',
 				),
-				'quality_min_score'   => array(
+				'quality_min_score'    => array(
 					'label' => 'Mindestwert je Merkmal der KI-Bewertung',
 					'type'  => 'number',
 					'step'  => 0.05,
 					'help'  => 'Darunter ist der Entwurf blockiert (Spezifikation 10.2, Vorschlag 0,6).',
 				),
-				'quality_min_average' => array(
+				'quality_min_average'  => array(
 					'label' => 'Mindestdurchschnitt der KI-Bewertung',
 					'type'  => 'number',
 					'step'  => 0.05,
@@ -368,8 +373,8 @@ final class SettingsSchema {
 					'fields' => array( 'draft_author' ),
 				),
 				array(
-					'label'  => 'Strukturierte Daten (Rank Math)',
-					'fields' => array( 'schema_entities', 'schema_organization' ),
+					'label'  => 'Strukturierte Daten und Schlagwörter',
+					'fields' => array( 'schema_entities', 'schema_organization', 'auto_tagger_entities' ),
 				),
 			),
 			'advanced' => array( 'draft_lengths', 'quality_min_score', 'quality_min_average' ),

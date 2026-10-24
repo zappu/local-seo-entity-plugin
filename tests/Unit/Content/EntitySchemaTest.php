@@ -165,4 +165,27 @@ final class EntitySchemaTest extends TestCase {
 		$this->assertSame( array( '@id' => 'https://example.de/#organization' ), $linked[0] );
 		$this->assertSame( 'Celle', $linked[1]['name'] );
 	}
+
+	public function test_schlagwoerter_ohne_eigenes_unternehmen(): void {
+		$nodes = array(
+			array(
+				'@type' => 'Service',
+				'name'  => 'Fassadenreinigung',
+			),
+			array(
+				'@type' => 'Place',
+				'name'  => 'Celle',
+			),
+			array(
+				'@type' => 'Organization',
+				'name'  => 'Staats Flächenreinigung & Wassertechnik',
+			),
+			array( '@id' => 'https://example.de/#organization' ),
+			array(
+				'@type' => 'Place',
+				'name'  => 'Celle',
+			),
+		);
+		$this->assertSame( array( 'Fassadenreinigung', 'Celle' ), EntitySchema::term_names( $nodes, 'Staats Flächenreinigung &amp; Wassertechnik' ) );
+	}
 }

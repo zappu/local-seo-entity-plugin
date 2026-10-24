@@ -52,6 +52,7 @@ final class Settings {
 		'local_category_hide'      => false,
 		'schema_entities'          => true,
 		'schema_organization'      => true,
+		'auto_tagger_entities'     => true,
 		'image_mode'               => 'library_ai',
 		'ai_vision_model'          => '',
 		'ai_image_model'           => 'black-forest-labs/flux-3-image',
