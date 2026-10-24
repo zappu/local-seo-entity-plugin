@@ -21,6 +21,14 @@ const FILTERS = [
 	{ label: 'alle (ohne bestehende Seiten)', value: '' },
 ];
 
+const IMAGE_SOURCES = {
+	library: 'aus der Mediathek',
+	generated: 'KI-Bild',
+	kept: 'vorhanden',
+	none: 'keins',
+	off: 'ausgeschaltet',
+};
+
 const CLAIM_BADGE = {
 	verified: 'e-confirmed',
 	confirmed: 'e-confirmed',
@@ -154,6 +162,15 @@ function Production( { report } ) {
 					) }
 					{ report.words !== null && <span className="lsec-muted"> · { number( report.words ) } Wörter</span> }
 				</p>
+			) }
+			{ report.image && report.image.source && (
+				<div className="lsec-production__image">
+					{ report.image.thumb && <img src={ report.image.thumb } alt="" /> }
+					<p>
+						<strong>Beitragsbild:</strong> { IMAGE_SOURCES[ report.image.source ] || report.image.source }
+						{ report.image.note && <span className="lsec-muted"> · { report.image.note }</span> }
+					</p>
+				</div>
 			) }
 			{ report.score !== null && (
 				<>

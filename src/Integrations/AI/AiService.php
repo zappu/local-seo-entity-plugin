@@ -240,7 +240,7 @@ final class AiService {
 	 * @param AiRequest $request Anfrage.
 	 */
 	private static function hash( AiRequest $request ): string {
-		return hash( 'sha256', $request->task . "\0" . $request->system . "\0" . $request->user . "\0" . Json::encode( $request->json_schema ?? array() ) );
+		return hash( 'sha256', $request->task . "\0" . $request->system . "\0" . $request->user . "\0" . Json::encode( $request->json_schema ?? array() ) . "\0" . implode( "\0", $request->images ) );
 	}
 
 	/**

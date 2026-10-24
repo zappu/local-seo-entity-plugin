@@ -77,6 +77,7 @@ final class ProductionReport {
 				'counts'     => (array) ( $outputs['place_facts']['counts'] ?? array() ),
 				'facts'      => (array) ( $outputs['place_facts']['facts'] ?? array() ),
 			),
+			'image'               => self::image( $post_id, (array) ( $outputs['featured_image'] ?? array() ) ),
 			'revision'            => array(
 				'revised' => $revised,
 				'reason'  => (string) ( $outputs['revise']['reason'] ?? '' ),
@@ -103,6 +104,25 @@ final class ProductionReport {
 				),
 				$calls
 			),
+		);
+	}
+
+	/**
+	 * Beitragsbild des Entwurfs (0.10.0): Quelle, Grund, Vorschau.
+	 *
+	 * @param int                  $post_id Entwurf.
+	 * @param array<string, mixed> $output  Ergebnis des Schritts featured_image.
+	 * @return array{source: string, note: string, image_id: int, thumb: string}
+	 */
+	private static function image( int $post_id, array $output ): array {
+		$id     = $post_id > 0 ? (int) get_post_thumbnail_id( $post_id ) : 0;
+		$source = $post_id > 0 ? (string) get_post_meta( $post_id, \Lsec\Media\FeaturedImage::SOURCE, true ) : '';
+		$note   = $post_id > 0 ? (string) get_post_meta( $post_id, \Lsec\Media\FeaturedImage::NOTE, true ) : '';
+		return array(
+			'source'   => '' !== $source ? $source : (string) ( $output['source'] ?? '' ),
+			'note'     => '' !== $note ? $note : (string) ( $output['note'] ?? '' ),
+			'image_id' => $id,
+			'thumb'    => $id > 0 ? (string) wp_get_attachment_image_url( $id, 'medium' ) : '',
 		);
 	}
 

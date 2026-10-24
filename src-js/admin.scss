@@ -294,6 +294,11 @@
 	margin-bottom: 12px;
 }
 
+.lsec-loading {
+	opacity: 0.5;
+	transition: opacity 0.15s;
+}
+
 .lsec-check {
 	width: 32px;
 }
@@ -691,6 +696,19 @@
 
 .lsec-topic__id {
 	color: #1d2327;
+}
+
+// Beitragsbild im Bericht des Entwurfs (0.10.0).
+.lsec-production__image {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+
+	img {
+		width: 160px;
+		height: auto;
+		border-radius: 4px;
+	}
 }
 
 // Doppelte Themen vergleichen (0.9.2).

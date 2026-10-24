@@ -59,6 +59,24 @@ final class AiClientFactory {
 	}
 
 	/**
+	 * Bildmodell über OpenRouter (0.10.0). Bilder erzeugt das Plugin nur über OpenRouter, auch wenn für Texte ein
+	 * anderer Anbieter eingestellt ist; dann braucht es zusätzlich den OpenRouter-Schlüssel.
+	 *
+	 * @param string $model Bildmodell.
+	 * @throws AiException Ohne Schlüssel oder Modell.
+	 */
+	public function image_client( string $model ): OpenRouterImageClient {
+		if ( '' === trim( $model ) ) {
+			throw new AiException( 'not_configured', 'Kein Bildmodell eingestellt (ai_image_model).' );
+		}
+		$key = $this->secrets->get( 'openrouter_api_key' );
+		if ( null === $key || '' === $key ) {
+			throw new AiException( 'not_configured', 'Bilder erzeugt das Plugin über OpenRouter. Konstante ' . Secrets::constant_name( 'openrouter_api_key' ) . ' in wp-config.php setzen.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
+		return new OpenRouterImageClient( $this->http, $key, trim( $model ), function_exists( 'home_url' ) ? home_url() : '' );
+	}
+
+	/**
 	 * Dienst mit Protokoll, Preistabelle, Budget und gegebenenfalls Recherchemodell.
 	 *
 	 * Wird ein Modell ausdrücklich angegeben (Prüfbefehl mit --model), gilt es auch für die Recherche.

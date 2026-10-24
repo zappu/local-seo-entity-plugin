@@ -183,6 +183,7 @@ final class Plugin {
 		$this->workflows->register( KeywordSyncWorkflow::definition( $this ) );
 		$this->workflows->register( TopicResearchWorkflow::definition( $this ) );
 		$this->workflows->register( \Lsec\Production\ContentProductionWorkflow::definition( $this ) );
+		$this->workflows->register( \Lsec\Media\ImageDescriptionWorkflow::definition( $this ) );
 
 		/**
 		 * Weitere Ablauftypen registrieren.
@@ -242,6 +243,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'lsec style', new \Lsec\Cli\StyleCommand( $this ) );
 			\WP_CLI::add_command( 'lsec setup', new \Lsec\Cli\SetupCommand( $this ) );
 			\WP_CLI::add_command( 'lsec report', new \Lsec\Cli\ReportCommand() );
+			\WP_CLI::add_command( 'lsec images', new \Lsec\Cli\ImagesCommand( $this ) );
 		}
 	}
 

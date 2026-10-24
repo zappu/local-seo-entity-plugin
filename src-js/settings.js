@@ -116,7 +116,7 @@ function Field( { field, value, error, onChange } ) {
 					__nextHasNoMarginBottom
 					__next40pxDefaultSize
 					value={ value }
-					options={ ( field.choices || [] ).map( ( c ) => ( { label: c, value: c } ) ) }
+					options={ ( field.choices || [] ).map( ( c ) => ( { label: ( field.choice_labels && field.choice_labels[ c ] ) || c, value: c } ) ) }
 					onChange={ onChange }
 				/>
 			);

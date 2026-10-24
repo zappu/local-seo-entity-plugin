@@ -5,10 +5,11 @@
  * Keywords: täglicher Abgleich (Search Console, Orte und Namen, Ausschlüsse, Textfocus-Volumina),
  * verwandte Keywords von Textfocus, Import mit Vorschau und Spaltenzuordnung, Tabelle mit Ausschlüssen.
  */
-import { createElement, Fragment, useCallback, useEffect, useState } from '@wordpress/element';
-import { Button, Card, CardBody, CardHeader, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
+import { createElement, Fragment, useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import { Button, Card, CardBody, CardHeader, CheckboxControl, Notice, SelectControl, Spinner, TextControl } from '@wordpress/components';
 import {
 	decideKeyword,
+	decideKeywords,
 	getKeywordOverview,
 	getKeywordTable,
 	previewImport,
@@ -306,12 +307,36 @@ function KeywordTable( { overview, onChanged, setNotice } ) {
 	const [ data, setData ] = useState( null );
 	const [ limit, setLimit ] = useState( PAGE );
 	const [ busyId, setBusyId ] = useState( null );
+	const [ selected, setSelected ] = useState( [] );
+	const [ bulkBusy, setBulkBusy ] = useState( false );
+	const [ loading, setLoading ] = useState( false );
+	const [ error, setError ] = useState( '' );
+	const latest = useRef( 0 );
 
+	// Nachtrag 24.10. (0.10.0): Nur die Antwort der neuesten Anfrage zählt; eine langsamere ältere überschrieb
+	// sonst die Tabelle, und die Filter wirkten, als reagierten sie nicht. Fehler stehen direkt über der Tabelle.
 	const load = useCallback( () => {
+		const request = latest.current + 1;
+		latest.current = request;
+		setLoading( true );
 		getKeywordTable( { search: filters.search, source: filters.source, status: filters.status, sort: filters.sort, limit } )
-			.then( setData )
-			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) );
-	}, [ filters, limit, setNotice ] );
+			.then( ( result ) => {
+				if ( request === latest.current ) {
+					setData( result );
+					setError( '' );
+				}
+			} )
+			.catch( ( e ) => {
+				if ( request === latest.current ) {
+					setError( e.message || 'Die Tabelle konnte nicht geladen werden.' );
+				}
+			} )
+			.finally( () => {
+				if ( request === latest.current ) {
+					setLoading( false );
+				}
+			} );
+	}, [ filters, limit ] );
 
 	useEffect( () => {
 		const timer = setTimeout( load, 250 );
@@ -320,6 +345,7 @@ function KeywordTable( { overview, onChanged, setNotice } ) {
 
 	const setFilter = ( key, value ) => {
 		setLimit( PAGE );
+		setSelected( [] );
 		setFilters( ( f ) => ( { ...f, [ key ]: value } ) );
 	};
 
@@ -333,6 +359,24 @@ function KeywordTable( { overview, onChanged, setNotice } ) {
 			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
 			.finally( () => setBusyId( null ) );
 	};
+
+	// Nachtrag 24.10. (0.10.0): mehrere Keywords auf einmal ausschließen oder aufnehmen.
+	const decideSelected = ( decision ) => {
+		setBulkBusy( true );
+		decideKeywords( selected, decision )
+			.then( ( out ) => {
+				setNotice( { status: 'success', text: `${ number( out.changed ) } Keywords ${ decision === 'manual' ? 'ausgeschlossen' : 'aufgenommen' }.` } );
+				setSelected( [] );
+				load();
+				onChanged();
+			} )
+			.catch( ( e ) => setNotice( { status: 'error', text: e.message } ) )
+			.finally( () => setBulkBusy( false ) );
+	};
+	const toggle = ( id, on ) => setSelected( ( sel ) => ( on ? sel.concat( [ id ] ) : sel.filter( ( x ) => x !== id ) ) );
+	const visible = data ? data.rows.map( ( r ) => r.id ) : [];
+	const allSelected = visible.length > 0 && visible.every( ( id ) => selected.includes( id ) );
+	const selectedRows = data ? data.rows.filter( ( r ) => selected.includes( r.id ) ) : [];
 
 	const summary = overview.summary;
 	const sources = [ { label: 'alle Quellen', value: '' } ].concat(
@@ -363,13 +407,35 @@ function KeywordTable( { overview, onChanged, setNotice } ) {
 					) ) }
 					{ summary.unanalyzed > 0 && <span className="lsec-muted"> · { number( summary.unanalyzed ) } noch nicht auf Orte und Namen geprüft</span> }
 				</p>
-				{ ! data && <Spinner /> }
+				{ selected.length > 0 && (
+					<div className="lsec-bulk">
+						<span>{ number( selected.length ) } ausgewählt</span>
+						{ selectedRows.some( ( r ) => ! r.exclusion ) && (
+							<Button variant="secondary" isDestructive disabled={ bulkBusy } onClick={ () => decideSelected( 'manual' ) }>Ausschließen</Button>
+						) }
+						{ selectedRows.some( ( r ) => r.exclusion ) && (
+							<Button variant="secondary" disabled={ bulkBusy } onClick={ () => decideSelected( 'include' ) }>Aufnehmen</Button>
+						) }
+						<Button variant="tertiary" onClick={ () => setSelected( [] ) }>Auswahl aufheben</Button>
+					</div>
+				) }
+				{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
+				{ ( ! data || loading ) && <Spinner /> }
 				{ data && data.rows.length === 0 && <p>Keine Keywords für diese Auswahl.</p> }
 				{ data && data.rows.length > 0 && (
-					<div className="lsec-table-wrap">
+					<div className={ `lsec-table-wrap${ loading ? ' lsec-loading' : '' }` }>
 						<table className="widefat striped lsec-table">
 							<thead>
 								<tr>
+									<th className="lsec-check">
+										<CheckboxControl
+											label=""
+											aria-label="Alle angezeigten auswählen"
+											checked={ allSelected }
+											onChange={ ( v ) => setSelected( v ? visible : [] ) }
+											__nextHasNoMarginBottom
+										/>
+									</th>
 									<th>Keyword</th>
 									<th className="lsec-num">Volumen</th>
 									<th className="lsec-num">Wettbewerb</th>
@@ -385,6 +451,15 @@ function KeywordTable( { overview, onChanged, setNotice } ) {
 							<tbody>
 								{ data.rows.map( ( row ) => (
 									<tr key={ row.id }>
+										<td className="lsec-check">
+											<CheckboxControl
+												label=""
+												aria-label={ `${ row.keyword } auswählen` }
+												checked={ selected.includes( row.id ) }
+												onChange={ ( v ) => toggle( row.id, v ) }
+												__nextHasNoMarginBottom
+											/>
+										</td>
 										<td>{ row.keyword }</td>
 										<td className="lsec-num">
 											{ row.search_volume === null ? <span className="lsec-muted">unbekannt</span> : number( row.search_volume ) }

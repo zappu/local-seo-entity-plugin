@@ -48,6 +48,11 @@ final class Settings {
 		'production_auto'          => true,
 		'production_revise'        => true,
 		'place_research'           => true,
+		'image_mode'               => 'library_ai',
+		'ai_vision_model'          => '',
+		'ai_image_model'           => 'black-forest-labs/flux-3-image',
+		'image_resolution'         => '1K',
+		'image_aspect'             => '16:9',
 		'drafts_per_day'           => 3,
 		'draft_author'             => 0,
 		'draft_lengths'            => array(),
@@ -68,6 +73,8 @@ final class Settings {
 	public const CHOICES = array(
 		'ai_provider'   => array( 'openrouter', 'anthropic', 'openai' ),
 		'ai_web_engine' => array( 'standard', 'native', 'exa', 'parallel', 'perplexity' ),
+		'image_mode'    => array( 'library_ai', 'library', 'off' ),
+		'image_aspect'  => array( '16:9', '3:2', '4:3', '1:1' ),
 	);
 
 	/**

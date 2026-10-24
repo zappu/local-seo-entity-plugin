@@ -21,7 +21,7 @@ final class ReportCommand {
 	 * ## OPTIONS
 	 *
 	 * [--section=<teil>]
-	 * : content, entities oder improve; ohne Angabe alle.
+	 * : content, entities, improve oder images; ohne Angabe alle.
 	 *
 	 * [--format=<format>]
 	 * : table, json oder csv (csv nur für improve).
@@ -48,6 +48,10 @@ final class ReportCommand {
 		if ( 'json' === $format ) {
 			WP_CLI::line( (string) wp_json_encode( '' === $section ? $report : ( $report[ $section ] ?? null ), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
+		}
+		if ( '' === $section || 'images' === $section ) {
+			$m = (array) $report['images'];
+			WP_CLI::log( sprintf( 'Bilder: %d in der Mediathek · %d beschrieben, %d offen · frei als Beitragsbild %d · schon genutzt %d · KI-Bilder %d', $m['images'], $m['described'], $m['pending'], $m['free'], $m['used'], $m['generated'] ) );
 		}
 		if ( '' === $section || 'content' === $section ) {
 			$c = $report['content'];

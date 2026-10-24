@@ -74,6 +74,7 @@ final class KeywordsController {
 		$route( '/keywords/table', 'GET', array( $this, 'table' ) );
 		$route( '/keywords/overview', 'GET', array( $this, 'overview' ) );
 		$route( '/keywords/(?P<id>\d+)/exclusion', 'POST', array( $this, 'exclusion' ) );
+		$route( '/keywords/exclusion', 'POST', array( $this, 'exclusion_many' ) );
 		$route( '/keywords/sync', 'POST', array( $this, 'sync' ) );
 		$route( '/keywords/related', 'POST', array( $this, 'related' ) );
 		$route( '/keywords/import/preview', 'POST', array( $this, 'preview' ) );
@@ -190,6 +191,41 @@ final class KeywordsController {
 			}
 		}
 		return new \WP_REST_Response( array( 'ok' => true ) );
+	}
+
+	/**
+	 * Sammelentscheidung: mehrere Keywords ausschließen oder aufnehmen (Nachtrag 24.10.2026, 0.10.0).
+	 *
+	 * @param \WP_REST_Request $request Anfrage mit ids (höchstens 500) und decision (manual oder include).
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function exclusion_many( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$decision = (string) $request->get_param( 'decision' );
+		$ids      = array_values( array_unique( array_filter( array_map( 'intval', (array) $request->get_param( 'ids' ) ), static fn( int $id ): bool => $id > 0 ) ) );
+		if ( ! in_array( $decision, array( 'manual', 'include' ), true ) || array() === $ids || count( $ids ) > 500 ) {
+			return new \WP_Error( 'lsec_invalid', 'Entscheidung manual oder include und 1 bis 500 Keywords angeben.', array( 'status' => 400 ) );
+		}
+		$repo    = new KeywordRepository();
+		$changed = array();
+		foreach ( $ids as $id ) {
+			if ( $repo->decide_exclusion( $id, $decision, get_current_user_id() ) ) {
+				$changed[] = $id;
+			}
+		}
+		$this->plugin->logger->audit(
+			'Keyword-Ausschluss entschieden',
+			array(
+				'keyword_ids' => $changed,
+				'decision'    => $decision,
+				'user_id'     => get_current_user_id(),
+			)
+		);
+		return new \WP_REST_Response(
+			array(
+				'changed'  => count( $changed ),
+				'decision' => $decision,
+			)
+		);
 	}
 
 	/**

@@ -32,6 +32,7 @@ final class RunsController {
 		'keyword_sync'       => 'Keyword-Abgleich',
 		'topic_research'     => 'Themenrecherche',
 		'content_production' => 'Beitrag',
+		'image_description'  => 'Bildbeschreibung',
 		'selftest'           => 'Selbsttest',
 	);
 

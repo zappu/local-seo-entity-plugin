@@ -194,6 +194,40 @@ final class SettingsSchema {
 				),
 			),
 		),
+		'images'     => array(
+			'label'  => 'Bilder',
+			'fields' => array(
+				'image_mode'       => array(
+					'label'         => 'Beitragsbilder',
+					'type'          => 'select',
+					'choice_labels' => array(
+						'library_ai' => 'aus der Mediathek, sonst KI-Bild',
+						'library'    => 'nur aus der Mediathek',
+						'off'        => 'aus',
+					),
+					'help'          => 'Jeder neue Entwurf bekommt das passendste Bild aus der Mediathek, ungenutzte zuerst. Passt keines, erzeugt die KI ein Bild (etwa 0,05 USD). Neue Bilder der Mediathek beschreibt der Cronjob einmal auf Deutsch (Alternativtext und Stichworte, etwa 0,0002 USD je Bild); einen vorhandenen Alternativtext überschreibt das Plugin nicht.',
+				),
+				'ai_vision_model'  => array(
+					'label' => 'Modell für die Bildbeschreibung',
+					'type'  => 'text',
+					'help'  => 'Muss Bilder lesen können. Leer = Hauptmodell (openai/gpt-6-luna kann das).',
+				),
+				'ai_image_model'   => array(
+					'label' => 'Bildmodell',
+					'type'  => 'text',
+					'help'  => 'Über OpenRouter, auch wenn für Texte ein anderer Anbieter eingestellt ist. Empfehlung: black-forest-labs/flux-3-image (etwa 0,05 USD bei 1K); günstiger: black-forest-labs/flux-3-image-klein (etwa 0,01 USD). Liste: wp lsec images models.',
+				),
+				'image_resolution' => array(
+					'label' => 'Auflösung',
+					'type'  => 'text',
+					'help'  => 'Für Modelle mit Auflösungsstufen, z. B. 1K oder 1.5K. Das Plugin speichert das Bild höchstens 1600 Pixel breit als WebP.',
+				),
+				'image_aspect'     => array(
+					'label' => 'Seitenverhältnis',
+					'type'  => 'select',
+				),
+			),
+		),
 		'gsc'        => array(
 			'label'  => 'Search Console',
 			'fields' => array(

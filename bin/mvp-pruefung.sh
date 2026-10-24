@@ -20,6 +20,7 @@
 #            F2 Sammelauftrag mit Kostenschätzung, Seite „Abläufe“ (REST) (0.9.0)
 #            F3 Bericht: Inhalte, Entitäten, Hinweise „bestehende Seite verbessern“ (Search Console Position 4–20), CSV (0.9.1)
 #            F4 Sammelentscheidung über Entitäten (0.9.2)
+#            F5 Beitragsbilder: Beschreibung, Wahl aus der Mediathek, KI-Bild speichern; Sammelausschluss Keywords (0.10.0)
 #
 # Aufruf (Plugin aktiviert, als Benutzer des Abonnements):
 #   bash bin/mvp-pruefung.sh --path=/var/www/vhosts/example.de/httpdocs [--online]
@@ -684,6 +685,38 @@ OUT=$(wpc lsec entities decide "$EA,$EB" rejected 2>&1)
 contains "Wiederholung ist kein Fehler" "Success" "$OUT"
 OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
 contains "Route Sammelentscheidung" "/lsec/v1/entities/decision" "$OUT"
+
+echo "F5 Beitragsbilder und Sammelausschluss (0.10.0)"
+contains "Standard: Mediathek, sonst KI-Bild" "library_ai" "$(wpc lsec settings list --format=json)"
+if php -r 'exit(function_exists("imagecreatetruecolor") ? 0 : 1);'; then
+	php -r '$i=imagecreatetruecolor((int)$argv[2],(int)$argv[3]); imagefill($i,0,0,imagecolorallocate($i,90,120,150)); imagejpeg($i,$argv[1],85);' "$TMP/lsectest-bild.jpg" 1200 700
+	php -r '$i=imagecreatetruecolor(200,200); imagejpeg($i,$argv[1]);' "$TMP/lsectest-klein.jpg"
+	IA=$(wpc media import "$TMP/lsectest-bild.jpg" --title="LSECTEST Bild" --porcelain | last_number)
+	IS=$(wpc media import "$TMP/lsectest-klein.jpg" --title="LSECTEST klein" --porcelain | last_number)
+	check "neues Bild ist offen" "1" "$(wpc eval "echo in_array($IA, \\Lsec\\Media\\ImageLibrary::pending_ids(1000), true) ? 1 : 0;")"
+	contains "kleines Bild ohne KI als ungeeignet" "$IS small" "$(wpc lsec images describe "$IS" 2>&1)"
+	# Beschreibung wie von der KI, ohne Kosten.
+	wpc eval "\\Lsec\\Media\\ImageLibrary::store($IA, array('alt' => 'LSECTEST Pflaster wird gereinigt', 'motif' => 'Pflaster', 'keywords' => array('Pflasterreinigung'), 'kind' => 'photo', 'watermark' => false, 'text' => false, 'suitable' => true), 'test');" >/dev/null
+	check "Alternativtext gesetzt" "LSECTEST Pflaster wird gereinigt" "$(wpc post meta get "$IA" _wp_attachment_image_alt)"
+	contains "geeignet und frei" "$IA" "$(wpc lsec images list --free --format=csv)"
+	php -r '$d=json_decode(file_get_contents($argv[1]),true); $d["image"]=["image_id"=>(int)$argv[2]]; echo json_encode($d, JSON_UNESCAPED_UNICODE);' "$TMP/e1.json" "$IA" > "$TMP/e5.json"
+	OUT=$(wpc lsec production start "$T1" --again --allow-duplicate --stub="$TMP/e5.json" --now 2>&1)
+	R5=$(printf '%s' "$OUT" | sed -n 's/^Ablauf \([0-9]*\) .*/\1/p' | head -1)
+	P5=$(wpj lsec production report "$R5" --format=json | json post_id)
+	check "Beitragsbild aus der Mediathek gesetzt" "$IA" "$(wpc post meta get "$P5" _thumbnail_id)"
+	contains "Beitragsbild im Bericht des Entwurfs" "Beitragsbild: aus der Mediathek" "$(wpc lsec production report "$R5")"
+	check "danach nicht mehr frei" "0" "$(wpc lsec images list --free --format=csv | grep -c "^$IA,")"
+	GEN=$(wpc eval "echo \\Lsec\\Media\\ImageLibrary::save_generated(file_get_contents('$TMP/lsectest-bild.jpg'), 'image/jpeg', array('prompt' => 'test photo', 'alt' => 'LSECTEST KI-Bild', 'title' => 'LSECTEST KI-Bild', 'keywords' => array('Test'), 'filename' => 'lsectest-ki-bild'), $P5, 'test/model', 0.01);" | last_number)
+	contains "KI-Bild mit deutschem Dateinamen" "lsectest-ki-bild" "$(wpc eval "echo basename(get_attached_file($GEN));")"
+	contains "als KI-Bild vermerkt" "test/model" "$(wpc post meta get "$GEN" _lsec_ai_generated)"
+	check "Alternativtext des KI-Bilds" "LSECTEST KI-Bild" "$(wpc post meta get "$GEN" _wp_attachment_image_alt)"
+	contains "Bilder im Bericht" "Bilder:" "$(wpc lsec report --section=images)"
+	for id in $IA $IS $GEN; do wpc post delete "$id" --force >/dev/null 2>&1; done
+else
+	skip "Beitragsbilder (PHP ohne GD)"
+fi
+OUT=$($WP "${WP_ARGS[@]}" lsec check rest 2>&1)
+contains "Route Sammelausschluss Keywords" "/lsec/v1/keywords/exclusion" "$OUT"
 
 STYLE_V=$(wpc lsec style list --format=json | json 0.version)
 wpc db query "DELETE FROM ${PREFIX}lsec_style_profiles WHERE profile LIKE '%LSECTEST%'" >/dev/null

@@ -73,7 +73,7 @@ Werte mit **Vorschlag** sind Ausgangswerte und werden während MVP 1 oder in der
 - Externe Entity-Verifizierung über Orte hinaus (Wikidata für Unternehmen und Fachbegriffe, Register, offizielle Websites) mit Belegbewertung
 - Dynamische Content-Cluster und kontinuierliche Themenproduktion
 - Überarbeitung bestehender Beiträge (Vorschläge aus der Search Console, 6.4)
-- Bildanalyse und KI-Bildgenerierung
+- Bildanalyse und KI-Bildgenerierung über das Beitragsbild hinaus (Bilder im Text, Prüfung vorhandener Bilder auf Größe und Barrierefreiheit); Beitragsbilder aus der Mediathek oder per KI sind seit 0.10.0 umgesetzt
 - Testphase und regelgesteuerte automatische Veröffentlichung
 - Google Trends (bei Zugang) und DataForSEO als zusätzliche Keyword-Quellen
 - Strukturierte Daten über Rank Math
@@ -1156,7 +1156,7 @@ Die Prüfskripte bleiben Teil der CI und werden in MVP 1 um die neuen Abläufe e
 | KI-Sichtbarkeit (Screpy, optional Indexly) | **Entscheidung offen** – betrifft erst Ausbau 3 |
 | Umfang und Dauer der Testphase | festgelegt: 20 geprüfte Beiträge in 60 Tagen (18.10.2026) |
 | Mindestwerte der Qualitätsprüfung | Vorschlag, Kalibrierung in der Testphase |
-| Bilddienst | offen (Ausbau 2) |
+| Bilddienst | OpenRouter, Bild-Schnittstelle; Standard black-forest-labs/flux-3-image (0.10.0) |
 | Google Trends, DataForSEO | vorgesehen für Ausbau 2 |
 | Screpy | vorgesehen für Ausbau 3 |
 
@@ -1205,6 +1205,30 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 - **Sammelentscheidung über Entitäten:** Auf der Seite „Entitäten“ erscheinen ab einer markierten Zeile „Bestätigen“ und „Ablehnen“ für alle markierten (Zusammenführen weiter ab zwei); ein Kästchen im Tabellenkopf markiert alle sichtbaren außer zusammengeführten. `POST lsec/v1/entities/decision` mit `ids` (höchstens 200) und `decision`, `EntityRepository::decide_many()`; Antwort `changed`, `unchanged` (schon so entschieden) und `skipped` (unbekannt, zusammengeführt oder aus dem Unternehmensprofil, das dort gepflegt wird). Ein Eintrag im Audit-Protokoll je Sammelentscheidung. `wp lsec entities decide 12,13,14 rejected` nimmt mehrere Nummern mit Komma. Prüfskript F4.
 - **Doppelte Themen vergleichen:** Jede Themenzeile zeigt ihre Nummer (#36); der große Kreis ist die Priorität. Der Hinweis „Doppelt zu #36“ steht jetzt an beiden Themen (`duplicates` am behaltenen Thema) und hat „Vergleichen“: beide Themen nebeneinander mit Format, Ort, Status, Priorität, Haupt- und weiteren Keywords (mit Suchvolumen und Impressionen), Begründung und Entitäten, je mit „Thema #N ablehnen“ (nicht bei Themen in Arbeit, mit Entwurf oder schon abgelehnt) und „Entwurf öffnen“.
 - Herkunft `ai_research` heißt in der Oberfläche „KI-Recherche“.
+
+**Umsetzung Beitragsbilder (Nachtrag 24.10.2026, 0.10.0, Wunsch von Thomas; zieht einen Teil von Anforderung 8 aus Ausbau 2 vor, `Lsec\Media`):** Bisher setzte das Plugin keine Beitragsbilder.
+- **Einstellung `image_mode`:** `library_ai` (Standard: Mediathek, sonst KI-Bild), `library` (nur Mediathek) oder `off`. Dazu `ai_vision_model` (leer = Hauptmodell; muss Bilder lesen), `ai_image_model` (Standard `black-forest-labs/flux-3-image`, etwa 0,05 USD bei 1K; günstiger `black-forest-labs/flux-3-image-klein`, etwa 0,01 USD), `image_resolution` (Standard `1K`) und `image_aspect` (16:9, 3:2, 4:3, 1:1). Gruppe „Bilder“ in den Einstellungen.
+- **Bilder an die KI:** `AiRequest` hat `images` (data-URLs). OpenRouter schickt sie als `image_url`, Anthropic als Block `image` (base64), OpenAI als `input_image`. Der Fingerabdruck der Anfrage enthält die Bilder.
+- **Bildbeschreibung (`ImageDescriber`, `ImageLibrary`):** Jedes Bild der Mediathek (JPEG, PNG, WebP, AVIF) wird einmal beschrieben: `alt` (höchstens 120 Zeichen), `motif`, 5 bis 12 deutsche `keywords`, `kind` (photo, illustration, logo, icon, screenshot, graphic, other), `watermark`, `text`. Das Bild geht verkleinert (höchstens 1024 Pixel, JPEG) an das Modell. Gespeichert als JSON in der Post-Meta `_lsec_image`; ein leerer Alternativtext wird gesetzt, ein vorhandener nie überschrieben. Bilder unter 400 Pixel Breite werden ohne KI als `small` vermerkt. Fehler stehen in `_lsec_image_error` und werden nach einem Tag erneut versucht. Als Beitragsbild geeignet: Foto oder Illustration, ohne Wasserzeichen, ohne viel Schrift, mindestens 800 Pixel breit. Stockfotos mit englischen Dateinamen (z. B. Envato Elements) werden so für deutsche Themen auffindbar.
+- **Ablauf `image_description`:** Der Cronjob startet ihn höchstens alle 15 Minuten, wenn Bilder offen sind, Beitragsbilder eingeschaltet sind und ein Hauptmodell eingestellt ist; zehn Bilder je Durchgang, höchstens 500 je Lauf (etwa 0,0002 USD je Bild mit `openai/gpt-6-luna`).
+- **Schritt `featured_image`** in `content_production` zwischen `create_post` und `finalize` (`FeaturedImage::assign`):
+  1. Ein vorhandenes Beitragsbild bleibt.
+  2. Offene Bilder werden zuerst beschrieben (höchstens drei Durchgänge zu zehn), damit gerade hochgeladene mitzählen.
+  3. **Wahl aus der Mediathek (`ImagePicker`):** Vorauswahl der 30 Bilder mit den meisten Suchwörtern des Themas in Alternativtext, Motiv, Stichworten, Titel und Dateiname, freie zuerst. Das Hauptmodell wählt dann nach Bedeutung (Aufgabe `image_choice`, `fit` good, acceptable oder none). Freie Bilder haben Vorrang, ein schon genutztes nur, wenn kein freies ähnlich gut passt. Passt keines, gibt es kein Bild aus der Mediathek. Als genutzt gilt ein Bild, das Beitragsbild eines Beitrags, einer Seite oder eines Produkts ist (nicht im Papierkorb).
+  4. **KI-Bild bei `library_ai` (`ImagePrompter`, `OpenRouterImageClient`):** Das Hauptmodell schreibt einen englischen Bildauftrag sowie deutschen Alternativtext, Titel, Dateinamen und Stichworte (Aufgabe `image_prompt`). Vorgaben für jede Branche: realistisches Foto im Querformat, die Tätigkeit oder das Ergebnis zum Thema; keine Schrift, keine Logos, keine Wasserzeichen; kein erkennbares Gebäude, keine Straße, kein Wahrzeichen und kein Ortsschild (kein bestimmter Ort, nicht das Unternehmen selbst); keine Personen, die wie Mitarbeiter oder Kunden wirken; keine Verletzungen und keine Eingriffe in Nahaufnahme.
+     - Erzeugt wird über `POST https://openrouter.ai/api/v1/images`, immer über OpenRouter, auch bei anderem Textanbieter. Parameter, die das Modell laut `GET /api/v1/images/models` nicht kennt, bleiben weg; die Liste wird einen Tag zwischengespeichert.
+     - Kosten aus `usage.cost` stehen als Aufgabe `image_generation` in `lsec_ai_calls` und zählen zum Budget.
+     - Gespeichert wird höchstens 1600 Pixel breit als WebP (sonst JPEG), mit deutschem Dateinamen, Alternativtext, Beschreibung „KI-generiertes Bild (Modell) für Beitrag N“ und Post-Meta `_lsec_ai_generated` (Modell, Auftrag, Kosten). Das Bild gilt danach als beschrieben und geeignet.
+  5. Ein Fehler beim Bild hält den Entwurf nie auf: Der Schritt endet ohne Bild und nennt den Grund, auch bei erreichtem KI-Budget.
+  6. Ergebnis in den Post-Metas `_lsec_image_source` (library, generated, none, off) und `_lsec_image_note`, im Prüfbericht des Entwurfs (Themen-Seite, `production report`) und im Bericht.
+  7. Im Prüfskript nur mit `image` in der Testdatei (sonst ohne Bild und ohne KI).
+- **Befehle:** `wp lsec images status | describe [<id>…] [--limit] [--queue] | list [--free] | assign <beitrag> [--force] [--generate] [--library] | models [--search]`. Mit `assign` bekommen auch schon vorhandene Beiträge ein Beitragsbild.
+- **Bericht:** Teil „Bilder“ (in der Mediathek, beschrieben, offen, frei, schon genutzt, KI-Bilder; Hinweis bei weniger als fünf freien). In der Tabelle der Entwürfe steht die Spalte „Beitragsbild“.
+- **Abnahme durch Thomas:** Im normalen Prüfmodus bleibt jeder Beitrag ein Entwurf; der Administrator sieht das Beitragsbild vor dem Veröffentlichen und kann es tauschen.
+
+**Weitere Änderungen in 0.10.0:**
+- **Keywords gesammelt entscheiden:** Kästchen je Zeile und „alle angezeigten“, dann „Ausschließen“ oder „Aufnehmen“ für alle markierten; `POST lsec/v1/keywords/exclusion` mit `ids` (höchstens 500) und `decision` (manual oder include).
+- **Filter der Keyword-Tabelle:** Nur die Antwort der neuesten Anfrage gilt (eine langsamere ältere überschrieb die Tabelle). Während des Ladens ist die Tabelle abgeblendet, Fehler stehen direkt über ihr. Auf der zweiten Testwebsite reagierten Quelle, Status und Sortierung laut Thomas nicht; lokal und unter strengem SQL-Modus funktionieren alle Kombinationen.
 
 **Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
 - **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.

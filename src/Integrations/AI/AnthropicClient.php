@@ -64,7 +64,7 @@ final class AnthropicClient implements AiClient {
 			'messages'   => array(
 				array(
 					'role'    => 'user',
-					'content' => $request->user,
+					'content' => self::user_content( $request ),
 				),
 			),
 		);
@@ -160,5 +160,34 @@ final class AnthropicClient implements AiClient {
 			$duration,
 			'max_tokens' === $stop ? 'length' : 'stop'
 		);
+	}
+
+	/**
+	 * Nutzernachricht; mit Bildern als Blöcke vom Typ image (0.10.0).
+	 *
+	 * @param AiRequest $request Anfrage.
+	 * @return string|list<array<string, mixed>>
+	 */
+	private static function user_content( AiRequest $request ): string|array {
+		if ( array() === $request->images ) {
+			return $request->user;
+		}
+		$content = array();
+		foreach ( $request->images as $url ) {
+			$part      = AiRequest::split_data_url( $url );
+			$content[] = array(
+				'type'   => 'image',
+				'source' => array(
+					'type'       => 'base64',
+					'media_type' => $part['type'],
+					'data'       => $part['data'],
+				),
+			);
+		}
+		$content[] = array(
+			'type' => 'text',
+			'text' => $request->user,
+		);
+		return $content;
 	}
 }

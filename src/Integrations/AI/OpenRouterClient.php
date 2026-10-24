@@ -67,7 +67,7 @@ final class OpenRouterClient implements AiClient {
 				),
 				array(
 					'role'    => 'user',
-					'content' => $request->user,
+					'content' => self::user_content( $request ),
 				),
 			),
 			'max_tokens' => $request->max_output_tokens,
@@ -164,6 +164,31 @@ final class OpenRouterClient implements AiClient {
 			$duration,
 			(string) ( $choice['finish_reason'] ?? 'stop' )
 		);
+	}
+
+	/**
+	 * Nutzernachricht; mit Bildern als Liste aus Text und image_url (0.10.0).
+	 *
+	 * @param AiRequest $request Anfrage.
+	 * @return string|list<array<string, mixed>>
+	 */
+	private static function user_content( AiRequest $request ): string|array {
+		if ( array() === $request->images ) {
+			return $request->user;
+		}
+		$content = array(
+			array(
+				'type' => 'text',
+				'text' => $request->user,
+			),
+		);
+		foreach ( $request->images as $url ) {
+			$content[] = array(
+				'type'      => 'image_url',
+				'image_url' => array( 'url' => $url ),
+			);
+		}
+		return $content;
 	}
 
 	/**

@@ -71,6 +71,7 @@ final class ContentProductionWorkflow {
 				'quality_check'  => self::step( $plugin, 'quality_check' ),
 				'revise'         => self::step( $plugin, 'revise' ),
 				'create_post'    => self::step( $plugin, 'create_post' ),
+				'featured_image' => self::step( $plugin, 'featured_image' ),
 				'finalize'       => self::step( $plugin, 'finalize' ),
 			)
 		);
@@ -960,6 +961,77 @@ final class ContentProductionWorkflow {
 		update_post_meta( $post_id, '_lsec_used_claims', wp_slash( (string) wp_json_encode( array_values( (array) $quality['used_claim_ids'] ) ) ) );
 		update_post_meta( $post_id, '_lsec_brief_id', (int) $context->output_of( 'create_brief' )['brief_id'] );
 		( new QualityReportRepository() )->attach( (int) $quality['report_id'], $post_id );
+		return StepResult::done( $result );
+	}
+
+	/**
+	 * Schritt featured_image (Nachtrag 24.10.2026, 0.10.0): Beitragsbild aus der Mediathek, sonst KI-Bild.
+	 *
+	 * Erst werden neue Bilder ohne Beschreibung beschrieben (höchstens drei Durchgänge zu zehn), damit gerade
+	 * hochgeladene Bilder mitzählen. Ein Fehler beim Bild hält den Entwurf nie auf: Der Schritt endet dann
+	 * ohne Bild und nennt den Grund.
+	 *
+	 * @param Plugin     $plugin  Plugin.
+	 * @param RunContext $context Kontext.
+	 */
+	public static function featured_image( Plugin $plugin, RunContext $context ): StepResult {
+		$post_id = (int) ( $context->output_of( 'create_post' )['post_id'] ?? 0 );
+		$stop    = self::topic_withdrawn( $context );
+		if ( null !== $stop ) {
+			return $stop;
+		}
+		if ( $post_id <= 0 || 'off' === (string) Settings::get( 'image_mode' ) ) {
+			return StepResult::done( array( 'source' => 'off' ) );
+		}
+		$options = array();
+		if ( isset( $context->input['stub'] ) ) {
+			// Prüfskript: ohne KI; nur mit Angabe image in der Testdatei.
+			$stub = json_decode( (string) $context->input['stub'], true );
+			if ( ! is_array( $stub ) || ! isset( $stub['image'] ) ) {
+				return StepResult::done(
+					array(
+						'source' => 'none',
+						'note'   => 'Testlauf ohne Bild.',
+					)
+				);
+			}
+			$options['stub'] = (array) $stub['image'];
+		} else {
+			$rounds  = (int) ( $context->state['rounds'] ?? 0 );
+			$pending = $rounds < 3 && ! has_post_thumbnail( $post_id ) ? \Lsec\Media\ImageLibrary::pending_ids( \Lsec\Media\ImageLibrary::BATCH ) : array();
+			if ( array() !== $pending ) {
+				try {
+					$ai       = \Lsec\Media\ImageLibrary::lazy( static fn() => \Lsec\Media\ImageDescriptionWorkflow::vision( $plugin ) );
+					$business = \Lsec\Media\ImageLibrary::business();
+					foreach ( $pending as $id ) {
+						\Lsec\Media\ImageLibrary::describe( $id, $ai, $business, $context->run_id );
+					}
+				} catch ( \Throwable $e ) {
+					$plugin->logger->warning(
+						'Bildbeschreibung vor der Bildwahl fehlgeschlagen',
+						array(
+							'run_id' => $context->run_id,
+							'error'  => $e->getMessage(),
+						)
+					);
+					return StepResult::more( array( 'rounds' => 3 ) );
+				}
+				return StepResult::more( array( 'rounds' => $rounds + 1 ) );
+			}
+		}
+		try {
+			$result = \Lsec\Media\FeaturedImage::assign( $plugin, $post_id, $context->run_id, $options );
+		} catch ( \Throwable $e ) {
+			$note = $e instanceof \Lsec\Workflow\WaitException ? 'KI-Budget erreicht, kein Beitragsbild.' : 'Kein Beitragsbild: ' . $plugin->logger->redact( mb_substr( $e->getMessage(), 0, 300 ) );
+			update_post_meta( $post_id, \Lsec\Media\FeaturedImage::SOURCE, 'none' );
+			update_post_meta( $post_id, \Lsec\Media\FeaturedImage::NOTE, wp_slash( $note ) );
+			$result = array(
+				'source'   => 'none',
+				'image_id' => 0,
+				'note'     => $note,
+				'cost'     => null,
+			);
+		}
 		return StepResult::done( $result );
 	}
 

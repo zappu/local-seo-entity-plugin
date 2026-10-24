@@ -145,6 +145,11 @@ final class LsecCommand {
 			WP_CLI::log( 'Entwürfe zu freigegebenen Themen gestartet: Abläufe ' . implode( ', ', $drafts ) );
 		}
 
+		$images = \Lsec\Media\ImageDescriptionWorkflow::maybe_start_scheduled( $this->plugin );
+		if ( null !== $images ) {
+			WP_CLI::log( 'Beschreibung neuer Bilder der Mediathek gestartet: Ablauf ' . $images );
+		}
+
 		$index = ContentIndexWorkflow::maybe_start_scheduled( $this->plugin );
 		if ( null !== $index ) {
 			WP_CLI::log( 'Inhaltsindex für neue oder geänderte Inhalte gestartet: Ablauf ' . $index );

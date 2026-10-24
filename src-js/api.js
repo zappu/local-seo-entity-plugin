@@ -97,6 +97,8 @@ export const getKeywordTable = ( query ) => getWith( '/keywords/table', query );
 export const getKeywordOverview = () => apiFetch( { path: `${ base }/keywords/overview` } );
 export const decideKeyword = ( id, decision ) =>
 	apiFetch( { path: `${ base }/keywords/${ id }/exclusion`, method: 'POST', data: { decision } } );
+export const decideKeywords = ( ids, decision ) =>
+	apiFetch( { path: `${ base }/keywords/exclusion`, method: 'POST', data: { ids, decision } } );
 export const syncKeywords = () => apiFetch( { path: `${ base }/keywords/sync`, method: 'POST' } );
 export const relatedKeywords = ( keyword, ignoreTypos = false ) =>
 	apiFetch( { path: `${ base }/keywords/related`, method: 'POST', data: { keyword, ignore_typos: ignoreTypos } } );

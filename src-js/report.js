@@ -69,6 +69,7 @@ function ContentCard( { content } ) {
 									<th>Prüfung</th>
 									<th className="lsec-num">Bewertung</th>
 									<th className="lsec-num">Kosten</th>
+									<th>Beitragsbild</th>
 									<th>Stand</th>
 								</tr>
 							</thead>
@@ -88,6 +89,7 @@ function ContentCard( { content } ) {
 										<td>{ i.passed ? 'bestanden' : 'blockiert' }</td>
 										<td className="lsec-num">{ null === i.score ? '–' : number( i.score ) }</td>
 										<td className="lsec-num">{ usd( i.cost ) }</td>
+										<td>{ i.image ? IMAGE_SOURCES[ i.image ] || i.image : <span className="lsec-muted">keins</span> }</td>
 										<td>{ dateTime( i.date ) }</td>
 									</tr>
 								) ) }
@@ -193,6 +195,60 @@ function ImproveCard( { items } ) {
 	);
 }
 
+const IMAGE_SOURCES = {
+	library: 'Mediathek',
+	generated: 'KI-Bild',
+	kept: 'vorhanden',
+	none: 'keins',
+	off: 'keins',
+};
+
+const IMAGE_MODES = {
+	library_ai: 'aus der Mediathek, sonst KI-Bild',
+	library: 'nur aus der Mediathek',
+	off: 'aus',
+};
+
+// Nachtrag 24.10. (0.10.0): Bilder der Mediathek.
+function ImagesCard( { images } ) {
+	return (
+		<Card className="lsec-wide">
+			<CardHeader>
+				<h2>Bilder</h2>
+				<span className="lsec-muted">Beitragsbilder: { IMAGE_MODES[ images.mode ] || images.mode }</span>
+			</CardHeader>
+			<CardBody>
+				<div className="lsec-kpis">
+					<div>
+						<strong>{ number( images.images ) }</strong>
+						<span>Bilder in der Mediathek</span>
+					</div>
+					<div>
+						<strong>{ number( images.described ) }</strong>
+						<span>beschrieben{ images.pending > 0 ? `, ${ number( images.pending ) } offen` : '' }</span>
+					</div>
+					<div>
+						<strong>{ number( images.free ) }</strong>
+						<span>frei als Beitragsbild</span>
+					</div>
+					<div>
+						<strong>{ number( images.used ) }</strong>
+						<span>schon Beitragsbild</span>
+					</div>
+					<div>
+						<strong>{ number( images.generated ) }</strong>
+						<span>KI-Bilder</span>
+					</div>
+				</div>
+				<p className="lsec-muted">
+					Neue Bilder beschreibt der Cronjob innerhalb von etwa 15 Minuten. Logos, Symbole, Grafiken mit Text, Bilder mit Wasserzeichen und Bilder unter 800 Pixel Breite kommen nicht als Beitragsbild infrage.
+					{ images.free < 5 && images.mode !== 'off' && ' Es sind nur noch wenige freie Bilder da; neue Fotos in die Mediathek laden spart KI-Bilder.' }
+				</p>
+			</CardBody>
+		</Card>
+	);
+}
+
 export default function Report() {
 	const [ data, setData ] = useState( null );
 	const [ error, setError ] = useState( '' );
@@ -216,6 +272,7 @@ export default function Report() {
 			<ImproveCard items={ data.improve } />
 			<ContentCard content={ data.content } />
 			<EntitiesCard entities={ data.entities } />
+			{ data.images && <ImagesCard images={ data.images } /> }
 		</div>
 	);
 }

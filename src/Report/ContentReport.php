@@ -43,8 +43,18 @@ final class ContentReport {
 			'content'      => self::content(),
 			'entities'     => self::entities(),
 			'improve'      => self::improve(),
+			'images'       => self::images(),
 			'generated_at' => gmdate( 'c' ),
 		);
+	}
+
+	/**
+	 * Bilder der Mediathek (0.10.0): Zahlen und Einstellung.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function images(): array {
+		return \Lsec\Media\ImageLibrary::stats() + array( 'mode' => (string) \Lsec\Core\Settings::get( 'image_mode' ) );
 	}
 
 	/**
@@ -79,6 +89,11 @@ final class ContentReport {
 			if ( null !== $score ) {
 				$scores[] = $score;
 			}
+			$image = '';
+			if ( has_post_thumbnail( $id ) ) {
+				$image = (string) get_post_meta( $id, \Lsec\Media\FeaturedImage::SOURCE, true );
+				$image = in_array( $image, array( 'library', 'generated' ), true ) ? $image : 'kept';
+			}
 			$drafts[] = array(
 				'post_id'  => $id,
 				'title'    => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
@@ -91,7 +106,9 @@ final class ContentReport {
 				'date'     => (string) get_post_modified_time( 'c', true, $post ),
 				'edit_url' => (string) get_edit_post_link( $id, 'raw' ),
 				'view_url' => 'publish' === $post->post_status ? (string) get_permalink( $post ) : '',
+				'image'    => $image,
 			);
+
 		}
 		$count = count( $drafts );
 		return array(

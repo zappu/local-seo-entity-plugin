@@ -22,6 +22,17 @@ use WP_CLI;
 final class ProductionCommand {
 
 	/**
+	 * Quellen des Beitragsbilds.
+	 */
+	public const IMAGE_SOURCES = array(
+		'library'   => 'aus der Mediathek',
+		'generated' => 'KI-Bild',
+		'kept'      => 'vorhanden',
+		'none'      => 'keins',
+		'off'       => 'ausgeschaltet',
+	);
+
+	/**
 	 * Konstruktor.
 	 *
 	 * @param Plugin $plugin Plugin.
@@ -147,6 +158,10 @@ final class ProductionCommand {
 		WP_CLI::log( array() === $data['services'] ? 'Leistungsbeschreibungen im Profil: keine – Abläufe des Betriebs darf der Entwurf nicht beschreiben (Seite „Unternehmen“, Leistungen, Kurzbeschreibung).' : 'Leistungsbeschreibungen im Profil: ' . implode( ', ', $data['services'] ) );
 		$facts = (array) $data['facts'];
 		WP_CLI::log( sprintf( 'Format %s · Ort %s · Geprüfte Tatsachen: %d im Kontext (%d zum Ort), im Text verwendet %d (%d zum Ort)', '' !== $facts['format'] ? $facts['format'] : '–', '' !== $facts['region'] ? $facts['region'] : '–', $facts['context'], $facts['local'], $facts['used'], $facts['used_local'] ) );
+		$image = (array) $data['image'];
+		if ( '' !== (string) $image['source'] ) {
+			WP_CLI::log( sprintf( 'Beitragsbild: %s%s · %s', self::IMAGE_SOURCES[ $image['source'] ] ?? $image['source'], (int) $image['image_id'] > 0 ? ' (Anhang ' . (int) $image['image_id'] . ')' : '', (string) $image['note'] ) );
+		}
 		$place = (array) $data['place_research'];
 		if ( $place['researched'] ) {
 			WP_CLI::log( sprintf( 'Ortsfakten recherchiert: %d geprüft, %d strittig, %d verworfen', (int) ( $place['counts']['verified'] ?? 0 ), (int) ( $place['counts']['disputed'] ?? 0 ), (int) ( $place['counts']['rejected'] ?? 0 ) ) );

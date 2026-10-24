@@ -60,7 +60,7 @@ final class OpenAiClient implements AiClient {
 		$body = array(
 			'model'             => $this->model,
 			'instructions'      => $request->system,
-			'input'             => $request->user,
+			'input'             => self::input( $request ),
 			'max_output_tokens' => $request->max_output_tokens,
 			'store'             => false,
 		);
@@ -154,6 +154,36 @@ final class OpenAiClient implements AiClient {
 			null,
 			$duration,
 			$incomplete ? 'length' : 'stop'
+		);
+	}
+
+	/**
+	 * Eingabe; mit Bildern als Nachricht aus input_text und input_image (0.10.0).
+	 *
+	 * @param AiRequest $request Anfrage.
+	 * @return string|list<array<string, mixed>>
+	 */
+	private static function input( AiRequest $request ): string|array {
+		if ( array() === $request->images ) {
+			return $request->user;
+		}
+		$content = array(
+			array(
+				'type' => 'input_text',
+				'text' => $request->user,
+			),
+		);
+		foreach ( $request->images as $url ) {
+			$content[] = array(
+				'type'      => 'input_image',
+				'image_url' => $url,
+			);
+		}
+		return array(
+			array(
+				'role'    => 'user',
+				'content' => $content,
+			),
 		);
 	}
 }

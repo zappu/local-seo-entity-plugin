@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## 0.10.0 – 24.10.2026
+
+- **Beitragsbilder:** Jeder neue Entwurf bekommt das passendste Bild aus der Mediathek, ungenutzte zuerst. Passt keines, erzeugt die KI ein Bild über OpenRouter (Standard FLUX 3, etwa 0,05 USD), als WebP mit deutschem Dateinamen und Alternativtext. Einstellung „Bilder“: Mediathek und KI, nur Mediathek oder aus.
+- **Bildbeschreibung:** Der Cronjob beschreibt neue Bilder der Mediathek einmal auf Deutsch, mit Alternativtext und Stichworten, damit auch Stockfotos mit englischen Dateinamen gefunden werden. Logos, Grafiken mit Text und Bilder mit Wasserzeichen kommen nicht als Beitragsbild infrage.
+- **Befehle** `wp lsec images status|describe|list|assign|models`, z. B. `wp lsec images assign 1360` für vorhandene Beiträge. Im Bericht gibt es den Teil „Bilder“ und die Spalte „Beitragsbild“.
+- **Keywords gesammelt ausschließen oder aufnehmen** (Kästchen je Zeile und „alle“).
+- **Keyword-Tabelle:** Die Filter wirken zuverlässig, auch wenn eine ältere Anfrage langsamer ist. Fehler stehen direkt über der Tabelle.
+
 ## 0.9.2 – 24.10.2026
 
 - **Entitäten gesammelt entscheiden:** mehrere markieren (auch alle über das Kästchen im Tabellenkopf) und gemeinsam bestätigen oder ablehnen; Einträge aus dem Unternehmensprofil werden übersprungen. Auch `wp lsec entities decide 12,13,14 rejected`.
