@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+## 0.10.3 – 24.10.2026
+
+- **Antwort zuerst:** Briefing und Text beantworten die Suchanfrage gleich im ersten Absatz, ohne Ankündigung oder Allgemeinplatz. Die KI-Bewertung achtet darauf, und eine neue Regelprüfung gibt einen Hinweis, wenn der Einstieg fehlt oder mit „In diesem Beitrag erfahren Sie …“ beginnt.
+- **Ideen für Ausbau 2** aus den Beiträgen von Casey Keith: `docs/ausbau-2-ideen.md`.
+
 ## 0.10.2 – 24.10.2026
 
 - **Empfehlung bei doppelten Themen:** Der Vergleich nennt, welches Thema bleiben soll, und warum: schon in Arbeit, Priorität, Suchvolumen, Impressionen, Anzahl der Keywords, fremder Ort in einem Haupt-Keyword. „Empfehlung übernehmen“ lehnt das andere Thema ab und übernimmt dessen zusätzliche Keywords, Tatsachen und Quellen.

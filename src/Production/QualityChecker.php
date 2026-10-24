@@ -139,6 +139,11 @@ final class QualityChecker {
 		$leaks = self::prompt_leaks( $all );
 		$add( 'PROMPT_LEAK', 'Keine Sätze über Quellen, Belege oder Arbeitsanweisungen', array() === $leaks, true, implode( ' | ', $leaks ) );
 
+		// Nachtrag 24.10. (0.10.3, „Antwort zuerst“ nach Casey Keith): Der erste Absatz beantwortet die Suchanfrage
+		// direkt; Hinweis, kein Blocker.
+		$late = self::answer_first( (array) $draft['content'] );
+		$add( 'ANSWER_FIRST', 'Antwort zuerst: Einstieg beantwortet die Suchanfrage', '' === $late, false, $late );
+
 		$seo   = (array) $draft['seo'];
 		$t_len = mb_strlen( (string) $seo['title'] );
 		$d_len = mb_strlen( (string) $seo['description'] );
@@ -429,6 +434,34 @@ final class QualityChecker {
 			}
 		}
 		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * Prüft den Einstieg: ein Absatz vor der ersten Überschrift, ohne Ankündigung oder Allgemeinplatz.
+	 *
+	 * @param array<int, array<string, mixed>> $content Inhalt.
+	 * @return string Leer, wenn in Ordnung; sonst der Grund.
+	 */
+	public static function answer_first( array $content ): string {
+		$first = null;
+		foreach ( $content as $node ) {
+			$type = (string) ( $node['type'] ?? '' );
+			if ( 'heading' === $type ) {
+				break;
+			}
+			if ( 'paragraph' === $type && '' !== trim( strip_tags( (string) ( $node['text'] ?? '' ) ) ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				$first = trim( strip_tags( (string) $node['text'] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				break;
+			}
+		}
+		if ( null === $first ) {
+			return 'Kein Einstieg vor der ersten Zwischenüberschrift.';
+		}
+		$pattern = '/^(in diesem (beitrag|artikel|ratgeber|text|leitfaden)|heutzutage|in der heutigen zeit|wer kennt (das|es) nicht|jeder kennt|kennen sie das|haben sie sich (schon )?(einmal |jemals )?gefragt)|(erfahren sie|zeigen wir ihnen|erklären wir ihnen|lesen sie)[^.!?]*(in diesem|im folgenden|hier)|in diesem (beitrag|artikel|ratgeber) (erfahren|zeigen|erklären|geht es)/iu';
+		if ( preg_match( $pattern, $first, $m ) ) {
+			return 'Einstieg mit Ankündigung oder Allgemeinplatz: „' . mb_substr( $first, 0, 120 ) . ( mb_strlen( $first ) > 120 ? '…' : '' ) . '“';
+		}
+		return '';
 	}
 
 	/**

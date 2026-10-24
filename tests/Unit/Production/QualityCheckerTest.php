@@ -350,4 +350,26 @@ final class QualityCheckerTest extends TestCase {
 		$result = QualityChecker::check( self::draft( 'Uetze hat 20.723 Einwohner und wurde 1021 erstmals erwähnt. Schreiben Sie an anfrage@heuristic-bhabha.89-22-101-72.plesk.page oder besuchen Sie https://heuristic-bhabha.89-22-101-72.plesk.page/kontakt/.' ), self::context(), self::site() );
 		$this->assertNotContains( 'UNSUPPORTED_NUMBER', self::codes( $result ) );
 	}
+
+	/**
+	 * Absatz.
+	 *
+	 * @param string $type Typ.
+	 * @param string $text Text.
+	 * @return array<string, mixed>
+	 */
+	private static function node( string $type, string $text ): array {
+		return array(
+			'type' => $type,
+			'text' => $text,
+		);
+	}
+
+	public function test_answer_first(): void {
+		$this->assertSame( '', QualityChecker::answer_first( array( self::node( 'paragraph', 'Ölflecken auf Pflaster lassen sich mit Heißwasser und einem passenden Reiniger meist vollständig entfernen.' ), self::node( 'heading', 'Ursachen' ) ) ) );
+		$this->assertStringContainsString( 'Kein Einstieg', QualityChecker::answer_first( array( self::node( 'heading', 'Ursachen' ), self::node( 'paragraph', 'Text' ) ) ) );
+		$this->assertStringContainsString( 'Ankündigung', QualityChecker::answer_first( array( self::node( 'paragraph', 'In diesem Beitrag erfahren Sie, wie Sie Ölflecken entfernen.' ) ) ) );
+		$this->assertStringContainsString( 'Ankündigung', QualityChecker::answer_first( array( self::node( 'paragraph', 'Heutzutage legen viele Wert auf saubere Flächen.' ) ) ) );
+		$this->assertStringContainsString( 'Ankündigung', QualityChecker::answer_first( array( self::node( 'paragraph', 'Wie das geht, erfahren Sie in diesem Ratgeber.' ) ) ) );
+	}
 }

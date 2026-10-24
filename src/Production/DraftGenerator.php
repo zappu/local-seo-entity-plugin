@@ -43,7 +43,7 @@ final class DraftGenerator {
 			. "- used_claim_ids: alle Tatsachen, die im Text vorkommen. used_entity_ids: Entitäten, die im Text vorkommen.\n"
 			. "- Zahlen nur aus Tatsachen oder Profil (Telefon, Adresse). Keine Preise, Dauern, Garantien oder Mengen, die nicht belegt sind. Aufzählungen ohne Ziffern formulieren.\n"
 			. "- unsupported_statements: Aussagen im Text, die wie Tatsachen klingen, aber nicht belegt sind (sollte leer sein).\n"
-			. "- Der erste Absatz wiederholt nicht den Titel, sondern steigt mit einem konkreten Anlass ein.\n"
+			. "- Antwort zuerst: Der erste Absatz steht vor der ersten Zwischenüberschrift und beantwortet die Suchanfrage direkt in zwei bis vier Sätzen: worum es geht, für wen es wichtig ist und was der Leser tun kann, mit dem Haupt-Keyword. Er wiederholt nicht den Titel. Keine Ankündigung („In diesem Beitrag erfahren Sie …“) und kein Allgemeinplatz („Heutzutage …“, „Jeder kennt …“). Hintergrund, Ursachen und Einzelheiten folgen danach.\n"
 			. "- Kontaktdaten (Telefon, E-Mail, Adresse) nur einmal, in der Handlungsaufforderung am Schluss; keine Kontaktdaten in FAQ oder Fließtext.\n"
 			. "- Tatsachen nur dort, wo sie dem Leser nützen; keine bloßen Ortslisten.\n"
 			. "- Ortsfakten mit dem Thema verbinden, statt sie in einem eigenen Abschnitt aufzuzählen: Was folgt daraus für die Flächen, Gebäude oder Menschen vor Ort (z. B. Lage, Boden, Verkehr, Ortsteile)? Schreibe nie, dass ein Ortsfakt für das Thema keine Rolle spielt; dann lass ihn weg.\n"

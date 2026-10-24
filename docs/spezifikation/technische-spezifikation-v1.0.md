@@ -1250,6 +1250,12 @@ Jede Stufe endet mit einer Version, einem Lauf der Prüfskripte in CI und auf St
 - **Themendetails** enthalten je Keyword die erkannten Orte (`places`).
 - Fall aus dem Test (Themen #36 und #32 zu Uetze) als Unit-Test; Prüfskript F7.
 
+**Nachtrag 24.10.2026 (0.10.3), Antwort zuerst (nach Hinweisen von Casey Keith, die Thomas gesammelt hat; Ideen für Ausbau 2 in `docs/ausbau-2-ideen.md`):**
+- **Briefing:** Der Einstieg vor der ersten Überschrift beantwortet die Suchanfrage direkt. Die Gliederung beginnt nicht mit Hintergrund, Geschichte oder Allgemeinem.
+- **Text:** Der erste Absatz steht vor der ersten Zwischenüberschrift und beantwortet die Suchanfrage in zwei bis vier Sätzen: worum es geht, für wen, was der Leser tun kann, mit dem Haupt-Keyword. Keine Ankündigung („In diesem Beitrag erfahren Sie …“) und kein Allgemeinplatz („Heutzutage …“). Das ersetzt die bisherige Regel „steigt mit einem konkreten Anlass ein“.
+- **KI-Bewertung:** Das Merkmal `intent` bewertet ausdrücklich, ob der erste Absatz die Suchanfrage direkt beantwortet. Neuer Hinweis-Code `LATE_ANSWER`.
+- **Regelprüfung `ANSWER_FIRST`** (Hinweis, blockiert nicht): Vor der ersten Überschrift steht ein Absatz, und er beginnt nicht mit einer Ankündigung oder einem Allgemeinplatz (`QualityChecker::answer_first`).
+
 **Nachtrag 23.10.2026 (0.8.1), Test auf der zweiten Testwebsite (Zahnarztpraxis in Wees bei Flensburg):**
 - **Reihenfolge:** Technik, KI-Einstellungen, Website lesen, Schreibstil, Alles starten, Entscheidungen. „Website lesen“ braucht ein Modell; ohne Hauptmodell lehnen „Website lesen“, „Schreibstil“ und „Alles starten“ mit „Zuerst die KI-Einstellungen übernehmen (Schritt 2).“ ab.
 - **Cronjob bei Plesk:** Auf der ersten Testwebsite stand nur die Aufgabe des WP Toolkits für `wp-cron.php`; der Cronjob des Plugins fehlte. Eine Aufgabe „Befehl ausführen“ scheitert ohne Shell-Zugang des Abonnements. Zuverlässig ist: WP-CLI als `private/wp-cli.phar` neben dem Webroot (Befehle für root zum Kopieren, solange die Datei fehlt) und eine Aufgabe „PHP-Skript ausführen“ mit Skriptpfad (voller Pfad, ohne Leerzeichen davor) und Argumenten `--path=<WordPress> lsec cron`, Zeitplan `*/5 * * * *`. Assistent und Dashboard zeigen diese Anleitung; Einträge zum Kopieren können mehrere Blöcke haben.

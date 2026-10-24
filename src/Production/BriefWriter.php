@@ -38,7 +38,7 @@ final class BriefWriter {
 			. Context::text( $context )
 			. "\nVorgaben:\n"
 			. sprintf( "- length: zwischen %d und %d Wörtern.\n", (int) $context['length']['min'], (int) $context['length']['max'] )
-			. "- outline: Überschriften (level 2 oder 3) mit Zweck; entity_ids aus der Liste der Entitäten.\n"
+			. "- outline: Überschriften (level 2 oder 3) mit Zweck; entity_ids aus der Liste der Entitäten. Antwort zuerst: Der Einstieg vor der ersten Überschrift beantwortet die Suchanfrage direkt; die Gliederung beginnt nicht mit Hintergrund, Geschichte oder Allgemeinem, sondern mit dem, was der Leser gesucht hat.\n"
 			. "- required_facts: nur Tatsachen aus der Liste (claim_id) und wofür sie im Text stehen. Bei einem Beitrag mit Ort mindestens zwei Tatsachen zu diesem Ort, wenn vorhanden; use sagt, wie die Tatsache mit dem Thema zusammenhängt (z. B. Ortsteile als Einsatzorte, Lage oder Boden als Grund für typische Verschmutzung). Passt keine Tatsache zum Thema, eine Erwähnung im Einstieg oder bei den Einsatzorten statt eines eigenen Abschnitts.\n"
 			. "- facts_to_avoid: was nicht belegt ist und deshalb nicht in den Text gehört (z. B. Preise, Dauer, Garantien).\n"
 			. "- Die Fachbegriffe und Verfahren aus Titel und Keywords bekommen eigene Abschnitte, die sie gründlich erklären; dafür ist allgemeines Fachwissen erlaubt und nötig, es braucht keinen Beleg.\n"
