@@ -36,15 +36,6 @@ final class ToolsController {
 	public function register( callable $permission ): void {
 		register_rest_route(
 			RestController::NAMESPACE,
-			'/tools/(?P<tool>' . implode( '|', self::ACTIONS ) . ')',
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( $this, 'run' ),
-				'permission_callback' => $permission,
-			)
-		);
-		register_rest_route(
-			RestController::NAMESPACE,
 			'/tools/gsc-property',
 			array(
 				array(
@@ -68,15 +59,29 @@ final class ToolsController {
 				'permission_callback' => $permission,
 			)
 		);
+		// Zuletzt: Die besonderen Routen oben gehen vor (WordPress nimmt die erste passende).
+		register_rest_route(
+			RestController::NAMESPACE,
+			'/tools/(?P<tool>[a-z0-9-]+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'run' ),
+				'permission_callback' => $permission,
+			)
+		);
 	}
 
 	/**
 	 * Werkzeug ausführen.
 	 *
 	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public function run( \WP_REST_Request $request ): \WP_REST_Response {
+	public function run( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$tool = (string) $request['tool'];
+		if ( ! in_array( $tool, self::ACTIONS, true ) ) {
+			return new \WP_Error( 'rest_no_route', 'Unbekanntes Werkzeug.', array( 'status' => 404 ) );
+		}
 		// Laden von WP-CLI und die Prüfungen dürfen länger dauern als die übliche Grenze.
 		if ( function_exists( 'set_time_limit' ) ) {
 			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
