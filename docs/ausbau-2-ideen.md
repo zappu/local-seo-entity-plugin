@@ -10,7 +10,7 @@ Gesammelt nach MVP 1, noch nicht beschlossen. Grundlage für die Planung von Aus
 | 2 | Advice for Content Creators | 04.09.2025 | Keine Wortzahl als Ziel, keine Google-Formel; Antwort zuerst; Einzigartigkeit ist das Wichtigste; Bilder und Video ergänzen |
 | 3 | Conversion Optimization with Persuasive Language | 09.09.2025 | Handlungsaufforderungen mit Verb und Ergebnis statt „Absenden“; konkrete statt leere Wörter; Nutzen in Überschriften; Kundenstimmen nahe der Handlungsaufforderung |
 | 4 | The Straight-Talk Match Type Throwdown | 20.09.2025 | Google Ads (Übereinstimmungstypen); für SEO übertragbar: Suchanfragen zeigen die Sprache der Kunden, Ortsverwechslung, Kannibalisierung |
-| 5 | SEO Keyword Placement | – | konnte nicht gelesen werden (Fehler beim Abruf); Text oder PDF nachreichen |
+| 5 | SEO Keyword Placement | 02.10.2025 | Vier Stellen: Title-Tag (Keyword vorn, 50–60 Zeichen, passend zur Absicht), H1 (Keyword oder Variante, nicht wortgleich mit dem Title), URL (kurz, unter fünf Wörtern, nur das Haupt-Keyword, kein Jahr), erste 100 Wörter (Keyword natürlich, mit Varianten, Nutzen sofort) |
 | 6 | The No-Nonsense Checklist for SEO QA | 01.10.2025 | Prüfliste vor und nach Veröffentlichungen: robots, noindex, Canonical, Statuscodes, echte Links, Titel/H1, Schema, Mobil |
 | 7 | Rank and Rent HVAC Websites | 05.11.2025 | Leistung × Ort mit eigener lokaler Information, ein Cluster je Leistung, NAP überall gleich, LocalBusiness-Schema, saisonale Auffrischung, Anruf-Knopf und kurzes Formular je Leistungsseite |
 | 8 | The Semantic Lie | 30.07.2025 | Eine klare Absicht je Seite, Ziel im ersten Satz, benannte Entitäten und ausdrückliche Beziehungen, Schema; die Thesen zu Common Crawl, C4 und Updates sind unbelegt und keine Grundlage für Funktionen |
@@ -57,7 +57,15 @@ Umgesetzt: **Antwort zuerst** (0.10.3) aus 2 und 8.
 - Ortsverwechslung erkennen: Suchanfragen mit anderem Ort, die auf eine Ortsseite fallen, als Hinweis „eigene Seite für Ort X?“.
 - Kannibalisierung: Keywords, für die zwei eigene Seiten Impressionen bekommen, im Bericht nennen (ergänzt den Dublettenschutz bei Themen).
 
-### 6. Lokale Grundlagen (aus 7)
+### 6. Keyword an den vier Stellen (aus 5)
+
+Heute gilt: Haupt-Keyword im Titel, in der Einleitung und in einer Zwischenüberschrift; SEO-Titel 30 bis 60 Zeichen. Ergänzungen:
+- SEO-Titel: Haupt-Keyword möglichst am Anfang.
+- Titelform (Slug): höchstens fünf Wörter, Haupt-Keyword (bei Ortsseiten mit Ort), keine Füllwörter, kein Jahr.
+- Erste 100 Wörter: Regelprüfung, ob das Haupt-Keyword (oder seine Wortstämme) vorkommt.
+- Alle drei als Hinweis, nicht als Blocker. Rank Math prüft Ähnliches; die Regeln sorgen dafür, dass der Entwurf es von Anfang an erfüllt.
+
+### 7. Lokale Grundlagen (aus 7)
 
 - NAP-Abgleich: Name, Adresse und Telefon im Profil mit Impressum, Kontaktseite und Schema vergleichen; Abweichungen melden.
 - LocalBusiness-Schema über Rank Math aus dem Profil (steht als „Strukturierte Daten über Rank Math“ schon in Ausbau 2).
