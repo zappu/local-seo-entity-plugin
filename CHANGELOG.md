@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.10.6 – 24.10.2026
+
+- **Handbuch** `docs/handbuch.md`: Installation mit Cronjob bei Plesk, Einrichtung, laufender Betrieb, alle Seiten, Prüfbericht, Einstellungen, Befehle, Kosten, Fehlerbehebung, Sicherheit.
+- **Abnahme-Checkliste** `docs/abnahme-1.0.md` für beide Testwebsites.
+- README auf den aktuellen Stand gebracht; Hilfetext von `wp lsec images` verständlicher.
+
 ## 0.10.5 – 24.10.2026
 
 - **Bericht „Bestehende Seiten verbessern“:**

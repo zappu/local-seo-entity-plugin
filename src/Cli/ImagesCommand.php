@@ -14,7 +14,9 @@ use Lsec\Media\ImageLibrary;
 use WP_CLI;
 
 /**
- * Nachtrag 24.10.2026 (0.10.0): Beschreibung der Bilder, Liste der geeigneten und Beitragsbild für einen Beitrag.
+ * Bilder der Mediathek beschreiben und auflisten, Beitragsbilder setzen.
+ *
+ * Nachtrag 24.10.2026 (0.10.0).
  */
 final class ImagesCommand {
 

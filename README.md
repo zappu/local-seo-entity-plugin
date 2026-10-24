@@ -1,8 +1,13 @@
 # Local SEO & Entity Content
 
-WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe erstellt. Aktueller Stand: **MVP 1, Stufe E** (Beitragsentwürfe aus freigegebenen Themen mit Briefing, Style Mimic und Qualitätsprüfung; davor Themenrecherche mit Faktenprüfung, Keywords, Entitäten und Grundlage) auf Grundlage des bestandenen Machbarkeitstests. Plan in Spezifikation v1.0, Abschnitt 14.
+WordPress-Plugin, das lokale SEO-Themen recherchiert, Entitäten erkennt und daraus Beitragsentwürfe mit Rank-Math-Angaben und Beitragsbild erstellt. Aktueller Stand: **MVP 1 vollständig umgesetzt (Stufen A–F), Abnahme für Version 1.0 läuft.**
 
-Spezifikationen und Plan: [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md).
+- **Handbuch** (Installation, Cronjob, Einrichtung, Betrieb, Einstellungen, Befehle, Kosten, Fehlerbehebung): [`docs/handbuch.md`](docs/handbuch.md)
+- **Abnahme-Checkliste 1.0:** [`docs/abnahme-1.0.md`](docs/abnahme-1.0.md)
+- **Spezifikationen und Plan:** [`docs/spezifikation/`](docs/spezifikation/), [`PROJEKTPLAN.md`](PROJEKTPLAN.md), [`GLOSSAR.md`](GLOSSAR.md), Ideen für Ausbau 2: [`docs/ausbau-2-ideen.md`](docs/ausbau-2-ideen.md)
+- **Änderungen je Version:** [`CHANGELOG.md`](CHANGELOG.md)
+
+Die folgenden Abschnitte richten sich an Entwickler und Administratoren der Testwebsites; für den Betrieb gilt das Handbuch.
 
 ## Installation auf der Staging-Website
 
